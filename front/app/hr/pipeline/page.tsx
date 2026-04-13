@@ -3,39 +3,35 @@ import PipelineClient from "@/components/hr/pipeline/PipelineClient";
 import { Candidate } from "@/types/hr";
 
 const MOCK_PIPELINE_CANDIDATES: Candidate[] = [
-  {
-    id: "cnd_1",
-    name: "김지원",
-    appliedJob: "job_1",
-    status: "interview",
-    fitScore: 92,
-    resumeSummary: "이커머스 플랫폼 프론트엔드 성능 30% 개선 경험.",
-  },
-  {
-    id: "cnd_2",
-    name: "박랭체",
-    appliedJob: "job_2",
-    status: "screening",
-    fitScore: 85,
-    resumeSummary: "LangGraph를 활용한 사내 챗봇 토이 프로젝트 진행.",
-  },
-  {
-    id: "cnd_3",
-    name: "이코드",
-    appliedJob: "job_1",
-    status: "applied",
-    fitScore: 68,
-    resumeSummary: "신입 프론트엔드 개발자. React 기반 쇼핑몰 클론 코딩.",
-  },
-  {
-    id: "cnd_4",
-    name: "최서버",
-    appliedJob: "job_2",
-    status: "offered",
-    fitScore: 95,
-    resumeSummary:
-      "대용량 트래픽 처리 경험 보유. FastAPI 및 Redis 캐싱 아키텍처 설계.",
-  },
+  // 1. 신규 지원 (Applied)
+  { id: 'cnd_101', name: '김프론', appliedJob: 'job_1', status: 'applied', fitScore: 72, resumeSummary: 'React, TypeScript 기반 어드민 대시보드 개발 경험. UI/UX 최적화 관심.' },
+  { id: 'cnd_102', name: '이웹웹', appliedJob: 'job_1', status: 'applied', fitScore: 65, resumeSummary: '퍼블리셔 3년차, 프론트엔드 전향. Vue.js 주로 사용.' },
+  { id: 'cnd_103', name: '박에이', appliedJob: 'job_2', status: 'applied', fitScore: 88, resumeSummary: 'PyTorch, TensorFlow를 이용한 이미지 분류 모델 학습 경험. 최근 LLM 파인튜닝 프로젝트 진행.' },
+  { id: 'cnd_104', name: '최랭체', appliedJob: 'job_2', status: 'applied', fitScore: 91, resumeSummary: 'LangChain과 ChromaDB를 활용한 사내 문서 Q&A 챗봇 개발. FastAPI 백엔드 연동.' },
+  { id: 'cnd_105', name: '정리액', appliedJob: 'job_1', status: 'applied', fitScore: 78, resumeSummary: 'Next.js 14 App Router 도입 및 SSR/RSC 활용으로 초기 로딩 속도 40% 단축.' },
+  { id: 'cnd_106', name: '강옵옵', appliedJob: 'job_1', status: 'applied', fitScore: 60, resumeSummary: '국비지원 부트캠프 수료. 자바스크립트 기본기 탄탄, React 클론코딩 다수.' },
+
+  // 2. AI 서류 검토 (Screening)
+  { id: 'cnd_201', name: '조최적', appliedJob: 'job_1', status: 'screening', fitScore: 94, resumeSummary: 'Lighthouse Web Vitals 지표 최적화, 번들 사이즈 50% 감소. 모노레포 구축 경험.' },
+  { id: 'cnd_202', name: '윤파이', appliedJob: 'job_2', status: 'screening', fitScore: 85, resumeSummary: 'FastAPI 기반 마이크로서비스 아키텍처 설계. Redis 캐싱 적용.' },
+  { id: 'cnd_203', name: '임데이터', appliedJob: 'job_2', status: 'screening', fitScore: 89, resumeSummary: '빅데이터 처리 파이프라인 구축. RAG 시스템에서 Retriever 성능 개선 논문 작성.' },
+  { id: 'cnd_204', name: '한넥스', appliedJob: 'job_1', status: 'screening', fitScore: 82, resumeSummary: 'React Native로 모바일 앱 출시. 최근 Next.js를 이용한 웹뷰 하이브리드 앱 개발.' },
+  { id: 'cnd_205', name: '오그래', appliedJob: 'job_2', status: 'screening', fitScore: 93, resumeSummary: 'LangGraph를 이용한 다중 에이전트(Multi-Agent) 시스템 구현 토이 프로젝트 우수상.' },
+
+  // 3. 심층 면접 (Interview)
+  { id: 'cnd_301', name: '신아키', appliedJob: 'job_1', status: 'interview', fitScore: 96, resumeSummary: '5년차 시니어. 토스/당근마켓과 유사한 복잡한 상태관리 설계. Zustand 및 React Query 마스터.' },
+  { id: 'cnd_302', name: '권프롬', appliedJob: 'job_2', status: 'interview', fitScore: 95, resumeSummary: '프롬프트 엔지니어링 튜닝으로 환각 현상(Hallucination) 30% 감소 경험. B2B AI 챗봇 상용화.' },
+  { id: 'cnd_303', name: '황성능', appliedJob: 'job_1', status: 'interview', fitScore: 90, resumeSummary: '웹어셈블리(Wasm)를 활용한 프론트엔드 렌더링 한계 극복 시도. 오픈소스 기여자.' },
+  { id: 'cnd_304', name: '안벡터', appliedJob: 'job_2', status: 'interview', fitScore: 92, resumeSummary: 'Pinecone과 OpenAI 임베딩 API를 활용한 시맨틱 검색 엔진 고도화. 검색 정확도 20% 향상.' },
+
+  // 4. 최종 합격 (Offered)
+  { id: 'cnd_401', name: '송리드', appliedJob: 'job_1', status: 'offered', fitScore: 98, resumeSummary: '대용량 트래픽 처리 프론트엔드 리드. 디자인 시스템 구축 및 사내 FE 인프라 표준화 주도.' },
+  { id: 'cnd_402', name: '전엔진', appliedJob: 'job_2', status: 'offered', fitScore: 97, resumeSummary: '초거대 언어모델(LLM) 서빙 최적화(vLLM). AI 서비스 아키텍처 A-Z 설계 가능 인재.' },
+
+  // 5. 불합격 (Rejected)
+  { id: 'cnd_501', name: '유스프', appliedJob: 'job_1', status: 'rejected', fitScore: 55, resumeSummary: 'Spring Boot 백엔드 5년차. 프론트엔드 리드 포지션에는 부적합하여 1차 드랍.' },
+  { id: 'cnd_502', name: '고디비', appliedJob: 'job_2', status: 'rejected', fitScore: 62, resumeSummary: 'DBA 경력 10년. AI/ML 모델링이나 LangChain 관련 경험 부재로 서류 탈락.' },
+  { id: 'cnd_503', name: '백바닐', appliedJob: 'job_1', status: 'rejected', fitScore: 45, resumeSummary: '바닐라 JS 위주의 포트폴리오. 최신 React/Next.js 스택 경험이 부족함.' }
 ];
 
 export default function PipelinePage() {

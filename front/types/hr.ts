@@ -11,7 +11,7 @@ export interface Candidate {
   name: string;
   appliedJob: string;
   resumeSummary: string;
-  status?: 'applied' | 'screening' | 'interview' | 'offered'; // 파이프라인 상태 추가
+  status?: 'applied' | 'screening' | 'interview' | 'offered' | 'rejected'; // 파이프라인 상태 추가
   fitScore?: number; // AI 적합도 점수 추가
 }
 
