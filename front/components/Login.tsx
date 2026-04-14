@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import useAuthStore from "@/store/getAuth"; // Zustand 스토어
+// import useAuthStore from "@/store/getAuth"; // Zustand 스토어
 // import { getAuth, signup } from "@/lib/getInfo";
 import "../css/login.css";
 import "boxicons/css/boxicons.min.css";
@@ -37,6 +37,10 @@ export default function Login() {
         alert("관리자 계정으로 로그인합니다.");
         // setAuth(id, true);
         router.push("/admin");
+      } else if (id.at(0) === "u" || id.at(0) === "U") {
+        alert("지원자 계정으로 로그인합니다.");
+        // setAuth(id, true);
+        router.push("/applicant/dashboard");
       } else {
         alert("로그인 실패! ID/비밀번호를 확인해주세요.");
       }
