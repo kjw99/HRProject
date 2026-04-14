@@ -6,7 +6,7 @@ import KanbanColumn from "./KanbanColumn";
 import FilterModal from "./FilterModal";
 import AddCandidateModal from "./AddCandidateModal";
 import CandidateModal from "./CandidateModal";
-import DeleteConfirmModal from "./DeleteConfirmModal";
+import DeleteConfirmModal from "../../admin/accounts/DeleteConfirmModal";
 
 interface PipelineClientProps {
   initialCandidates: Candidate[];

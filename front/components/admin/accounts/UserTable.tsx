@@ -1,4 +1,4 @@
-import Badge from "@/components/hr/admin/accounts/Badge";
+import Badge from "@/components/admin/accounts/Badge";
 import { Role, Status, UserAccount } from "@/types/admin";
 
 export const ROLE_COLORS: Record<Role, string> = {

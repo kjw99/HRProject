@@ -26,7 +26,7 @@ export default function SettingsClient() {
             우리 기업에 딱 맞는 채용 에이전트를 구축하세요.
           </p>
         </div>
-        <button className="px-6 py-3.5 bg-slate-900 text-white font-bold rounded-[16px] shadow-md hover:bg-slate-800 transition-all flex items-center justify-center gap-2 text-[14px]">
+        <button className="px-6 py-3.5 bg-slate-900 text-white font-bold rounded-2xl shadow-md hover:bg-slate-800 transition-all flex items-center justify-center gap-2 text-[14px]">
           <i className="bx bx-save text-lg"></i> 전체 설정 배포
         </button>
       </header>
@@ -46,7 +46,7 @@ export default function SettingsClient() {
         </div>
 
         {/* 우측 패널 (사전 테스트 플레이그라운드) */}
-        <div className="lg:col-span-5 xl:col-span-4 h-[800px] lg:h-auto">
+        <div className="lg:col-span-5 xl:col-span-4 h-200 lg:h-auto">
           <Playground tone={tone} techWeight={techWeight} />
         </div>
       </div>

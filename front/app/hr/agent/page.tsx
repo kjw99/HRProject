@@ -1,4 +1,3 @@
-import React from "react";
 import AgentClient from "@/components/hr/agent/AgentClient";
 import { JobPosting, Candidate } from "@/types/hr";
 
