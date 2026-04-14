@@ -17,15 +17,24 @@ export default function Login() {
     const [loading, setLoading] = useState<boolean>(false);
     const [signUp, setSignUp] = useState<boolean>(false);
     const router = useRouter();
-    const { setAuth, confirmAuth } = useAuthStore();
+    // const { setAuth, confirmAuth } = useAuthStore();
     useEffect(() => {
         if (pw === pw2) setSame(true)
         else setSame(false);
-    }, [pw, pw2])
+    }, [pw, pw2]);
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault(); // 폼 기본 동작 막기
         setLoading(true);
-        router.push("/hr/agent");
+        router.push("/admin");
+        // router.push("/hr/agent");
+        if (id.at(0) === "h" || pw.at(0) === "H") {
+            alert("인사 담당자 계정으로 로그인합니다.");
+            // setAuth(id, true);
+        } else if (id.at(0) === "a" || pw.at(0) === "A") {
+            alert("관리자 계정으로 로그인합니다.");
+            // setAuth(id, true);
+            router.push("/admin");
+        }
         // try {
         //     const loginData = await getAuth(id, pw);
         //     if (loginData.status === "success") {
