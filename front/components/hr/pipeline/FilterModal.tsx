@@ -8,7 +8,7 @@ interface FilterModalProps {
   onReset: () => void;
 }
 
-const FilterModal = ({ isOpen, onClose, filterJob, setFilterJob, filterMinScore, setFilterMinScore, onReset }: any) => {
+const FilterModal = ({ isOpen, onClose, filterJob, setFilterJob, filterMinScore, setFilterMinScore, onReset }: FilterModalProps) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
@@ -42,5 +42,6 @@ const FilterModal = ({ isOpen, onClose, filterJob, setFilterJob, filterMinScore,
     </div>
   );
 };
+
 
 export default FilterModal;

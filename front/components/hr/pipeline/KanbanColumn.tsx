@@ -86,4 +86,5 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   );
 };
 
+
 export default KanbanColumn;
