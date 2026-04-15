@@ -1,0 +1,131 @@
+.publishing {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    background: url(./background/red-stag-in-morning-fog-e1.jpg) no-repeat;
+    background-size: cover;
+    background-position: center center;
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.wraaper {
+    width: 420px;
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(3px);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    color: #0d0d0d;
+    border-radius: 10px;
+    padding: 30px 40px;
+}
+
+
+.wraaper h1 {
+    color: #0d0d0d;
+    font-size: 36px;
+    text-align: center;
+    letter-spacing: -0.025em;
+}
+
+.wraaper .input-box {
+    position: relative;
+    width: 100%;
+    height: 50px;
+    margin: 30px 0px;
+}
+
+.input-box input {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none !important;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 40px;
+    font-size: 16px;
+    color: #0d0d0d;
+    padding: 20px 45px 20px 20px;
+}
+
+.input-box input:focus {
+    background: #ffffff;
+    border-color: #3b82f6;
+    /* 피그마 기본 블루 색상 */
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.input-box input::placeholder {
+    color: #0d0d0d;
+}
+
+.input-box i {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+}
+
+
+.wraaper .remember-forget {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14.5px;
+    margin: -15px 0 15px;
+}
+
+.remember-forget label input {
+    accent-color: #fff;
+    margin-right: 3px;
+}
+
+.remember-forget a {
+    color: #0d0d0d;
+    text-decoration: none;
+}
+
+.remember-forget a:hover {
+    text-decoration: underline;
+}
+
+.wraaper .btn {
+    width: 100%;
+    height: 45px;
+    background: #fff;
+    border: none;
+    outline: none;
+    border-radius: 45px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    font-size: 15px;
+    color: #333;
+    font-weight: 600;
+}
+
+.wraaper .btn:hover {
+    background: rgba(83, 73, 73, 0.5);
+    color: #fff;
+    border-color: #fff;
+}
+
+.wraaper .register-link {
+    font-size: 14.5px;
+    text-align: center;
+    margin: 20px 0 15px;
+}
+
+.wraaper .register-link p a {
+    text-decoration: none;
+    color: #0d0d0d;
+    font-weight: 600;
+}
+
+.wraaper .register-link p a:hover {
+    text-decoration: underline;
+}
