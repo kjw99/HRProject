@@ -83,15 +83,36 @@ export default function EventFormModal({ mode, initialData, selectedDate, applic
                         <label className="text-[12px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Select Candidates</label>
                         <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                             {applicants.map(app => (
-                                <label key={app.id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedApplicants.includes(app.id) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100 bg-slate-50'
-                                    }`}>
+                                <label
+                                    key={app.id}
+                                    htmlFor={`app-${app.id}`} // 💡 ID 연결
+                                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedApplicants.includes(app.id) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100 bg-slate-50'
+                                        }`}
+                                >
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${selectedApplicants.includes(app.id) ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white border-slate-300'}`}>
+                                        <input
+                                            id={`app-${app.id}`} // 💡 ID 부여
+                                            type="checkbox"
+                                            className="hidden" // 숨겨져 있어도 ID로 연결되면 클릭됨
+                                            checked={selectedApplicants.includes(app.id)}
+                                            onChange={() => {
+                                                const isSelected = selectedApplicants.includes(app.id);
+                                                if (isSelected) {
+                                                    setSelectedApplicants(selectedApplicants.filter(id => id !== app.id));
+                                                } else {
+                                                    setSelectedApplicants([...selectedApplicants, app.id]);
+                                                }
+                                            }}
+                                        />
+                                        {/* 커스텀 디자인 박스 */}
+                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${selectedApplicants.includes(app.id) ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white border-slate-300'
+                                            }`}>
                                             {selectedApplicants.includes(app.id) && <i className='bx bx-check text-sm'></i>}
                                         </div>
                                         <span className="text-[14px] font-bold text-slate-700">{app.name}</span>
                                     </div>
                                     <span className="text-[10px] bg-white text-slate-400 px-2 py-1 rounded-md border border-slate-100 font-bold">{app.position}</span>
+
                                 </label>
                             ))}
                         </div>
