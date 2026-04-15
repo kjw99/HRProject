@@ -28,6 +28,18 @@ export default function Navbar() {
       icon: "bx-cog",
       path: "/hr/settings",
     },
+    {
+      id: "calendar",
+      label: "캘린더",
+      icon: "bx-calendar",
+      path: "/hr/calendar",
+    },
+    {
+      id: "excel",
+      label: "엑셀 관리",
+      icon: "bx-file",
+      path: "/hr/excel",
+    },
   ];
 
   const handleNavigate = (path: string) => {

@@ -1,7 +1,7 @@
 import React from "react";
 import PipelineClient from "@/components/hr/pipeline/PipelineClient";
 import { Candidate } from "@/types/hr";
-
+import PipelineExcel from '@/components/hr/pipeline/PipelineExcel';
 const MOCK_PIPELINE_CANDIDATES: Candidate[] = [
   // 1. 신규 지원 (Applied)
   {
