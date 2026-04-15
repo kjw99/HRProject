@@ -1,6 +1,5 @@
-// app/applicant/interview/[sessionId]/page.tsx
-import React from "react";
 import InterviewSession from "@/components/applicant/interview/InterviewSession";
+import InterviewTimer from "@/components/applicant/interview/InterviewTimer";
 
 export default async function InterviewSessionPage({
   params,
@@ -8,6 +7,11 @@ export default async function InterviewSessionPage({
   params: Promise<{ sessionId: string }>;
 }) {
   const { sessionId } = await params;
+  // confirmAuth(); // 인증 상태 확인 (선택 사항)
+  // getInterviewConfirm(sessionId); // 인터뷰 세션 유효성 검사 (선택 사항), and 토큰 확인
+  // 만약 없다면, 대시보드 홈페이지로 리다이렉트 처리 (예: router.push('/applicant/dashboard'))
+  const timerDuration: number = 20; // 인터뷰 시간 (분 단위)
+
 
   return (
     <div className="fixed inset-0 bg-[#F8FAFC] z-[100] flex flex-col overflow-hidden">
@@ -25,9 +29,7 @@ export default async function InterviewSessionPage({
           </span>
         </div>
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 font-mono text-rose-500 font-black">
-            <span className="text-[12px] text-slate-400">남은 시간</span> 18:42
-          </div>
+          <InterviewTimer initialMinutes={timerDuration} />
         </div>
       </header>
 

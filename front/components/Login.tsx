@@ -33,6 +33,7 @@ export default function Login() {
       if (id.at(0) === "h" || id.at(0) === "H") {
         alert("인사 담당자 계정으로 로그인합니다.");
         // setAuth(id, true);
+        router.push("/hr/agent");
       } else if (id.at(0) === "a" || id.at(0) === "A") {
         alert("관리자 계정으로 로그인합니다.");
         // setAuth(id, true);
