@@ -21,7 +21,7 @@ const UserTable = ({ users, onRowClick, onEdit, onDelete }: { users: UserAccount
                 <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200">
                         {['사용자 정보', '부서', '보안 권한', '상태', '최근 접속', '관리'].map(h => (
-                            <th key={h} className="px-6 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                            <th key={h} className="px-4 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap sm:px-6 sm:py-5 sm:text-[12px]">{h}</th>
                         ))}
                     </tr>
                 </thead>
@@ -37,8 +37,8 @@ const UserTable = ({ users, onRowClick, onEdit, onDelete }: { users: UserAccount
                         </tr>
                     ) : users.map((user) => (
                         <tr key={user.id} onClick={() => onRowClick(user)} className="hover:bg-slate-50/80 transition-colors cursor-pointer group">
-                            <td className="px-6 py-4">
-                                <div className="flex items-center gap-4">
+                            <td className="px-4 py-4 sm:px-6">
+                                <div className="flex items-center gap-3 sm:gap-4">
                                     <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-black shrink-0 border border-indigo-100">
                                         {user.name.charAt(0)}
                                     </div>
@@ -48,16 +48,16 @@ const UserTable = ({ users, onRowClick, onEdit, onDelete }: { users: UserAccount
                                     </div>
                                 </div>
                             </td>
-                            <td className="px-6 py-4 text-[13px] font-bold text-slate-600">{user.department}</td>
-                            <td className="px-6 py-4"><Badge text={user.role} className={ROLE_COLORS[user.role]} /></td>
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4 text-[13px] font-bold text-slate-600 sm:px-6">{user.department}</td>
+                            <td className="px-4 py-4 sm:px-6"><Badge text={user.role} className={ROLE_COLORS[user.role]} /></td>
+                            <td className="px-4 py-4 sm:px-6">
                                 <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-bold ${STATUS_COLORS[user.status].bg} ${STATUS_COLORS[user.status].text}`}>
                                     <span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[user.status].dot}`}></span>{user.status}
                                 </div>
                             </td>
-                            <td className="px-6 py-4 text-[13px] font-medium text-slate-500">{user.lastLogin}</td>
-                            <td className="px-6 py-4 text-right">
-                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <td className="px-4 py-4 text-[13px] font-medium text-slate-500 sm:px-6">{user.lastLogin}</td>
+                            <td className="px-4 py-4 text-right sm:px-6">
+                                <div className="flex items-center justify-end gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                                     <button onClick={(e) => { e.stopPropagation(); onEdit(user); }} className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm" title="권한 변경">
                                         <i className='bx bx-key text-lg'></i>
                                     </button>

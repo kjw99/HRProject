@@ -103,7 +103,7 @@ export default function AccountManagementClient({
   // --- 렌더링 부 --- (코드가 매우 간결해짐)
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 p-6 md:p-10">
-      <div className="max-w-350 mx-auto space-y-8 animate-in fade-in duration-500">
+      <div className="mx-auto max-w-[1600px] space-y-6 animate-in fade-in duration-500 sm:space-y-8">
         {/* 블록 조립 (추상화된 컴포넌트 사용) */}
         <Header onAddClick={() => setIsAddOpen(true)} />
 

@@ -1,3 +1,4 @@
+import { CalendarEvent, PassedApplicant } from "@/types/calendar";
 import { Candidate, CandidateInsight, GeneratedQuestion, JobPosting } from "@/types/hr";
 import { CandidateReport } from "@/types/report";
 import { ScheduleData } from "@/types/schedule";
@@ -172,4 +173,68 @@ export const fetchScheduleData = async (): Promise<ScheduleData> => {
       ]
     };
   }
+};
+
+export const fetchAdminEvents = async (): Promise<CalendarEvent[]> => {
+  try {
+    const response = await axios.get('/api/admin/events');
+    return response.data;
+  } catch (error) {
+    // Mock Data Fallback
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return [
+      {
+        id: 'ev-1',
+        title: '프론트엔드 기술 면접',
+        date: '2026-04-20',
+        startTime: '14:00',
+        endTime: '15:00',
+        type: 'INTERVIEW',
+        location: '회의실 A',
+        candidates: [
+          { id: 'c1', name: '홍길동', position: 'FE 개발자', email: 'hong@test.com' },
+          { id: 'c2', name: '김철수', position: 'FE 개발자', email: 'kim@test.com' }
+        ]
+      },
+      {
+        id: 'ev-2',
+        title: '백엔드 코딩 테스트',
+        date: '2026-04-20',
+        startTime: '10:00',
+        endTime: '12:00',
+        type: 'CODING_TEST',
+        location: '온라인 세션',
+        candidates: [{ id: 'c3', name: '이영희', position: 'BE 개발자', email: 'lee@test.com' }]
+      }
+    ];
+  }
+};
+
+export const fetchPassedApplicants = async (): Promise<PassedApplicant[]> => {
+  // 실제로는 axios.get('/api/hr/applicants?status=passed')
+  return [
+    { id: 'app-1', name: '박지성', position: 'FE 개발자', status: 'DOCUMENT_PASSED' },
+    { id: 'app-2', name: '손흥민', position: 'BE 개발자', status: 'DOCUMENT_PASSED' },
+    { id: 'app-3', name: '이강인', position: 'FE 개발자', status: 'DOCUMENT_PASSED' },
+  ];
+};
+
+// 💡 일정 등록 API
+export const createCalendarEvent = async (eventData: any) => {
+  // return axios.post('/api/hr/events', eventData);
+  console.log("서버에 전송될 데이터:", eventData);
+  return { success: true };
+};
+
+export const updateCalendarEvent = async (eventId: string, eventData: any) => {
+  // return axios.put(`/api/hr/events/${eventId}`, eventData);
+  console.log(`${eventId}번 일정 수정 완료`, eventData);
+  return { success: true };
+};
+
+// 일정 삭제 API
+export const deleteCalendarEvent = async (eventId: string) => {
+  // return axios.delete(`/api/hr/events/${eventId}`);
+  console.log(`${eventId}번 일정 삭제 완료`);
+  return { success: true };
 };

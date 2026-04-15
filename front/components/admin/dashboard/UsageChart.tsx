@@ -64,7 +64,7 @@ export default function UsageChart({ initialData }: UsageChartProps) {
         backgroundColor: "#6366f1", // indigo-500
         hoverBackgroundColor: "#4f46e5", // indigo-600
         borderRadius: 8, // 막대 모서리 둥글게
-        barThickness: 48, // 막대 두께
+        maxBarThickness: 52,
       },
     ],
   };
@@ -133,7 +133,7 @@ export default function UsageChart({ initialData }: UsageChartProps) {
   };
 
   return (
-    <div className="bg-white p-8 rounded-[32px] border border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col h-[450px]">
+    <div className="flex h-[min(28rem,70dvh)] flex-col rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)] sm:h-[450px] sm:rounded-[32px] sm:p-8">
       {/* 차트 상단 컨트롤러 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>

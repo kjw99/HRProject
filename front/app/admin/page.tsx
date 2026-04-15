@@ -56,15 +56,15 @@ export default async function AdminDashboardPage() {
   const data = await fetchDashboardData();
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-700">
+    <div className="mx-auto max-w-[1600px] space-y-6 animate-in fade-in duration-700 sm:space-y-8">
       {/* 아이콘 로드를 위한 CDN (실제 프로덕션에서는 npm 패키지 설치 권장) */}
 
       {/* 헤더 영역 (정적) */}
-      <header className="border-b border-slate-200/60 pb-6">
+      <header className="border-b border-slate-200/60 pb-4 sm:pb-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-[8px] text-[10px] font-black uppercase tracking-[0.2em] mb-3 border border-indigo-100/50 shadow-sm">
           <i className="bx bx-radar text-sm animate-pulse"></i> System Overview
         </div>
-        <h1 className="text-[32px] font-black text-slate-900 tracking-tight flex items-center gap-3">
+        <h1 className="flex items-center gap-3 text-2xl font-black tracking-tight text-slate-900 sm:text-[32px]">
           AI 리소스 대시보드
         </h1>
         <p className="text-slate-500 font-semibold text-[14px] mt-1">

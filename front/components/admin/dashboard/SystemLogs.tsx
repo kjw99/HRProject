@@ -38,7 +38,7 @@ export default function SystemLogs({ logs }: { logs: Log[] }) {
   };
 
   return (
-    <div className="bg-white p-8 rounded-[32px] border border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col h-[450px]">
+    <div className="flex h-[min(28rem,70dvh)] flex-col rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)] sm:h-[450px] sm:rounded-[32px] sm:p-8">
       <div className="flex justify-between items-center mb-6 shrink-0">
         <h2 className="text-[18px] font-black text-slate-900 flex items-center gap-2">
           <i className="bx bx-list-ul text-slate-400"></i> 시스템 이벤트 로그
