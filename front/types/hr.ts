@@ -1,3 +1,21 @@
+export interface Document {
+  id: string;
+  name: string;
+  size: string;
+  status: "vectorized" | "uploading" | "error";
+  progress: number;
+}
+
+export interface Message {
+  role: 'system' | 'user' | 'agent';
+  content: string;
+}
+
+export const TONES = [
+  { id: "friendly", label: "친화적인 (Ice Breaking)", icon: "bx-smile", desc: "부드러운 분위기 유도" },
+  { id: "analytical", label: "분석적인 (Logical)", icon: "bx-search-alt", desc: "객관적인 역량 검증" },
+  { id: "strict", label: "엄격한 (Stress Test)", icon: "bx-target-lock", desc: "위기 대처 능력 평가" },
+];
 export interface JobPosting {
   id: string;
   title: string;

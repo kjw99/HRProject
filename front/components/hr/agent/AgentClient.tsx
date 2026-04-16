@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { JobPosting, Candidate, GeneratedQuestion } from "@/types/hr";
-import ControlPanel from "../ControlPanel";
-import ResultsPanel from "../ResultsPanel";
+import ControlPanel from "./ControlPanel";
+import ResultsPanel from "./ResultsPanel";
 import { fetchGeminiDeepAnalysis } from "@/lib/axios";
 
 interface AgentClientProps {
