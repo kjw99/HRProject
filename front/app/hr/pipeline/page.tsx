@@ -192,7 +192,29 @@ const MOCK_PIPELINE_CANDIDATES: Candidate[] = [
       "바닐라 JS 위주의 포트폴리오. 최신 React/Next.js 스택 경험이 부족함.",
   },
 ];
+import { Applicant } from '@/types/hr';
+import { fetchPassedApplicants } from "@/lib/axios";
 
-export default function PipelinePage() {
-  return <PipelineClient initialCandidates={MOCK_PIPELINE_CANDIDATES} />;
+
+// export default function PipelinePage() {
+//   return <PipelineClient initialCandidates={MOCK_PIPELINE_CANDIDATES} />;
+//   // return <PipelineExcel initialApplicants={MOCK_PIPELINE_CANDIDATES as Applicant[]} />;
+// }
+
+
+export const metadata = { title: '파이프라인 관리 | HR' };
+
+export default async function HrPipelinePage() {
+  const applicants = await fetchPassedApplicants();
+
+  return (
+    <div className="p-8 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-700">
+      <header>
+        <h1 className="text-[32px] font-black text-slate-900 tracking-tight">지원자 파이프라인</h1>
+        <p className="text-slate-500 font-medium">채용 단계별 지원자 현황을 엑셀 뷰로 한눈에 관리하세요.</p>
+      </header>
+
+      <PipelineExcel initialApplicants={applicants as Applicant[]} />
+    </div>
+  );
 }

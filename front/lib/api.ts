@@ -1,0 +1,1 @@
+export { fetchGeminiDeepAnalysis } from "./axios";

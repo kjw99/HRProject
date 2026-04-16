@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AdminSidebar from "@/components/admin/layout/AdminSidebar";
+import AdminHeader from "./AdminHeader";
 
 export default function AdminAppFrame({
   children,
@@ -42,7 +43,7 @@ export default function AdminAppFrame({
             Admin Console
           </span>
         </header>
-
+        {/* <AdminHeader /> */}
         <main className="styled-scrollbar relative min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
           {children}
         </main>

@@ -1,87 +1,131 @@
-"use client";
+'use client';
 
-import React from "react";
-import { CalendarEvent } from "@/types/hr";
+import React, { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { CalendarEvent, PassedApplicant } from '@/types/calendar';
 
 interface Props {
-  event: CalendarEvent;
-  onClose: () => void;
+    mode: 'CREATE' | 'EDIT';
+    initialData: CalendarEvent | null; // 수정 시 기존 데이터
+    selectedDate: Date;
+    applicants: PassedApplicant[];
+    onClose: () => void;
+    onSuccess: (event: CalendarEvent) => void;
 }
 
-export default function EventDetailModal({ event, onClose }: Props) {
-  return (
-    // 1️⃣ 외부 배경 레이어 (Overlay)
-    <div
-      onClick={onClose} // 💡 배경 클릭 시 onClose 실행
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
-    >
-      {/* 2️⃣ 모달 내부 콘텐츠 박스 */}
-      <div
-        onClick={(e) => e.stopPropagation()} // 💡 중요: 내부 클릭 시에는 부모(배경)로 이벤트가 전달되지 않게 막음
-        className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300"
-      >
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div>
-            <h3 className="text-[20px] font-black text-slate-900">
-              {event.title} 상세
-            </h3>
-            <p className="text-[13px] text-slate-400 font-bold flex items-center gap-1 mt-1">
-              <i className="bx bx-time-five"></i> {event.startTime} -{" "}
-              {event.endTime} | {event.location}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-full hover:bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100 transition-all"
-          >
-            <i className="bx bx-x text-2xl"></i>
-          </button>
-        </div>
+export default function EventFormModal({ mode, initialData, selectedDate, applicants, onClose, onSuccess }: Props) {
+    const [title, setTitle] = useState(initialData?.title || '');
+    const [startTime, setStartTime] = useState(initialData?.startTime || '14:00');
+    const [endTime, setEndTime] = useState(initialData?.endTime || '15:00');
+    const [selectedApplicants, setSelectedApplicants] = useState<string[]>(
+        initialData?.candidates?.map(candidate => candidate.id) || []
+    );
 
-        <div className="p-8 space-y-6">
-          <h4 className="text-[14px] font-black text-slate-400 uppercase tracking-widest">
-            참석 대상자 ({event.candidates.length}명)
-          </h4>
-          <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-            {event.candidates.map((candidate) => (
-              <div
-                key={candidate.id}
-                className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center font-black">
-                    {candidate.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-bold text-slate-800">
-                      {candidate.name}
-                    </p>
-                    <p className="text-[12px] text-slate-400 font-medium">
-                      {candidate.position}
-                    </p>
-                  </div>
+    const handleSubmit = async () => {
+        const eventData = {
+            id: initialData?.id || Math.random().toString(),
+            title,
+            date: format(selectedDate, 'yyyy-MM-dd'),
+            startTime,
+            endTime,
+            type: 'INTERVIEW',
+            candidates: applicants.filter(a => selectedApplicants.includes(a.id)),
+        };
+
+        // API 호출 후 성공 시 상위 상태 업데이트
+        onSuccess(eventData as any);
+    };
+
+    return (
+        <div className="fixed inset-0 z-200 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-lg rounded-4xl shadow-2xl overflow-hidden animate-in zoom-in-95">
+                <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-[20px] font-black text-slate-900">
+                        {mode === 'CREATE' ? '새 일정 등록' : '일정 수정'}
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><i className='bx bx-x text-3xl'></i></button>
                 </div>
-                <button className="text-indigo-500 hover:text-indigo-700 text-sm font-black">
-                  이력서 보기
-                </button>
-              </div>
-            ))}
-          </div>
 
-          <div className="pt-4 flex gap-3">
-            <button className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[14px] shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors"
-            onClick={() => alert("준비중입니다.")}>
-              <i className="bx bx-video"></i> 면접실 입장
-            </button>
-            <button
-              onClick={onClose}
-              className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[14px] hover:bg-slate-200 transition-colors"
-            >
-              닫기
-            </button>
-          </div>
+                <div className="p-8 space-y-5">
+                    <div>
+                        <label className="text-[12px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Interview Title</label>
+                        <input
+                            type="text"
+                            className="w-full p-4 bg-slate-50 border text-slate-700 border-slate-100 rounded-2xl focus:ring-2 ring-indigo-500 outline-none font-bold"
+                            placeholder="예: 백엔드 1차 기술 면접"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-[12px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Start Time</label>
+                            <input
+                                type="time"
+                                className="w-full p-4 bg-slate-50 border border-slate-100 text-slate-700 rounded-2xl outline-none font-bold"
+                                value={startTime}
+                                onChange={(e) => setStartTime(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[12px] font-black text-slate-400 uppercase mb-2 block tracking-widest">End Time</label>
+                            <input
+                                type="time"
+                                className="w-full p-4 bg-slate-50 border border-slate-100 text-slate-700 rounded-2xl outline-none font-bold"
+                                value={endTime}
+                                onChange={(e) => setEndTime(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-[12px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Select Candidates</label>
+                        <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                            {applicants.map(app => (
+                                <label
+                                    key={app.id}
+                                    htmlFor={`app-${app.id}`} // 💡 ID 연결
+                                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedApplicants.includes(app.id) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100 bg-slate-50'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            id={`app-${app.id}`} // 💡 ID 부여
+                                            type="checkbox"
+                                            className="hidden" // 숨겨져 있어도 ID로 연결되면 클릭됨
+                                            checked={selectedApplicants.includes(app.id)}
+                                            onChange={() => {
+                                                const isSelected = selectedApplicants.includes(app.id);
+                                                if (isSelected) {
+                                                    setSelectedApplicants(selectedApplicants.filter(id => id !== app.id));
+                                                } else {
+                                                    setSelectedApplicants([...selectedApplicants, app.id]);
+                                                }
+                                            }}
+                                        />
+                                        {/* 커스텀 디자인 박스 */}
+                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${selectedApplicants.includes(app.id) ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white border-slate-300'
+                                            }`}>
+                                            {selectedApplicants.includes(app.id) && <i className='bx bx-check text-sm'></i>}
+                                        </div>
+                                        <span className="text-[14px] font-bold text-slate-700">{app.name}</span>
+                                    </div>
+                                    <span className="text-[10px] bg-white text-slate-400 px-2 py-1 rounded-md border border-slate-100 font-bold">{app.position}</span>
+
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleSubmit}
+                        className="w-full py-4 bg-indigo-600 text-white rounded-[22px] font-black text-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 mt-4"
+                    >
+                        {mode === 'CREATE' ? '일정 저장하기' : '수정 완료'}
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

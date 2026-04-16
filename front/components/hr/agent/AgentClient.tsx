@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { JobPosting, Candidate, GeneratedQuestion } from "@/types/hr";
 import ControlPanel from "../ControlPanel";
 import ResultsPanel from "../ResultsPanel";
+import { fetchGeminiDeepAnalysis } from "@/lib/axios";
 
 interface AgentClientProps {
   jobPostings: JobPosting[];
@@ -22,30 +23,32 @@ export default function AgentClient({
   >([]);
 
   // 💡 실제 API 호출 로직을 여기에 연동합니다.
-  const handleGenerateAI = () => {
+  const handleGenerateAI = async () => {
     setIsGenerating(true);
     setGeneratedQuestions([]);
-
+    const quesData: GeneratedQuestion[] = await fetchGeminiDeepAnalysis(jobPostings.filter((j) => j.id === selectedJob)[0], candidates.filter((c) => c.id === selectedCandidate)[0]);
     setTimeout(() => {
-      setGeneratedQuestions([
-        {
-          id: 1,
-          type: "기술 검증",
-          question:
-            "이커머스 성능을 30% 개선한 과정에서 Lighthouse의 어떤 지표(LCP, TTI 등)를 중점적으로 모니터링하셨나요?",
-          intent: "성과 진위 및 트러블슈팅 능력 검증",
-          ragContext:
-            "지원자의 '성능 30% 개선' 이력과 공고의 '성능 최적화' 스킬 대조",
-        },
-        {
-          id: 2,
-          type: "아키텍처 설계",
-          question:
-            "Vue에서 React로 전환할 때 상태 관리 전략은 어떻게 재수립하셨나요?",
-          intent: "아키텍처 이해도 및 프레임워크 전환 적응력 측정",
-          ragContext: "지원자의 'Vue -> React 마이그레이션' 이력 기반 도출",
-        },
-      ]);
+      // setGeneratedQuestions([
+      //   {
+      //     id: 1,
+      //     type: "기술 검증",
+      //     question:
+      //       "이커머스 성능을 30% 개선한 과정에서 Lighthouse의 어떤 지표(LCP, TTI 등)를 중점적으로 모니터링하셨나요?",
+      //     intent: "성과 진위 및 트러블슈팅 능력 검증",
+      //     ragContext:
+      //       "지원자의 '성능 30% 개선' 이력과 공고의 '성능 최적화' 스킬 대조",
+      //   },
+      //   {
+      //     id: 2,
+      //     type: "아키텍처 설계",
+      //     question:
+      //       "Vue에서 React로 전환할 때 상태 관리 전략은 어떻게 재수립하셨나요?",
+      //     intent: "아키텍처 이해도 및 프레임워크 전환 적응력 측정",
+      //     ragContext: "지원자의 'Vue -> React 마이그레이션' 이력 기반 도출",
+      //   },
+      // ]);
+      // setGeneratedQuestions(quesData);
+      setGeneratedQuestions(quesData);
       setIsGenerating(false);
     }, 2500);
   };

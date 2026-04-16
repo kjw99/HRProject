@@ -1,9 +1,9 @@
 const AdminHeader: React.FC = () => {
     return (
-        <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+        <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-end px-8 shrink-0 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
 
             {/* 좌측: 전역 검색 (Global Search) */}
-            <div className="flex-1 max-w-md">
+            {/* <div className="flex-1 max-w-md">
                 <div className="relative group">
                     <i className='bx bx-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl group-focus-within:text-indigo-500 transition-colors'></i>
                     <input
@@ -16,7 +16,7 @@ const AdminHeader: React.FC = () => {
                         <kbd className="px-2 py-0.5 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-400 shadow-sm">K</kbd>
                     </div>
                 </div>
-            </div>
+            </div> */}
 
             {/* 우측: 유틸리티 및 프로필 */}
             <div className="flex items-center gap-6 ml-8">
