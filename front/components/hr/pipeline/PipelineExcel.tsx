@@ -46,7 +46,9 @@ export default function PipelineExcel({ initialApplicants }: { initialApplicants
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredData.map(app => (
-                <PipelineRow key={app.id} applicant={app} onStatusChange={handleStatusChange} />
+                <PipelineRow key={app.id} applicant={app} onStatusChange={handleStatusChange} onDetailClick={()=>
+                  alert(`지원자 ID: ${app.id}\n이름: ${app.name}\n이메일: ${app.email}\n직무: ${app.position}\n상태: ${app.status}`)
+                }/>
               ))}
             </tbody>
           </table>
