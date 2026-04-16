@@ -20,7 +20,7 @@ export default function PipelineExcel({ initialApplicants }: { initialApplicants
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-5 rounded-[24px] border border-slate-200 shadow-sm flex items-center">
+      <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex items-center">
         <div className="relative flex-1 max-w-md">
           <i className='bx bx-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl'></i>
           <input
@@ -33,9 +33,9 @@ export default function PipelineExcel({ initialApplicants }: { initialApplicants
         </div>
       </div>
 
-      <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-4xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left border-collapse min-w-200">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="p-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Candidate</th>
