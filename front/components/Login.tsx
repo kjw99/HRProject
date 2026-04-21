@@ -6,20 +6,19 @@ import Image from "next/image";
 import "boxicons/css/boxicons.min.css";
 import Link from "next/link";
 
-const inputClass =
-  "h-full w-full rounded-full border-2 border-white/25 bg-white/40 py-5 pl-5 pr-12 text-base text-zinc-900 outline-none transition placeholder:text-zinc-600/80 focus:border-blue-500 focus:bg-white focus:shadow-[0_0_0_4px_rgba(59,130,246,0.12)] sm:pr-[3.25rem]";
-
-const inputWrapClass = "relative h-[50px] w-full sm:h-[52px]";
-
+const inputWrapClass = "relative group w-full transition-all duration-300";
+const inputClass = "w-full h-12 bg-white/5 border border-white/20 rounded-xl px-5 pr-12 text-white placeholder:text-white/40 outline-none focus:border-indigo-400 focus:bg-white/10 focus:ring-4 focus:ring-indigo-500/20 transition-all duration-300 backdrop-blur-sm";
+const iconClass = "bx absolute right-4 top-1/2 -translate-y-1/2 text-xl text-white/50 group-focus-within:text-indigo-400 transition-colors duration-300";
 export default function Login() {
   const [id, setId] = useState<string>("");
   const [pw, setPw] = useState<string>("");
   const [pw2, setPw2] = useState<string>("");
+  const [name, setName] = useState("");
   const [same, setSame] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [signUp, setSignUp] = useState<boolean>(false);
   const router = useRouter();
-
+  const confirm = pw.length > 0 && pw2.length > 0 && name.length > 0 && id.length > 0;
   useEffect(() => {
     if (pw === pw2) setSame(true);
     else setSame(false);
@@ -82,28 +81,55 @@ export default function Login() {
         {signUp ? (
           <form
             className="w-full"
-            onSubmit={() => {
-              alert("SignUp functionality not implemented");
+            onSubmit={(e) => {
+              e.preventDefault(); // 페이지 새로고침 방지
+              if (!same) {
+                alert("비밀번호가 일치하지 않습니다.");
+                return;
+              }
+              // 여기에 회원가입 API 호출 로직 (axios 등)을 넣으시면 됩니다.
+              console.log({ user_email: id, user_name: name, password: pw });
+              alert("회원가입 요청이 전송되었습니다.");
             }}
           >
             <h1 className="mb-6 text-center text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
               SignUp
             </h1>
+
+            {/* 1. 이메일 입력 (user_email) */}
             <div className={`${inputWrapClass} mb-6 sm:mb-7`}>
               <input
-                type="text"
+                type="email"
                 placeholder="Email"
+                required
                 value={id}
                 onChange={(e) => setId(e.target.value)}
                 disabled={loading}
                 className={inputClass}
               />
+              <i className="bx bxs-envelope pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xl text-zinc-700 sm:right-5 sm:text-[1.25rem]" />
+            </div>
+
+            {/* 2. 이름 입력 (user_name) - DB 필수값 반영 */}
+            <div className={`${inputWrapClass} mb-6 sm:mb-7`}>
+              <input
+                type="text"
+                placeholder="Full Name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={loading}
+                className={inputClass}
+              />
               <i className="bx bxs-user pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xl text-zinc-700 sm:right-5 sm:text-[1.25rem]" />
             </div>
+
+            {/* 3. 비밀번호 입력 (pw_hash로 변환될 값) */}
             <div className={`${inputWrapClass} mb-6 sm:mb-7`}>
               <input
                 type="password"
                 placeholder="Password"
+                required
                 value={pw}
                 onChange={(e) => setPw(e.target.value)}
                 disabled={loading}
@@ -111,36 +137,45 @@ export default function Login() {
               />
               <i className="bx bxs-lock-alt pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xl text-zinc-700 sm:right-5 sm:text-[1.25rem]" />
             </div>
+
+            {/* 4. 비밀번호 확인 */}
             <div className={`${inputWrapClass} mb-2 sm:mb-3`}>
               <input
                 type="password"
                 placeholder="Verify Password"
+                required
                 value={pw2}
                 onChange={(e) => setPw2(e.target.value)}
                 disabled={loading}
                 className={inputClass}
               />
-              <i className="bx bxs-lock-alt pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xl text-zinc-700 sm:right-5 sm:text-[1.25rem]" />
+              <i className="bx bxs-check-shield pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xl text-zinc-700 sm:right-5 sm:text-[1.25rem]" />
             </div>
-            <div className="-mt-1 mb-2 flex items-center justify-center text-sm">
-              {same && pw && pw2 ? (
-                <p>same</p>
-              ) : pw && pw2 ? (
-                <p>not same</p>
+
+            {/* 비밀번호 일치 메시지 최적화 */}
+            <div className="mb-4 h-5 text-center text-xs font-medium">
+              {pw && pw2 ? (
+                same ? (
+                  <p className="text-emerald-600">비밀번호가 일치합니다.</p>
+                ) : (
+                  <p className="text-rose-500">비밀번호가 일치하지 않습니다.</p>
+                )
               ) : null}
             </div>
+
             <button
-              className="h-11 w-full cursor-pointer rounded-full border-none bg-white text-[15px] font-semibold text-zinc-800 shadow-[0_0_10px_rgba(0,0,0,0.1)] transition hover:bg-zinc-800/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 sm:h-[45px]"
+              className="h-11 w-full cursor-pointer rounded-full border-none bg-zinc-950 text-[15px] font-semibold text-white shadow-md transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 sm:h-[45px]"
               type="submit"
-              disabled={loading}
+              disabled={loading || !same || !confirm} // 비밀번호가 다르면 버튼 비활성화
             >
-              {loading ? "등록 중..." : "Register"}
+              {loading ? "등록 중..." : "Register Now"}
             </button>
-            <div className="mt-5 text-center text-[14.5px] text-zinc-900">
+
+            <div className="mt-5 text-center text-[14.5px] text-zinc-800">
               <p>
-                Don you have an account?{" "}
+                Already have an account?{" "}
                 <button
-                  className="font-semibold text-zinc-950 no-underline hover:underline"
+                  className="font-bold text-zinc-950 no-underline hover:underline"
                   type="button"
                   onClick={() => changeSit()}
                   disabled={loading}
