@@ -164,7 +164,7 @@ export default function Login() {
             </div>
 
             <button
-              className="h-11 w-full cursor-pointer rounded-full border-none bg-zinc-950 text-[15px] font-semibold text-white shadow-md transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 sm:h-[45px]"
+              className="h-11 w-full cursor-pointer rounded-full border-none bg-zinc-950 text-[15px] font-semibold text-white shadow-md transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 sm:h-11.25"
               type="submit"
               disabled={loading || !same || !confirm} // 비밀번호가 다르면 버튼 비활성화
             >
@@ -228,7 +228,7 @@ export default function Login() {
               </Link>
             </div>
             <button
-              className="h-11 w-full cursor-pointer rounded-full border-none bg-white text-[15px] font-semibold text-zinc-800 shadow-[0_0_10px_rgba(0,0,0,0.1)] transition hover:bg-zinc-800/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 sm:h-[45px]"
+              className="h-11 w-full cursor-pointer rounded-full border-none bg-white text-[15px] font-semibold text-zinc-800 shadow-[0_0_10px_rgba(0,0,0,0.1)] transition hover:bg-zinc-800/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 sm:h-11.25"
               type="submit"
               disabled={loading}
             >
