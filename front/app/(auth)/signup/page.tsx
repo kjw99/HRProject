@@ -1,7 +1,10 @@
-function page() {
-    return (
-        <div>
+import ComingSoon from "@/components/rest/ComingSoon"
 
+function page() {
+
+    return (
+        <div className="bg-white h-screen flex items-center justify-center">
+            <ComingSoon title="회원가입" />
         </div>
     )
 }
