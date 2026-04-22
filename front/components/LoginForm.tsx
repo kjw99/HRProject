@@ -129,13 +129,13 @@ const LoginForm = () => {
                                 <h3 className="text-2xl font-bold text-[#000000] mb-6">Sign In</h3>
                                 <InputGroup icon="👤" placeholder="Email" type="text" value={email} onChange={setEmail} disabled={disabled} />
                                 <InputGroup icon="🔒" placeholder="Password" type="password" value={pw} onChange={setPw} disabled={disabled} />
-                                <button className="w-full py-3 bg-[#30219f] text-white rounded-lg font-semibold text-lg hover:bg-[#3d8b6f] transition-colors">
+                                <button className="w-full py-3 bg-[#160bb0] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors">
                                     Sign in
                                 </button>
                                 <p className="text-xs text-center font-bold cursor-pointer">Forgot password?</p>
                                 <p className="text-xs text-center">
                                     Don't have an account?{" "}
-                                    <span onClick={toggle} className="font-bold cursor-pointer hover:underline text-[#4EA685]">Sign up here</span>
+                                    <span onClick={toggle} className="font-bold cursor-pointer hover:underline text-[#000000]">Sign up here</span>
                                 </p>
                             </motion.div>
                         )}
