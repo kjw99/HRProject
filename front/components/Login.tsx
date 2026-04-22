@@ -240,6 +240,7 @@ export default function Login() {
                 <button
                   className="font-semibold text-zinc-950 no-underline hover:underline"
                   type="button"
+
                   onClick={() => changeSit()}
                   disabled={loading}
                 >
@@ -252,4 +253,5 @@ export default function Login() {
       </div>
     </div>
   );
+
 }
