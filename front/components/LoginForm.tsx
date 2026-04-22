@@ -17,7 +17,13 @@ const LoginForm = () => {
         setIsLoaded(true);
     }, []);
 
-    const toggle = () => setIsSignIn(!isSignIn);
+    const toggle = () => {
+        setName("");
+        setEmail("");
+        setPw("");
+        setConfirmPw("");
+        setIsSignIn(!isSignIn);
+    }
 
     // 배경 곡선 애니메이션 설정
     const bgVariants = {
