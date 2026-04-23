@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminSidebar from "@/components/admin/layout/AdminSidebar";
 import AdminHeader from "./AdminHeader";
+import useAuthStore from "@/store/getAuth";
+import { useRouter } from "next/navigation";
 
 export default function AdminAppFrame({
   children,
@@ -10,7 +12,18 @@ export default function AdminAppFrame({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-
+  const token = useAuthStore((state) => state.token);
+  const router = useRouter();
+  useEffect(() => {
+    if (!token) {
+      router.push("/login");
+    }
+  }, [token, router]);
+  if (!token) return (
+    <div className="flex h-dvh items-center justify-center bg-[#F8FAFC] font-sans">
+      <p className="text-sm font-medium text-slate-500">로그인이 필요합니다.</p>
+    </div>
+  )
   return (
     <div className="flex h-dvh bg-[#F8FAFC] font-sans overflow-hidden">
       {mobileOpen ? (

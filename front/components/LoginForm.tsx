@@ -3,33 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from "next/navigation";
-import axios from 'axios';
-
-interface LoginRequest {
-    email: string;
-    password: string; // 변수명이 pw라도 타입 내부 키 이름은 서버와 맞춰야 합니다.
-}
-
-export interface SignUpRequest {
-    email: string;
-    password: string;
-    name: string;
-    phoneNumber?: string; // 선택 사항일 경우 ? 붙임
-}
-
-export interface SignUpResponse {
-    success: boolean;
-    message: string;
-    userId: number;
-}
-
-interface LoginResponse {
-    token: string;
-    user: {
-        id: number;
-        name: string;
-    };
-}
+import useAuthStore from '@/store/getAuth';
+import { loginApi, signUpApi } from '@/lib/auth';
+import { LoginResponse, SignUpRequest } from '@/types/auth';
 
 // 배경 곡선 애니메이션 설정
 const bgVariants = {
@@ -50,13 +26,14 @@ const bgVariants = {
 const LoginForm = () => {
     const [isSignIn, setIsSignIn] = useState<boolean>(true);
     const [isLoaded, setIsLoaded] = useState<boolean>(false);
-    const [name, setName] = useState<string>("");
-    const [email, setEmail] = useState<string>("");
-    const [password, setPassword] = useState<string>("");
-    const [confirmPw, setConfirmPw] = useState<string>("");
-    const [loading, setLoading] = useState<boolean>(false);
-    const [disabled, setDisabled] = useState<boolean>(false);
+    const [name, setName] = useState<string>(""); // 회원가입 시 이름 입력 받는 필드 추가
+    const [email, setEmail] = useState<string>(""); // 로그인과 회원가입 모두에서 이메일 입력 받는 필드
+    const [password, setPassword] = useState<string>(""); // 로그인과 회원가입 모두에서 비밀번호 입력 받는 필드
+    const [confirmPw, setConfirmPw] = useState<string>(""); // 회원가입 시 비밀번호 확인 입력 받는 필드 추가
+    const [loading, setLoading] = useState<boolean>(false); // 로그인/회원가입 요청이 진행 중인지 여부를 나타내는 상태
+    const [disabled, setDisabled] = useState<boolean>(false); // 입력 필드와 버튼을 비활성화할지 여부를 나타내는 상태 (예: 요청이 진행 중일 때)
     const router = useRouter();
+    const setAuth = useAuthStore((state) => state.setAuth);
 
     useEffect(() => {
         setIsLoaded(true);
@@ -76,38 +53,14 @@ const LoginForm = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            const url = 'https://api.example.com/login';
-            // 2. 전송할 데이터 객체
-            const data = {
-                email,
-                password
-            };
-            // 3. POST 요청 보내기
-            const response = await axios.post(url, data);
+            const data: LoginResponse = await loginApi({ user_email: email, password: password });
 
-            // 로그인 성공 시 처리 (예: 토큰 저장, 페이지 이동 등)
-            console.log('로그인 성공:', response.data);
-
-            // 보통 서버에서 JWT 토큰을 보내주므로 이를 저장합니다.
-            const token = response.data.token;
-            localStorage.setItem('userToken', token);
-
-            // return response.data;
-
-        } catch {
-            if (email.at(0) === "h" || email.at(0) === "H") {
-                alert("인사 담당자 계정으로 로그인합니다.");
-                router.push("/hr/agent");
-            } else if (email.at(0) === "a" || email.at(0) === "A") {
-                alert("관리자 계정으로 로그인합니다.");
-                router.push("/admin");
-            } else if (email.at(0) === "u" || email.at(0) === "U") {
-                alert("지원자 계정으로 로그인합니다.");
-                router.push("/applicant/dashboard");
-            } else {
-                alert("로그인 실패! ID/비밀번호를 확인해주세요.");
-            }
-
+            // Zustand 스토어 업데이트
+            setAuth(data.user_name, data.access_token);
+            handleLoginError(data.token_type);
+        } catch (error: Error | any) {
+            // 에러 시 기존에 작성하신 테스트용 조건 로직 실행
+            handleLoginError(email);
         } finally {
             setLoading(false);
         }
@@ -116,24 +69,32 @@ const LoginForm = () => {
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+
         try {
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-
-            const sendData: SignUpRequest = {
-                email,
-                password,
-                name
-            };
-
-            const response = await axios.post<SignUpResponse>(
-                'https://api.example.com/signup',
-                sendData
-            );
-        } catch {
-            alert("이메일 또는 비밀번호 형식이 올바르지 않습니다.");
+            // 1. 비밀번호 일치 여부 선제 검사
+            if (password !== confirmPw) {
+                // 에러를 던져서 catch 블록으로 보냄
+                throw new Error("PASSWORD_MISMATCH");
+            }
+            const signUpData: SignUpRequest = await signUpApi({
+                user_email: email,
+                password: password,
+                user_name: name,
+                role: "hr" // 기본값 설정
+            });
+            alert("회원가입 성공! 로그인해주세요.");
+        } catch (error) {
+            alert("회원가입 실패: 형식을 확인해주세요.");
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleLoginError = (email: string) => {
+        const firstChar = email.toLowerCase().charAt(0);
+        if (firstChar === 'h') router.push("/hr/agent");
+        else if (firstChar === 'a') router.push("/admin");
+        else alert("로그인 정보가 올바르지 않습니다.");
     };
 
     if (!isLoaded) return null;
@@ -143,13 +104,23 @@ const LoginForm = () => {
 
             {/* --- BACKGROUND LAYER --- */}
             <motion.div
-                className="absolute top-0 h-screen w-[300vw] z-6 shadow-2xl bg-linear-to-br from-[#1b3285] to-[#1b3285] hidden md:block"
+                className="absolute top-0 h-screen w-[300vw] z-6 shadow-2xl bg-linear-to-br from-[#70a7f0] to-[#1b3285] hidden md:block"
                 initial={false}
                 animate={isSignIn ? "signIn" : "signUp"}
                 variants={bgVariants}
                 transition={{ duration: 1, ease: [0.645, 0.045, 0.355, 1.0] }}
+                style={{ opacity: 0.7 }}
             />
-
+            <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute top-0 left-0 w-full h-full object-cover"
+            >
+                <source src={`./iljin_main_02.mp4`} type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
             {/* --- CONTENT SECTION (TEXT & IMG) --- */}
             <div className="absolute inset-0 z-10 pointer-events-none flex w-full h-full">
                 {/* Sign In Content */}
@@ -196,7 +167,7 @@ const LoginForm = () => {
                                 <InputGroup icon="✉️" placeholder="Email" type="email" value={email} onChange={setEmail} disabled={disabled} />
                                 <InputGroup icon="🔒" placeholder="Password" type="password" value={password} onChange={setPassword} disabled={disabled} />
                                 <InputGroup icon="🔒" placeholder="Confirm password" type="password" value={confirmPw} onChange={setConfirmPw} disabled={disabled} />
-                                <button className="w-full py-3 bg-[#160bb0] text-white 
+                                <button className="w-full py-3 bg-[#70a7f0] text-white 
                                     rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors"
                                     type="submit"
                                     disabled={loading}>
@@ -226,7 +197,7 @@ const LoginForm = () => {
                                 <h3 className="text-2xl font-bold text-[#000000] mb-6">Sign In</h3>
                                 <InputGroup icon="👤" placeholder="Email" type="text" value={email} onChange={setEmail} disabled={disabled} />
                                 <InputGroup icon="🔒" placeholder="Password" type="password" value={password} onChange={setPassword} disabled={disabled} />
-                                <button className="w-full py-3 bg-[#160bb0] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors"
+                                <button className="w-full py-3 bg-[#70a7f0] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors"
                                     type="submit"
                                     disabled={loading}>
                                     Sign in
