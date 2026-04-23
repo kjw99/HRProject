@@ -2,16 +2,61 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from "next/navigation";
+import axios from 'axios';
+
+interface LoginRequest {
+    email: string;
+    password: string; // 변수명이 pw라도 타입 내부 키 이름은 서버와 맞춰야 합니다.
+}
+
+export interface SignUpRequest {
+    email: string;
+    password: string;
+    name: string;
+    phoneNumber?: string; // 선택 사항일 경우 ? 붙임
+}
+
+export interface SignUpResponse {
+    success: boolean;
+    message: string;
+    userId: number;
+}
+
+interface LoginResponse {
+    token: string;
+    user: {
+        id: number;
+        name: string;
+    };
+}
+
+// 배경 곡선 애니메이션 설정
+const bgVariants = {
+    signIn: {
+        x: "0%",
+        right: "50%",
+        borderBottomRightRadius: "50vw",
+        borderTopLeftRadius: "50vw",
+    },
+    signUp: {
+        x: "100%",
+        right: "50%",
+        borderBottomRightRadius: "0vw",
+        borderTopLeftRadius: "100vw", // 반대 방향 곡선 효과
+    }
+};
 
 const LoginForm = () => {
     const [isSignIn, setIsSignIn] = useState<boolean>(true);
     const [isLoaded, setIsLoaded] = useState<boolean>(false);
     const [name, setName] = useState<string>("");
     const [email, setEmail] = useState<string>("");
-    const [pw, setPw] = useState<string>("");
+    const [password, setPassword] = useState<string>("");
     const [confirmPw, setConfirmPw] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
     const [disabled, setDisabled] = useState<boolean>(false);
+    const router = useRouter();
 
     useEffect(() => {
         setIsLoaded(true);
@@ -20,24 +65,74 @@ const LoginForm = () => {
     const toggle = () => {
         setName("");
         setEmail("");
-        setPw("");
+        setPassword("");
         setConfirmPw("");
         setIsSignIn(!isSignIn);
     }
 
-    // 배경 곡선 애니메이션 설정
-    const bgVariants = {
-        signIn: {
-            x: "0%",
-            right: "50%",
-            borderBottomRightRadius: "50vw",
-            borderTopLeftRadius: "50vw",
-        },
-        signUp: {
-            x: "100%",
-            right: "50%",
-            borderBottomRightRadius: "0vw",
-            borderTopLeftRadius: "100vw", // 반대 방향 곡선 효과
+    // const handleLogin = async (e: React.FormEvent): Promise<LoginResponse | undefined> => {
+    const handleLogin = async (e: React.FormEvent) => {
+
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const url = 'https://api.example.com/login';
+            // 2. 전송할 데이터 객체
+            const data = {
+                email,
+                password
+            };
+            // 3. POST 요청 보내기
+            const response = await axios.post(url, data);
+
+            // 로그인 성공 시 처리 (예: 토큰 저장, 페이지 이동 등)
+            console.log('로그인 성공:', response.data);
+
+            // 보통 서버에서 JWT 토큰을 보내주므로 이를 저장합니다.
+            const token = response.data.token;
+            localStorage.setItem('userToken', token);
+
+            // return response.data;
+
+        } catch {
+            if (email.at(0) === "h" || email.at(0) === "H") {
+                alert("인사 담당자 계정으로 로그인합니다.");
+                router.push("/hr/agent");
+            } else if (email.at(0) === "a" || email.at(0) === "A") {
+                alert("관리자 계정으로 로그인합니다.");
+                router.push("/admin");
+            } else if (email.at(0) === "u" || email.at(0) === "U") {
+                alert("지원자 계정으로 로그인합니다.");
+                router.push("/applicant/dashboard");
+            } else {
+                alert("로그인 실패! ID/비밀번호를 확인해주세요.");
+            }
+
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSignUp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+
+            const sendData: SignUpRequest = {
+                email,
+                password,
+                name
+            };
+
+            const response = await axios.post<SignUpResponse>(
+                'https://api.example.com/signup',
+                sendData
+            );
+        } catch {
+            alert("이메일 또는 비밀번호 형식이 올바르지 않습니다.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -83,7 +178,7 @@ const LoginForm = () => {
             </div>
 
             {/* --- FORM SECTION --- */}
-            <div className="flex h-screen w-full relative z-[5]">
+            <div className="flex h-screen w-full relative z-5">
                 {/* SIGN UP FORM (Left Side) */}
                 <div className="flex-1 flex items-center justify-center p-4">
                     <AnimatePresence>
@@ -94,17 +189,18 @@ const LoginForm = () => {
                                 exit={{ scale: 0, opacity: 0 }}
                                 transition={{ delay: 0.5, duration: 0.5 }}
                                 className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl space-y-4"
-                                onSubmit={() => {
-
-                                }}
+                                onSubmit={handleSignUp}
                             >
                                 <h3 className="text-2xl font-bold text-[#000000] mb-6">Sign Up</h3>
                                 <InputGroup icon="👤" placeholder="Username" type="text" value={name} onChange={setName} disabled={disabled} />
                                 <InputGroup icon="✉️" placeholder="Email" type="email" value={email} onChange={setEmail} disabled={disabled} />
-                                <InputGroup icon="🔒" placeholder="Password" type="password" value={pw} onChange={setPw} disabled={disabled} />
+                                <InputGroup icon="🔒" placeholder="Password" type="password" value={password} onChange={setPassword} disabled={disabled} />
                                 <InputGroup icon="🔒" placeholder="Confirm password" type="password" value={confirmPw} onChange={setConfirmPw} disabled={disabled} />
-                                <button className="w-full py-3 bg-[#160bb0] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors">
-                                    Sign up
+                                <button className="w-full py-3 bg-[#160bb0] text-white 
+                                    rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors"
+                                    type="submit"
+                                    disabled={loading}>
+                                    {loading ? "등록 중..." : "회원가입"}
                                 </button>
                                 <p className="text-xs text-center">
                                     Already have an account?{" "}
@@ -119,7 +215,8 @@ const LoginForm = () => {
                 <div className="flex-1 flex items-center justify-center p-4">
                     <AnimatePresence>
                         {isSignIn && (
-                            <motion.div
+                            <motion.form
+                                onSubmit={handleLogin}
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
@@ -128,8 +225,10 @@ const LoginForm = () => {
                             >
                                 <h3 className="text-2xl font-bold text-[#000000] mb-6">Sign In</h3>
                                 <InputGroup icon="👤" placeholder="Email" type="text" value={email} onChange={setEmail} disabled={disabled} />
-                                <InputGroup icon="🔒" placeholder="Password" type="password" value={pw} onChange={setPw} disabled={disabled} />
-                                <button className="w-full py-3 bg-[#160bb0] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors">
+                                <InputGroup icon="🔒" placeholder="Password" type="password" value={password} onChange={setPassword} disabled={disabled} />
+                                <button className="w-full py-3 bg-[#160bb0] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors"
+                                    type="submit"
+                                    disabled={loading}>
                                     Sign in
                                 </button>
                                 <p className="text-xs text-center font-bold cursor-pointer">Forgot password?</p>
@@ -137,7 +236,7 @@ const LoginForm = () => {
                                     Don't have an account?{" "}
                                     <span onClick={toggle} className="font-bold cursor-pointer hover:underline text-[#000000]">Sign up here</span>
                                 </p>
-                            </motion.div>
+                            </motion.form>
                         )}
                     </AnimatePresence>
                 </div>
