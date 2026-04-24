@@ -81,3 +81,15 @@ test: 감성 분석 유닛 테스트 추가
 chore: Docker 설정 변경
 MR: 머지 리퀘스트
 ```
+
+
+## 브랜치 전략
+* 브랜치 전략은 main -> develop -> feature/backend-기능명, feature/frontend-기능명
+* 가능한 지키기!
+```
+main          ← 배포 (프로덕션)
+  └── develop     ← 개발 통합 브랜치
+        ├── feature/backend-auth      ← 백엔드 기능
+        ├── feature/frontend-login    ← 프론트 기능
+        └── feature/user-api          ← 기능 단위
+```

@@ -29,14 +29,3 @@ backend/                        ← 프로젝트 루트
 ├── requirements.txt
 └── README.md
 ```
-
-## 브랜치 전략
-* 브랜치 전략은 main -> develop -> feature/backend-기능명, feature/frontend-기능명
-* 이런 식으로 하는 것을 생각함.
-```
-main          ← 배포 (프로덕션)
-  └── develop     ← 개발 통합 브랜치
-        ├── feature/backend-auth      ← 백엔드 기능
-        ├── feature/frontend-login    ← 프론트 기능
-        └── feature/user-api          ← 기능 단위
-```
