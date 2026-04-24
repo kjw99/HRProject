@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import Base, engine, get_db
-from models import Conversation
+from back.app.models import Conversation
 import graph as graph_module
 
 from auth.router import router as auth_router
