@@ -3,8 +3,8 @@ import bcrypt
 from datetime import datetime, timedelta
 import os
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
-ALGORITHM = "HS256"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+ALGORITHM = os.getenv("JWT_ALGORITHM")
 
 
 def get_password_hash(password: str) -> str:
