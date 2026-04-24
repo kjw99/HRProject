@@ -1,8 +1,10 @@
+
+from dotenv import load_dotenv
 import os
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
-
+load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL 환경변수가 설정되지 않았습니다.")
@@ -21,8 +23,3 @@ class Base(DeclarativeBase):
 async def get_db():
     async with AsyncSessionLocal() as db:
         yield db
-
-
-# 모델을 metadata에 등록 (create_all 시 users, conversations 등 반영)
-import models  # noqa: E402, F401
-import auth.models  # noqa: E402, F401
