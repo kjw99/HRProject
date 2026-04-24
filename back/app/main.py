@@ -1,8 +1,9 @@
 from fastapi import FastAPI
-from routers.auth_router import router as auth_router
-from dependencies.database import engine, Base
+from app.routers.auth_router import router as auth_router
+from app.dependencies.database import async_engine, Base
 
-Base.metadata.create_all(bind=engine)
+# alembic 사용중.
+# Base.metadata.create_all(bind=async_engine)
 
 app = FastAPI()
 

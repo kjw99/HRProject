@@ -1,9 +1,15 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
-from database import get_db
-from back.app.services.auth_service import auth_service
-from models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession
+from database import get_async_db
+from app.services.auth_service import auth_service
+from app.models.user import User
+from app.repositories.user_repository import user_repository
+import jwt
+import os
+
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+ALGORITHM = os.getenv("JWT_ALGORITHM")
 
 # Authorization 헤더에서 Bearer 토큰을 자동으로 추출한다.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -11,6 +17,33 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> User:
-    return auth_service.get_current_user(db, token)
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = int(payload.get("sub"))
+
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="유효하지 않은 토큰입니다.",
+            )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="토큰이 만료되었습니다.",
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="유효하지 않은 토큰입니다.",
+        )
+
+    user = user_repository.find_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="사용자를 찾을 수 없습니다.",
+        )
+
+    return user

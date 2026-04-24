@@ -25,9 +25,12 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True  # SQLAlchemy 모델을 Pydantic으로 변환 허용
 
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+class UserInfo(BaseModel):
     user_name: str
     user_id: int
     role: Literal["admin", "hr", "interviewer"]
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserInfo
