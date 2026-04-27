@@ -20,6 +20,12 @@ class DuplicateException(AppException):
     code = "DUPLICATE_RESOURCE"
 
 
+class ConflictException(AppException):
+    """요청이 현재 리소스 상태와 충돌할 때"""
+    status_code = 409
+    code = "CONFLICT"
+
+
 class UnauthorizedException(AppException):
     """인증 실패 (로그인이 안 되었거나 토큰이 유효하지 않을 때)"""
     status_code = 401

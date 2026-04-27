@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routers.auth_router import router as auth_router
+from app.routers.position_router import router as position_router
 from app.dependencies.database import async_engine, Base
 from app.core.exception_handlers import register_exception_handlers
 
@@ -12,6 +13,7 @@ app = FastAPI()
 register_exception_handlers(app)
 
 app.include_router(auth_router)
+app.include_router(position_router)
 
 
 @app.get("/")
