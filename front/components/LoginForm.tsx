@@ -100,7 +100,7 @@ const LoginForm = () => {
     if (!isLoaded) return null;
 
     return (
-        <div className="relative min-h-screen w-full bg-white overflow-hidden font-['Poppins']">
+        <div className="relative min-h-screen w-full bg-white overflow-hidden font-['Pretendard']">
 
             {/* --- BACKGROUND LAYER --- */}
             <motion.div
@@ -194,18 +194,18 @@ const LoginForm = () => {
                                 transition={{ delay: 0.5, duration: 0.5 }}
                                 className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl space-y-4"
                             >
-                                <h3 className="text-2xl font-bold text-[#000000] mb-6">Sign in</h3>
-                                <InputGroup icon="👤" placeholder="Email" type="text" value={email} onChange={setEmail} disabled={disabled} />
+                                <h3 className="text-2xl font-bold text-[#000000] mb-6">로그인</h3>
+                                <InputGroup icon="👤" placeholder="E-mail" type="text" value={email} onChange={setEmail} disabled={disabled} />
                                 <InputGroup icon="🔒" placeholder="Password" type="password" value={password} onChange={setPassword} disabled={disabled} />
                                 <button className="w-full py-3 bg-[#1e69ca] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors"
                                     type="submit"
                                     disabled={loading}>
-                                    Sign in
+                                    로그인
                                 </button>
-                                <p className="text-xs text-center font-bold cursor-pointer">Forgot password?</p>
+                                <p className="text-xs text-center font-bold cursor-pointer">비밀번호 찾기</p>
                                 <p className="text-xs text-center">
-                                    Don't have an account?{" "}
-                                    <span onClick={toggle} className="font-bold cursor-pointer hover:underline text-[#000000]">Sign up here</span>
+                                    아이디 생성 {" "}
+                                    <span onClick={toggle} className="font-bold cursor-pointer hover:underline text-[#000000]">회원가입 하러가기</span>
                                 </p>
                             </motion.form>
                         )}
