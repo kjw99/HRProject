@@ -1,11 +1,11 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import get_async_db
+from app.dependencies.database import get_async_db
 from app.services.auth_service import auth_service
 from app.models.user import User
 from app.repositories.user_repository import user_repository
-import jwt
+from jose import jwt
 import os
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")

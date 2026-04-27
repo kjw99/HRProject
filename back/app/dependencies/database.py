@@ -12,6 +12,12 @@ ASYNC_DATABASE_URL = SYNC_DATABASE_URL.replace("postgresql://", "postgresql+asyn
 
 # Async 엔진 생성
 async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=True)
+# async_engine = create_async_engine(
+#     ASYNC_DATABASE_URL,
+#     echo=True,
+#     pool_pre_ping=True,
+#     # pool_recycle=1800 
+# )
 
 # Async 세션 생성기
 AsyncSessionLocal = async_sessionmaker(

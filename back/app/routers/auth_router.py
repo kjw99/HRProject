@@ -17,3 +17,7 @@ async def sign_up(data: UserCreate, db: AsyncSession = Depends(get_async_db)):
 async def sign_in(data: UserLogin, db: AsyncSession = Depends(get_async_db)):
     token = await auth_service.signin(db, data)
     return token
+
+async def get_current_user():
+    # TODO: decode JWT later
+    return {"role": "admin"}  # temporary mock

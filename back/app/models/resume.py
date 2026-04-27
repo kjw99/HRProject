@@ -103,7 +103,7 @@ class Resume(Base):
     )
     statements: Mapped[list["Statement"]] = relationship(
         back_populates="resume",
-        order_by="Statement.personal_statement_id.asc()",  # 문항 순서대로
+        order_by="Statement.statement_id.asc()",  # 문항 순서대로
         cascade="all, delete-orphan",
     )
 

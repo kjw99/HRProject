@@ -9,8 +9,18 @@ class UserBase(BaseModel):
     role: Literal["admin", "hr", "interviewer"]
 
 # 회원가입 요청
-class UserCreate(UserBase):
+# class UserCreate(UserBase):
+#     password: str
+
+class UserCreate(BaseModel):
+    user_email: EmailStr
+    user_name: str
     password: str
+
+# class UserCreateRequest(BaseModel):
+#     userEmail: EmailStr
+#     password: str
+#     userName: str
 
 # 로그인 요청
 class UserLogin(BaseModel):
@@ -29,6 +39,11 @@ class UserInfo(BaseModel):
     user_name: str
     user_id: int
     role: Literal["admin", "hr", "interviewer"]
+
+
+class EmailCheckResponse(BaseModel):
+    available: bool
+    message: str
 
 class TokenResponse(BaseModel):
     access_token: str
