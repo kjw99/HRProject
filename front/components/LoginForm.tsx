@@ -194,10 +194,10 @@ const LoginForm = () => {
                                 transition={{ delay: 0.5, duration: 0.5 }}
                                 className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl space-y-4"
                             >
-                                <h3 className="text-2xl font-bold text-[#000000] mb-6">Sign In</h3>
+                                <h3 className="text-2xl font-bold text-[#000000] mb-6">Sign in</h3>
                                 <InputGroup icon="👤" placeholder="Email" type="text" value={email} onChange={setEmail} disabled={disabled} />
                                 <InputGroup icon="🔒" placeholder="Password" type="password" value={password} onChange={setPassword} disabled={disabled} />
-                                <button className="w-full py-3 bg-[#70a7f0] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors"
+                                <button className="w-full py-3 bg-[#1e69ca] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors"
                                     type="submit"
                                     disabled={loading}>
                                     Sign in
