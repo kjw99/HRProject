@@ -1,10 +1,11 @@
 import jwt
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = os.getenv("JWT_ALGORITHM")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "30"))
 
 
 def get_password_hash(password: str) -> str:
@@ -17,9 +18,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     )
 
 
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    # 유효기간 24시간
-    expire = datetime.utcnow() + timedelta(hours=24)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+def create_access_token(user_id: int, role: str):
+    expire = datetime.now(timezone.utc) + timedelta(minutes=EXPIRE_MINUTES)
+    payload = {
+            "sub": str(user_id),
+            "role": role,
+            "exp": expire,
+        }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)

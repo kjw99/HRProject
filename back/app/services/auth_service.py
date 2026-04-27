@@ -33,7 +33,7 @@ class AuthService:
             raise HTTPException(status_code=401, detail="Invalid password")
 
         access_token = create_access_token(
-            data={"sub": str(user.user_id)}
+            user.user_id, user.role
         )
 
         token = TokenResponse(
