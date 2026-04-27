@@ -1,6 +1,6 @@
 from app.repositories.user_repository import user_repository
 from app.core.security import get_password_hash, verify_password, create_access_token
-from fastapi import HTTPException
+from app.core.exceptions import DuplicateException, UnauthorizedException
 from app.schemas.user import TokenResponse, UserInfo
 
 class AuthService:
@@ -8,7 +8,7 @@ class AuthService:
         existing_user = await user_repository.get_user_by_email(db, data.user_email)
 
         if existing_user:
-            raise HTTPException(status_code=400, detail="Email already exists")
+            raise DuplicateException("이메일 사용 불가")            
 
         hashed_pw = get_password_hash(data.password)
 
@@ -27,10 +27,10 @@ class AuthService:
         user = await user_repository.get_user_by_email(db, data.user_email)
 
         if not user:
-            raise HTTPException(status_code=401, detail="Invalid email")
+            raise UnauthorizedException("아이디 또는 비밀번호가 올바르지 않습니다.")            
 
         if not verify_password(data.password, user.pw_hash):
-            raise HTTPException(status_code=401, detail="Invalid password")
+            raise UnauthorizedException("아이디 또는 비밀번호가 올바르지 않습니다.")
 
         access_token = create_access_token(
             user.user_id, user.role

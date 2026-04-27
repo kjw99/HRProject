@@ -2,9 +2,9 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_async_db
-from app.services.auth_service import auth_service
 from app.models.user import User
 from app.repositories.user_repository import user_repository
+from app.core.exceptions import UnauthorizedException
 import jwt
 import os
 
@@ -24,26 +24,14 @@ def get_current_user(
         user_id: int = int(payload.get("sub"))
 
         if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="유효하지 않은 토큰입니다.",
-            )
+            raise UnauthorizedException("유효하지 않은 토큰입니다.")
     except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="토큰이 만료되었습니다.",
-        )
+        raise UnauthorizedException("토큰이 만료되었습니다.")
     except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="유효하지 않은 토큰입니다.",
-        )
+        raise UnauthorizedException("유효하지 않은 토큰입니다.")
 
     user = user_repository.find_by_id(db, user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="사용자를 찾을 수 없습니다.",
-        )
+        raise UnauthorizedException("사용자를 찾을 수 없습니다.")
 
     return user
