@@ -14,12 +14,10 @@ class CaseModel(BaseModel):
 
 class PositionCreate(CaseModel):
     position_name: str = Field(..., min_length=1, max_length=100)
-    department_name: str = Field(..., min_length=1, max_length=100)
 
 
 class PositionUpdate(CaseModel):
     position_name: str | None = Field(None, min_length=1, max_length=100)
-    department_name: str | None = Field(None, min_length=1, max_length=100)
 
     @model_validator(mode="after")
     def validate_update_fields(self):
@@ -36,5 +34,4 @@ class PositionUpdate(CaseModel):
 class PositionResponse(CaseModel):
     position_id: int
     position_name: str
-    department_name: str
     created_at: datetime

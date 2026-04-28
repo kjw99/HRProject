@@ -23,11 +23,6 @@ class Position(Base):
         nullable=False,
         comment="직무명",
     )
-    department_name: Mapped[str] = mapped_column(
-        String(100),
-        nullable=False,
-        comment="부서명",
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -58,6 +53,5 @@ class Position(Base):
     def __repr__(self) -> str:
         return (
             f"<Position(id={self.position_id}, "
-            f"name={self.position_name}, "
-            f"department={self.department_name})>"
+            f"name={self.position_name})>"
         )
