@@ -17,3 +17,18 @@
 #     print("❌ Connection failed:", e)
 
 # uvicorn app.main:app --reload
+
+
+# {
+#   "user_email": "test@test.com",
+#   "password": "password123!",
+#   "user_name": "Test User"
+# }
+
+
+# curl -X POST http://127.0.0.1:8000/api/auth/login \
+#   -H "Content-Type: application/json" \
+#   -d '{
+#     "user_email": "admin@company.com",
+#     "password": "admin123!"
+# }'

@@ -12,10 +12,10 @@ router = APIRouter(prefix="/api/hr", tags=["HR"])
 async def create_interviewer(
     request: UserCreate,
     db: AsyncSession = Depends(get_async_db),
-    # current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     # TEMP: comment auth while testing
-    # if current_user.role != "hr":
-    #     raise HTTPException(status_code=403)
+    if current_user.role != "hr":
+        raise HTTPException(status_code=403)
 
     return await user_service.create_user_service(db, request, role="interviewer")

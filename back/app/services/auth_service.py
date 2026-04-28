@@ -4,27 +4,11 @@ from fastapi import HTTPException
 from app.schemas.user import TokenResponse, UserInfo
 
 class AuthService:
-    async def signup(self, db, data):
-        existing_user = await user_repository.get_user_by_email(db, data.user_email)
-
-        if existing_user:
-            raise HTTPException(status_code=400, detail="Email already exists")
-
-        hashed_pw = get_password_hash(data.password)
-
-        user = await user_repository.create_user(
-            db,
-            email=data.user_email,
-            password_hash=hashed_pw,
-            name=data.user_name,
-            role=data.role
-        )
-
-        return user
-
-
-    async def signin(self, db, data):
+   
+    async def login(self, db, data):
+        
         user = await user_repository.get_user_by_email(db, data.user_email)
+        # user = await user_repository.get_user_by_email(db, data.username)
 
         if not user:
             raise HTTPException(status_code=401, detail="Invalid email")
@@ -33,7 +17,10 @@ class AuthService:
             raise HTTPException(status_code=401, detail="Invalid password")
 
         access_token = create_access_token(
-            data={"sub": str(user.user_id)}
+            {
+                "sub": str(user.user_id),
+                "role": user.role
+            }
         )
 
         token = TokenResponse(

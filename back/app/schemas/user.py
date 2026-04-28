@@ -17,10 +17,6 @@ class UserCreate(BaseModel):
     user_name: str
     password: str
 
-# class UserCreateRequest(BaseModel):
-#     userEmail: EmailStr
-#     password: str
-#     userName: str
 
 # 로그인 요청
 class UserLogin(BaseModel):

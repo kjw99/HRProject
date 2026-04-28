@@ -12,10 +12,10 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM")
 
 # Authorization 헤더에서 Bearer 토큰을 자동으로 추출한다.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
-def get_current_user(
+async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_async_db),
 ) -> User:
@@ -39,7 +39,7 @@ def get_current_user(
             detail="유효하지 않은 토큰입니다.",
         )
 
-    user = user_repository.find_by_id(db, user_id)
+    user = await user_repository.find_by_id(db, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

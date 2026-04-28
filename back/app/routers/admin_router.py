@@ -12,10 +12,10 @@ router = APIRouter(prefix="/api/admin", tags=["Admin"])
 async def create_hr_user(
     request: UserCreate,
     db: AsyncSession = Depends(get_async_db),
-    # current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     # TEMP: comment auth while testing
-    # if current_user.role != "admin":
-    #     raise HTTPException(status_code=403)
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403)
 
     return await user_service.create_user_service(db, request, role="hr")
