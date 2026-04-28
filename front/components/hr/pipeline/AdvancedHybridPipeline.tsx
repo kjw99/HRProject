@@ -126,11 +126,11 @@ export default function AdvancedHybridPipeline({ data }: { data: Applicant[] }) 
                                     key={item.label}
                                     onClick={() => setCurrentFilter(item.label)}
                                     className={`
-                    relative w-32 h-32 p-4 flex flex-col justify-between transition-all duration-300
-                    shadow-[4px_4px_15px_rgba(0,0,0,0.08)] cursor-pointer outline-none flex-shrink-0
-                    ${item.bgColor}
-                    ${isSelected ? 'scale-110 z-10 shadow-[8px_8px_25px_rgba(0,0,0,0.15)] ring-2 ring-slate-900/10' : `hover:scale-105 hover:-translate-y-1 ${item.rotation}`}
-                  `}
+                                                relative w-32 h-32 p-4 flex flex-col justify-between transition-all duration-300
+                                                shadow-[4px_4px_15px_rgba(0,0,0,0.08)] cursor-pointer outline-none flex-shrink-0
+                                                ${item.bgColor}
+                                                ${isSelected ? 'scale-110 z-10 shadow-[8px_8px_25px_rgba(0,0,0,0.15)] ring-2 ring-slate-900/10' : `hover:scale-105 hover:-translate-y-1 ${item.rotation}`}
+                                            `}
                                     style={{ borderRadius: '2px 16px 16px 24px' }}
                                 >
                                     <div className="absolute top-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-800/15 rounded-full shadow-inner" />

@@ -197,10 +197,25 @@ const LoginForm = () => {
                                 <h3 className="text-2xl font-bold text-[#000000] mb-6">Sign In</h3>
                                 <InputGroup icon="👤" placeholder="Email" type="text" value={email} onChange={setEmail} disabled={disabled} />
                                 <InputGroup icon="🔒" placeholder="Password" type="password" value={password} onChange={setPassword} disabled={disabled} />
-                                <button className="w-full py-3 bg-[#70a7f0] text-white rounded-lg font-semibold text-lg hover:bg-[#7584ad] transition-colors"
+                                <button
                                     type="submit"
-                                    disabled={loading}>
-                                    Sign in
+                                    disabled={loading}
+                                    className={`w-full py-3 rounded-lg font-semibold text-lg transition-all flex items-center justify-center gap-2
+    ${loading
+                                            ? 'bg-[#7584ad] text-white/80 cursor-not-allowed shadow-inner' // 로딩 중: 색상 톤다운 및 클릭 방지 느낌
+                                            : 'bg-[#70a7f0] text-white hover:bg-[#7584ad] active:scale-[0.98]' // 평소: 원래 색상 및 클릭 액션
+                                        }
+  `}
+                                >
+                                    {loading ? (
+                                        <>
+                                            {/* 빙글빙글 도는 Boxicon 로더 */}
+                                            <i className='bx bx-loader-alt bx-spin text-[22px]'></i>
+                                            <span>Signing in...</span>
+                                        </>
+                                    ) : (
+                                        <span>Sign in</span>
+                                    )}
                                 </button>
                                 <p className="text-xs text-center font-bold cursor-pointer">Forgot password?</p>
                                 <p className="text-xs text-center">
