@@ -108,7 +108,7 @@ export default function ResumeUploadClient() {
         <div className="max-w-7xl mx-auto space-y-8 font-sans pb-24 px-4 sm:px-6 relative">
 
             {/* 업로드 영역 */}
-            <div className="bg-white p-8 md:p-10 rounded-[32px] shadow-[0_8px_40px_rgb(0,0,0,0.04)] border border-slate-100/80">
+            <div className="bg-white p-8 md:p-10 rounded-4xl shadow-[0_8px_40px_rgb(0,0,0,0.04)] border border-slate-100/80">
                 <div className="flex justify-between items-start mb-8">
                     <div>
                         <h2 className="text-2xl font-black text-slate-900 tracking-tight">자기소개서 AI 파싱</h2>
@@ -123,7 +123,7 @@ export default function ResumeUploadClient() {
 
                 {/* 📤 1. 업로드 영역 (그리드 레이아웃 적용) */}
                 {/* 📤 1. 업로드 영역 (자세히 보기 리스트 레이아웃 적용) */}
-                <div className={`relative border-2 border-dashed rounded-[32px] p-8 md:p-12 transition-all flex flex-col items-center justify-center
+                <div className={`relative border-2 border-dashed rounded-4xl p-8 md:p-12 transition-all flex flex-col items-center justify-center
                     ${files.length > 0 ? 'border-indigo-100 bg-indigo-50/10' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/50 group'}`}>
 
                     {files.length === 0 ? (
@@ -137,7 +137,7 @@ export default function ResumeUploadClient() {
                                 className="absolute inset-0 opacity-0 cursor-pointer z-10"
                             />
                             <div className="flex flex-col items-center animate-in fade-in duration-500">
-                                <div className="w-20 h-20 rounded-[24px] bg-white shadow-sm border border-slate-100 flex items-center justify-center mb-5 group-hover:-translate-y-2 transition-transform duration-300">
+                                <div className="w-20 h-20 rounded-3xl bg-white shadow-sm border border-slate-100 flex items-center justify-center mb-5 group-hover:-translate-y-2 transition-transform duration-300">
                                     <i className='bx bx-cloud-upload text-4xl text-slate-400 group-hover:text-indigo-500 transition-colors'></i>
                                 </div>
                                 <p className="text-lg font-black text-slate-700">파일을 드래그하거나 클릭하세요</p>
@@ -184,7 +184,7 @@ export default function ResumeUploadClient() {
                             {/* 자세히 보기 파일 리스트 (세로 스택) */}
                             {/* 💡 자세히 보기: 컴팩트 테이블(Excel-like) 뷰 */}
                             <div className="w-full border border-slate-200 rounded-2xl overflow-hidden mt-2">
-                                <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                                <div className="max-h-75 overflow-y-auto custom-scrollbar">
                                     <table className="w-full text-left border-collapse">
                                         <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                                             <tr>
