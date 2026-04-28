@@ -103,16 +103,31 @@ class QuestionService:
 
         return question_texts
 
-    async def get_questions_by_position(
+    async def get_questions(
         self,
         db: AsyncSession,
-        position_id: int,
+        position_id: int | None = None,
     ) -> list[Question]:
+        if position_id is None:
+            return await question_repository.find_all(db)
+
         position = await position_repository.find_by_id(db, position_id)
         if not position:
             raise NotFoundException("Position not found.")
 
         return await question_repository.find_by_position_id(db, position_id)
+
+    async def delete_question(
+        self,
+        db: AsyncSession,
+        question_id: int,
+    ) -> None:
+        question = await question_repository.find_by_id(db, question_id)
+        if not question:
+            raise NotFoundException("Question not found.")
+
+        await question_repository.delete(db, question)
+        await db.commit()
 
 
 question_service = QuestionService()

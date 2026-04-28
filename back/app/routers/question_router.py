@@ -47,8 +47,21 @@ async def save_questions(
     response_model=list[QuestionResponse],
     dependencies=[Depends(require_roles(("admin", "hr")))],
 )
-async def get_questions_by_position(
-    position_id: int = Query(..., gt=0, alias="positionId"),
+async def get_questions(
+    position_id: int | None = Query(None, gt=0, alias="positionId"),
     db: AsyncSession = Depends(get_async_db),
 ):
-    return await question_service.get_questions_by_position(db, position_id)
+    return await question_service.get_questions(db, position_id)
+
+
+@router.delete(
+    "/{question_id}",
+    response_model=MessageResponse,
+    dependencies=[Depends(require_roles(("admin", "hr")))],
+)
+async def delete_question(
+    question_id: int,
+    db: AsyncSession = Depends(get_async_db),
+):
+    await question_service.delete_question(db, question_id)
+    return {"message": "질문 삭제가 완료되었습니다."}
