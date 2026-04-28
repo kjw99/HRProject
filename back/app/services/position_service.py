@@ -10,7 +10,6 @@ class PositionService:
     async def create_position(self, db: AsyncSession, data: PositionCreate):
         position = Position(
             position_name=data.position_name,
-            department_name=data.department_name,
         )
 
         position_repository.save(db, position)
