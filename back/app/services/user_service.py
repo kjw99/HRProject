@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from app.core.exceptions import NotFoundException
 from app.models.user import User
 from app.repositories.user_repository import user_repository 
 from app.core.security import get_password_hash
@@ -23,10 +23,7 @@ class UserService:
         # 1. email check
         existing = await user_repository.get_user_by_email(db, request.user_email)
         if existing:
-            raise HTTPException(
-                status_code=400,
-                detail="이미 존재하는 이메일입니다."
-            )
+            raise NotFoundException("이미 존재하는 이메일입니다.")
         
         # 2. create user
         user = User(
