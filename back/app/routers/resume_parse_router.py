@@ -1,13 +1,14 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base import get_db
+from app.dependencies.database import get_async_db
+from app.dependencies.dependencies import require_roles
 from app.schemas.resume_parse import ResumeParseResponse
 from app.services.resume_parse_service import ResumeParseService
 
-router = APIRouter()
+router = APIRouter(prefix="/api", tags=["Resume Parse"])
 
 _resume_parse_service = ResumeParseService()
 
@@ -20,10 +21,11 @@ def get_resume_parse_service() -> ResumeParseService:
     "/parse",
     response_model=ResumeParseResponse,
     response_model_by_alias=True,
+    dependencies=[Depends(require_roles(("admin", "hr")))],
 )
 async def parse_resumes(
     service: Annotated[ResumeParseService, Depends(get_resume_parse_service)],
-    session: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_async_db),
     files: list[UploadFile] = File(...),
 ) -> ResumeParseResponse:
     if not files:

@@ -15,6 +15,8 @@ from fastapi import UploadFile
 
 from sqlalchemy import select
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy.orm import Session
 
 
@@ -49,21 +51,21 @@ from ParsingToExcel import (
     infer_education_level,
 )
 
-from app.models.candidate_orm import Candidate
+from app.models.candidate import Candidate
 
-from app.models.education_orm import Education
+from app.models.education import Education
 
-from app.models.experience_orm import Experience
+from app.models.experience import Experience
 
-from app.models.military_orm import Military
+from app.models.military import Military
 
-from app.models.position_orm import Position
+from app.models.position import Position
 
-from app.models.qualification_orm import Qualification
+from app.models.qualification import Qualification
 
-from app.models.resume_orm import Resume
+from app.models.resume import Resume
 
-from app.models.statement_orm import Statement
+from app.models.statement import Statement
 
 
 PARSE_UPLOAD_POSITION_NAME = "파싱_미분류"
@@ -322,7 +324,21 @@ class ResumeParseRepository:
         return parse_resume_file(path)
 
     @staticmethod
-    def persist_parse_to_db(
+    async def persist_parse_to_db(
+        session: AsyncSession,
+        record: dict[str, Any],
+        uploaded_original_name: str | None = None,
+    ) -> dict[str, Any]:
+        return await session.run_sync(
+            lambda sync_session: ResumeParseRepository._persist_parse_to_db_sync(
+                sync_session,
+                record,
+                uploaded_original_name,
+            )
+        )
+
+    @staticmethod
+    def _persist_parse_to_db_sync(
         session: Session,
         record: dict[str, Any],
         uploaded_original_name: str | None = None,
