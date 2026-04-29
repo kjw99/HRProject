@@ -26,6 +26,12 @@ class ConflictException(AppException):
     code = "CONFLICT"
 
 
+class ExternalServiceException(AppException):
+    """External service request failed."""
+    status_code = 502
+    code = "EXTERNAL_SERVICE_ERROR"
+
+
 class UnauthorizedException(AppException):
     """인증 실패 (로그인이 안 되었거나 토큰이 유효하지 않을 때)"""
     status_code = 401

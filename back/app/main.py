@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.routers.position_router import router as position_router
-
+from app.routers.question_router import router as question_router
 from app.core.exception_handlers import register_exception_handlers
 
 
@@ -23,6 +23,7 @@ app.include_router(position_router)
 app.include_router(user_router)
 app.include_router(admin_router)
 app.include_router(hr_router)
+app.include_router(question_router)
 
 
 @app.get("/")
