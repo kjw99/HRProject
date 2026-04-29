@@ -1,30 +1,12 @@
 from app.repositories.user_repository import user_repository
-from app.core.security import get_password_hash, verify_password, create_access_token
-from app.core.exceptions import DuplicateException, UnauthorizedException
+from app.core.security import verify_password, create_access_token
+from app.core.exceptions import UnauthorizedException
 from app.schemas.user import TokenResponse, UserInfo
 
 class AuthService:
-    async def signup(self, db, data):
-        existing_user = await user_repository.get_user_by_email(db, data.user_email)
-
-        if existing_user:
-            raise DuplicateException("이메일 사용 불가")            
-
-        hashed_pw = get_password_hash(data.password)
-
-        user = await user_repository.create_user(
-            db,
-            email=data.user_email,
-            password_hash=hashed_pw,
-            name=data.user_name,
-            role=data.role
-        )
-
-        return user
-
-
-    async def signin(self, db, data):
+    async def login(self, db, data):
         user = await user_repository.get_user_by_email(db, data.user_email)
+        # user = await user_repository.get_user_by_email(db, data.username)
 
         if not user:
             raise UnauthorizedException("아이디 또는 비밀번호가 올바르지 않습니다.")            

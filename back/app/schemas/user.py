@@ -18,8 +18,14 @@ class UserBase(CaseModel):
     role: Literal["admin", "hr", "interviewer"]
 
 # 회원가입 요청
-class UserCreate(UserBase):
+# class UserCreate(UserBase):
+#     password: str
+
+class UserCreate(CaseModel):
+    user_email: EmailStr
+    user_name: str
     password: str
+
 
 # 로그인 요청
 class UserLogin(CaseModel):
@@ -43,3 +49,7 @@ class TokenResponse(CaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserInfo
+
+class EmailCheckResponse(CaseModel):
+    available: bool
+    message: str

@@ -1,6 +1,6 @@
-import jwt
 import bcrypt
 from datetime import datetime, timedelta, timezone
+import jwt
 import os
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -16,7 +16,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(
         plain_password.encode("utf-8"), hashed_password.encode("utf-8")
     )
-
 
 def create_access_token(user_id: int, role: str):
     expire = datetime.now(timezone.utc) + timedelta(minutes=EXPIRE_MINUTES)

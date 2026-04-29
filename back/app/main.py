@@ -1,8 +1,14 @@
 from fastapi import FastAPI
-from app.routers.auth_router import router as auth_router
 from app.routers.position_router import router as position_router
-from app.dependencies.database import async_engine, Base
+
 from app.core.exception_handlers import register_exception_handlers
+
+
+from app.routers.auth_router import router as auth_router
+from app.routers.user_router import router as user_router
+from app.routers.admin_router import router as admin_router
+from app.routers.hr_router import router as hr_router
+#import app.models.user
 
 # alembic 사용중.
 # Base.metadata.create_all(bind=async_engine)
@@ -14,6 +20,9 @@ register_exception_handlers(app)
 
 app.include_router(auth_router)
 app.include_router(position_router)
+app.include_router(user_router)
+app.include_router(admin_router)
+app.include_router(hr_router)
 
 
 @app.get("/")

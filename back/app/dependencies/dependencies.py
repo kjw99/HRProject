@@ -9,7 +9,7 @@ import jwt
 import os
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = os.getenv("JWT_ALGORITHM")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 # Authorization 헤더에서 Bearer 토큰을 자동으로 추출한다.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
