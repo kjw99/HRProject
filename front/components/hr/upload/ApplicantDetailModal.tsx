@@ -10,7 +10,7 @@ const ApplicantDetailModal = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="relative w-full max-w-3xl max-h-[90vh] bg-white rounded-[32px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+            <div className="relative w-full max-w-3xl max-h-[90vh] bg-white rounded-4xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
                 <button onClick={onClose} className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors z-20">
                     <i className="bx bx-x text-2xl"></i>
                 </button>
@@ -18,7 +18,7 @@ const ApplicantDetailModal = ({
                     <div className="p-8 md:p-10 bg-slate-50/50 border-b border-slate-100 relative">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                             <div className="flex items-center gap-6">
-                                <div className="w-20 h-20 rounded-[24px] bg-indigo-100 text-indigo-600 flex items-center justify-center shadow-inner border border-indigo-200/50">
+                                <div className="w-20 h-20 rounded-3xl bg-indigo-100 text-indigo-600 flex items-center justify-center shadow-inner border border-indigo-200/50">
                                     <i className="bx bxs-user text-4xl"></i>
                                 </div>
                                 <div>
@@ -41,7 +41,7 @@ const ApplicantDetailModal = ({
                             {Object.entries(restData).filter(([k]) => k !== 'id').map(([key, val], idx) => (
                                 <div key={idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all">
                                     <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{key}</span>
-                                    <span className="block text-sm font-bold text-slate-800 break-words">{String(val)}</span>
+                                    <span className="block text-sm font-bold text-slate-800 wrap-break-word">{String(val)}</span>
                                 </div>
                             ))}
                         </div>
