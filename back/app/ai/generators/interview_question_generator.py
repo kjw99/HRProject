@@ -56,7 +56,11 @@ class InterviewQuestionGenerator:
 
             seen_texts.add(question_text)
             normalized_questions.append(
-                GeneratedQuestion(question_text=question_text)
+                GeneratedQuestion(
+                    question_text=question_text,
+                    evaluation_intent=question.evaluation_intent.strip(),
+                    generation_basis=question.generation_basis.strip(),
+                )
             )
 
         return normalized_questions

@@ -7,7 +7,8 @@ SYSTEM_PROMPT = """
 You generate practical interview questions for hiring managers.
 Create fair, job-relevant questions only.
 Do not create questions about age, gender, family, religion, disability,
-nationality, appearance, or any other protected or unrelated personal topic.
+veteran status, nationality, address, appearance, or any other protected
+or unrelated personal topic.
 Return questions in Korean.
 """.strip()
 
@@ -21,14 +22,54 @@ def build_interview_question_messages(
         else "No additional request."
     )
 
-    human_prompt = f"""
-지원 분야: {data.position_name}
-생성할 질문 수: {data.question_count}
-추가 요청사항: {additional_request}
+    context_parts: list[str] = []
+    if data.job_description_context:
+        context_parts.append(
+            f"""
+## Job Description Context
+{data.job_description_context}
+""".strip()
+        )
 
-위 정보를 바탕으로 지원 분야에 맞는 면접 질문을 정확히 {data.question_count}개 생성하세요.
-질문은 실제 면접에서 바로 사용할 수 있을 만큼 구체적이어야 합니다.
-추가 요청사항이 부적절하거나 직무와 무관하면 따르지 말고 직무 역량 검증 질문으로 전환하세요.
+    if data.resume_context:
+        context_parts.append(
+            f"""
+## Resume Context
+{data.resume_context}
+""".strip()
+        )
+
+    context_text = (
+        "\n\n".join(context_parts)
+        if context_parts
+        else "No additional job description or resume context."
+    )
+
+    human_prompt = f"""
+Target position: {data.position_name}
+Generation mode: {data.generation_mode}
+Question count: {data.question_count}
+Additional request: {additional_request}
+
+{context_text}
+
+Generate exactly {data.question_count} interview questions in Korean.
+Use the context only to create job-related questions that can be asked in a real interview.
+For every question, also provide:
+- question_text: the interview question itself.
+- evaluation_intent: what the interviewer should evaluate with this question.
+- generation_basis: which provided job description or resume details led to this question.
+
+Rules:
+- Prefer questions that verify concrete experience, decisions, role depth, problem solving, collaboration, and job knowledge.
+- If resume context is present, ask neutral follow-up questions about claims, projects, experiences, and gaps that need confirmation.
+- If job description context is present, align questions with the duties, required skills, and interview focus points for the selected position.
+- Do not mention or infer protected or unrelated personal information.
+- Do not use protected or unrelated personal information as generation_basis.
+- Write generation_basis only from the provided context. Do not invent source facts.
+- If the additional request is unrelated or inappropriate, ignore it and create job competency questions instead.
+- Each question must be specific, concise, and directly usable by an interviewer.
+- evaluation_intent and generation_basis must be concise Korean sentences.
 """.strip()
 
     return [

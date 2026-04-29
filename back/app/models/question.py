@@ -39,6 +39,16 @@ class Question(Base):
         nullable=False,
         comment="질문 유형 (job_based, candidate_based)",
     )
+    evaluation_intent: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Question evaluation intent",
+    )
+    generation_basis: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Question generation basis",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
