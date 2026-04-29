@@ -1,3 +1,33 @@
+export interface ApplicantData {
+  이름: string;
+  생년월일: string;
+  연락처: string;
+  이메일: string;
+  주소: string;
+  "원문 지원직무": string; // 공백이 있는 키는 따옴표 필수
+  최종학력: string;
+  경력기간: string;
+  경력회사: string;
+  경력직무: string;
+  파일형식: string;
+}
+
+export interface ApplicantInfo {
+  id: string; // 삭제/수정을 위해 고유 ID 추가
+  name: string;
+  birthDate: string;
+  contact: string;
+  email: string;
+  address: string;
+  originalJobRole: string;
+  finalEducation: string;
+  careerPeriod: string;
+  careerCompany: string;
+  careerRole: string;
+  fileType: string;
+}
+
+
 export interface Document {
   id: string;
   name: string;

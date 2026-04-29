@@ -30,7 +30,7 @@ export default function SettingsClient() {
 
         {/* Right Column */}
         <div className="lg:col-span-5 xl:col-span-4 h-[800px] lg:h-auto lg:sticky lg:top-8">
-          <Playground tone={tone} techWeight={techWeight} />
+          <Playground tone={tone} techWeight={techWeight} prompt="" />
         </div>
       </div>
     </div>

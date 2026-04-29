@@ -1,5 +1,6 @@
 'use client';
 
+import useLogout from '@/hooks/useLogout';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -21,7 +22,7 @@ export default function AdminSidebar({
 }: AdminSidebarProps = {}) {
     const pathname = usePathname(); // 현재 URL 가져오기
     const router = useRouter(); // 라우터 가져오기
-
+    const logout = useLogout();
     const menuGroups = [
         {
             title: 'Overview',
@@ -93,13 +94,7 @@ export default function AdminSidebar({
             <div className="border-t border-slate-800/80 p-4 shrink-0">
                 <button
                     type="button"
-                    onClick={() => {
-                        // TODO: 실제 로그아웃 로직 추가 (예: signOut(), 로컬 스토리지 삭제 등)
-                        localStorage.removeItem('candidate_info');
-                        localStorage.removeItem('last_job_posting');
-                        router.push('/login'); // 로그아웃 후 로그인 페이지로 리디렉션
-                        console.log('로그아웃 클릭됨');
-                    }}
+                    onClick={logout}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[14px] font-bold text-slate-400 transition-all duration-200 hover:bg-slate-800 hover:text-rose-400 group"
                 >
                     <i className="bx bx-log-out text-xl text-slate-500 group-hover:text-rose-400 transition-colors"></i>
