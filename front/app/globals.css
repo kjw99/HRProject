@@ -27,3 +27,59 @@ body {
   color: var(--foreground);
   font-family: 'Pretendard', Arial, sans-serif;
 }
+
+/* app/globals.css 하단에 추가 */
+.custom-calendar.react-calendar {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+}
+
+.custom-calendar .react-calendar__navigation button {
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: #0f172a;
+  /* slate-900 */
+  border-radius: 12px;
+}
+
+.custom-calendar .react-calendar__navigation button:enabled:hover {
+  background-color: #f8fafc;
+}
+
+.custom-calendar .react-calendar__month-view__weekdays {
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #64748b;
+  /* slate-500 */
+  font-size: 0.75rem;
+  padding-bottom: 10px;
+}
+
+.custom-calendar .react-calendar__tile {
+  padding: 1.5em 0.5em;
+  border-radius: 16px;
+  font-weight: 600;
+  color: #334155;
+  transition: all 0.2s;
+}
+
+.custom-calendar .react-calendar__tile:enabled:hover {
+  background-color: #e0e7ff;
+  /* indigo-100 */
+  color: #4f46e5;
+}
+
+.custom-calendar .react-calendar__tile--now {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.custom-calendar .react-calendar__tile--active {
+  background: #4f46e5 !important;
+  /* indigo-600 */
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+
+}

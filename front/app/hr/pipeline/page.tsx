@@ -192,8 +192,27 @@ const MOCK_PIPELINE_CANDIDATES: Candidate[] = [
       "바닐라 JS 위주의 포트폴리오. 최신 React/Next.js 스택 경험이 부족함.",
   },
 ];
-import { Applicant } from '@/types/hr';
 import { fetchPassedApplicants } from "@/lib/axios";
+import AdvancedHybridPipeline, { Applicant } from "@/components/hr/pipeline/AdvancedHybridPipeline";
+const MOCK_DATA: Applicant[] = [
+  { id: '1', name: '김철수', position: '프론트엔드 개발자', status: '1차 면접', appliedDate: '2026-04-20', score: 92 },
+  { id: '2', name: '이영희', position: 'UI/UX 디자이너', status: '분석중', appliedDate: '2026-04-21', score: 0 },
+  { id: '3', name: '박지성', position: '백엔드 개발자', status: '2차 면접', appliedDate: '2026-04-18', score: 88 },
+  { id: '4', name: '손흥민', position: '퍼포먼스 마케터', status: '합격', appliedDate: '2026-04-15', score: 95 },
+  { id: '5', name: '김연아', position: '데이터 분석가', status: '불합격', appliedDate: '2026-04-19', score: 74 },
+  { id: '6', name: '정우성', position: '프로덕트 매니저', status: '분석 완료', appliedDate: '2026-04-22', score: 85 },
+  { id: '7', name: '이정재', position: 'iOS 개발자', status: '최종 면접', appliedDate: '2026-04-23', score: 91 },
+];
+export const metadata = { title: '파이프라인 관리 | HR' };
+
+
+function page() {
+  return (
+    <AdvancedHybridPipeline data={MOCK_DATA} />
+  )
+}
+
+export default page
 
 
 // export default function PipelinePage() {
@@ -202,19 +221,18 @@ import { fetchPassedApplicants } from "@/lib/axios";
 // }
 
 
-export const metadata = { title: '파이프라인 관리 | HR' };
 
-export default async function HrPipelinePage() {
-  const applicants = await fetchPassedApplicants();
+// export default async function HrPipelinePage() {
+//   const applicants = await fetchPassedApplicants();
 
-  return (
-    <div className="p-8 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-700">
-      <header>
-        <h1 className="text-[32px] font-black text-slate-900 tracking-tight">지원자 파이프라인</h1>
-        <p className="text-slate-500 font-medium">채용 단계별 지원자 현황을 엑셀 뷰로 한눈에 관리하세요.</p>
-      </header>
+//   return (
+//     <div className="p-8 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-700">
+//       <header>
+//         <h1 className="text-[32px] font-black text-slate-900 tracking-tight">지원자 파이프라인</h1>
+//         <p className="text-slate-500 font-medium">채용 단계별 지원자 현황을 엑셀 뷰로 한눈에 관리하세요.</p>
+//       </header>
 
-      <PipelineExcel initialApplicants={applicants as Applicant[]} />
-    </div>
-  );
-}
+//       <PipelineExcel initialApplicants={applicants as Applicant[]} />
+//     </div>
+//   );
+// }

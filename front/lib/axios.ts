@@ -4,6 +4,8 @@ import { CandidateReport } from "@/types/report";
 import { ScheduleData } from "@/types/schedule";
 import axios from 'axios';
 
+
+
 /**
  * Gemini 호출은 API 키가 서버에만 있어야 하므로 app/api 아래 Route Handler에서 수행합니다.
  * 클라이언트에서는 같은 출처의 /api/analyze 등으로만 요청합니다.
