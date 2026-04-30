@@ -5,10 +5,7 @@ from app.dependencies.database import get_async_db
 from app.dependencies.dependencies import require_roles
 from app.schemas.common import MessageResponse
 from app.schemas.question import (
-    CandidateQuestionGenerateRequest,
-    CandidateResumeQuestionGenerateRequest,
     GeneratedQuestionResponse,
-    JobDescriptionQuestionGenerateRequest,
     QuestionGenerateRequest,
     QuestionResponse,
     QuestionSaveRequest,
@@ -28,43 +25,7 @@ async def generate_questions(
     data: QuestionGenerateRequest,
     db: AsyncSession = Depends(get_async_db),
 ):
-    return await question_service.generate_position_questions(db, data)
-
-
-@router.post(
-    "/generate/job-description",
-    response_model=list[GeneratedQuestionResponse],
-    dependencies=[Depends(require_roles(("admin", "hr")))],
-)
-async def generate_job_description_questions(
-    data: JobDescriptionQuestionGenerateRequest,
-    db: AsyncSession = Depends(get_async_db),
-):
-    return await question_service.generate_job_description_questions(db, data)
-
-
-@router.post(
-    "/generate/candidate",
-    response_model=list[GeneratedQuestionResponse],
-    dependencies=[Depends(require_roles(("admin", "hr")))],
-)
-async def generate_candidate_questions(
-    data: CandidateQuestionGenerateRequest,
-    db: AsyncSession = Depends(get_async_db),
-):
-    return await question_service.generate_candidate_questions(db, data)
-
-
-@router.post(
-    "/generate/candidate/resume",
-    response_model=list[GeneratedQuestionResponse],
-    dependencies=[Depends(require_roles(("admin", "hr")))],
-)
-async def generate_candidate_resume_questions(
-    data: CandidateResumeQuestionGenerateRequest,
-    db: AsyncSession = Depends(get_async_db),
-):
-    return await question_service.generate_candidate_resume_questions(db, data)
+    return await question_service.generate_questions(db, data)
 
 
 @router.post(

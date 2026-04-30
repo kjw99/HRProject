@@ -8,10 +8,7 @@ from app.models.question import Question
 from app.repositories.position_repository import position_repository
 from app.repositories.question_repository import question_repository
 from app.schemas.question import (
-    CandidateQuestionGenerateRequest,
-    CandidateResumeQuestionGenerateRequest,
     GeneratedQuestionResponse,
-    JobDescriptionQuestionGenerateRequest,
     QuestionGenerateRequest,
     QuestionSaveRequest,
 )
@@ -20,60 +17,15 @@ from app.services.resume_context_service import resume_context_service
 
 
 POSITION_BASED_QUESTION_TYPE = "position_based"
-JOB_DESCRIPTION_BASED_QUESTION_TYPE = "job_description_based"
 CANDIDATE_RESUME_BASED_QUESTION_TYPE = "candidate_resume_based"
 CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE = "candidate_job_fit_based"
 
 
 class QuestionService:
-    async def generate_position_questions(
+    async def generate_questions(
         self,
         db: AsyncSession,
         data: QuestionGenerateRequest,
-    ) -> list[GeneratedQuestionResponse]:
-        position = await position_repository.find_by_id(db, data.position_id)
-        if not position:
-            raise NotFoundException("Position not found.")
-
-        return await self._generate_questions(
-            generation_input=InterviewQuestionGenerationInput(
-                position_name=position.position_name,
-                question_count=data.question_count,
-                additional_request=data.additional_request,
-                generation_mode=POSITION_BASED_QUESTION_TYPE,
-            ),
-            question_type=POSITION_BASED_QUESTION_TYPE,
-        )
-
-    async def generate_job_description_questions(
-        self,
-        db: AsyncSession,
-        data: JobDescriptionQuestionGenerateRequest,
-    ) -> list[GeneratedQuestionResponse]:
-        position = await position_repository.find_by_id(db, data.position_id)
-        if not position:
-            raise NotFoundException("Position not found.")
-
-        job_description_context = job_description_service.get_context_for_position(
-            position,
-            data.job_description_section,
-        )
-
-        return await self._generate_questions(
-            generation_input=InterviewQuestionGenerationInput(
-                position_name=position.position_name,
-                question_count=data.question_count,
-                additional_request=data.additional_request,
-                generation_mode=JOB_DESCRIPTION_BASED_QUESTION_TYPE,
-                job_description_context=job_description_context,
-            ),
-            question_type=JOB_DESCRIPTION_BASED_QUESTION_TYPE,
-        )
-
-    async def generate_candidate_questions(
-        self,
-        db: AsyncSession,
-        data: CandidateQuestionGenerateRequest,
     ) -> list[GeneratedQuestionResponse]:
         resume_context = await resume_context_service.build_context(
             db=db,
@@ -97,29 +49,6 @@ class QuestionService:
                 resume_context=resume_context.text,
             ),
             question_type=CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE,
-        )
-
-    async def generate_candidate_resume_questions(
-        self,
-        db: AsyncSession,
-        data: CandidateResumeQuestionGenerateRequest,
-    ) -> list[GeneratedQuestionResponse]:
-        resume_context = await resume_context_service.build_context(
-            db=db,
-            candidate_id=data.candidate_id,
-            resume_id=data.resume_id,
-            position_id=data.position_id,
-        )
-
-        return await self._generate_questions(
-            generation_input=InterviewQuestionGenerationInput(
-                position_name=resume_context.position.position_name,
-                question_count=data.question_count,
-                additional_request=data.additional_request,
-                generation_mode=CANDIDATE_RESUME_BASED_QUESTION_TYPE,
-                resume_context=resume_context.text,
-            ),
-            question_type=CANDIDATE_RESUME_BASED_QUESTION_TYPE,
         )
 
     async def save_position_questions(
