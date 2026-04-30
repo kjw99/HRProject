@@ -1,15 +1,25 @@
-import AdminAppFrame from "@/components/admin/layout/AdminAppFrame";
 import React from "react";
+import { requireRole } from "@app/server/auth/require-role";
+import LogoutButton from "@/components/auth/LogoutButton";
 
-// 서버에서만 실행되므로 메타데이터 설정 가능
 export const metadata = {
-  title: "Admin Console | A-RECRUIT",
+  title: "관리자",
 };
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <AdminAppFrame>{children}</AdminAppFrame>;
+  await requireRole(["admin"]);
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+        <span className="text-lg font-semibold text-slate-900">관리자</span>
+        <LogoutButton />
+      </header>
+      <main className="mx-auto max-w-4xl p-6">{children}</main>
+    </div>
+  );
 }
