@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,5 +16,29 @@ class UserRepository:
         await db.commit()
         await db.refresh(user)
         return user
+    
+
+    async def get_users(self, db, offset, limit, keyword):
+        query = select(User)
+
+        if keyword:
+            query = query.where(User.user_name.ilike(f"%{keyword}%"))
+
+        total_query = select(func.count()).select_from(query.subquery())
+        total = await db.scalar(total_query)
+
+        result = await db.execute(
+            query.offset(offset).limit(limit)
+        )
+        users = result.scalars().all()
+
+        return users, total
+    
+
+
+    async def delete_user(self, db, user):
+        await db.delete(user)
+        await db.commit()
+
 
 user_repository = UserRepository()

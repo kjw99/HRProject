@@ -53,3 +53,16 @@ class TokenResponse(CaseModel):
 class EmailCheckResponse(CaseModel):
     available: bool
     message: str
+
+class PasswordChangeRequest(CaseModel):
+    currentPassword: str
+    newPassword: str
+
+
+
+class UserListResponse(CaseModel):
+    content: list[UserResponse]
+    # page: int
+    # size: int
+    # totalElements: int
+    # totalPages: int
