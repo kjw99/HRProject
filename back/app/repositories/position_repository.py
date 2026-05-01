@@ -1,4 +1,4 @@
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.candidate import Candidate
@@ -34,12 +34,7 @@ class PositionRepository:
             .where(Candidate.position_id == position_id)
             .limit(1),
             select(Resume.resume_id)
-            .where(
-                or_(
-                    Resume.position_id == position_id,
-                    Resume.second_position_id == position_id,
-                )
-            )
+            .where(Resume.second_position_id == position_id)
             .limit(1),
         ]
 

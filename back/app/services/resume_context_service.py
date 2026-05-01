@@ -1,5 +1,7 @@
+import json
+import re
 from dataclasses import dataclass
-from datetime import date
+from typing import Any
 
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,8 +13,33 @@ from app.models.position import Position
 from app.models.resume import Resume
 
 
-MAX_STATEMENT_ANSWER_LENGTH = 1500
 MAX_RESUME_CONTEXT_LENGTH = 12000
+MAX_RAW_TEXT_CONTEXT_LENGTH = 6000
+MAX_JSON_CONTEXT_LENGTH = 8000
+SENSITIVE_RESUME_KEYS = {
+    "address",
+    "birth_date",
+    "birthDate",
+    "contact",
+    "dateOfBirth",
+    "date_of_birth",
+    "disability",
+    "email",
+    "exemption_reason",
+    "gender",
+    "military",
+    "militaryId",
+    "militaryRows",
+    "military_end_period_raw",
+    "military_rank",
+    "military_service",
+    "military_start_period_raw",
+    "military_type",
+    "name",
+    "phone",
+    "veteranEligibility",
+    "veteran_eligibility",
+}
 
 
 @dataclass(frozen=True)
@@ -48,7 +75,7 @@ class ResumeContextService:
             candidate=candidate,
             resume=resume,
             position=position,
-            text=self._truncate(text),
+            text=self._truncate(text, MAX_RESUME_CONTEXT_LENGTH),
         )
 
     async def _find_candidate(
@@ -72,14 +99,7 @@ class ResumeContextService:
         query = (
             select(Resume)
             .where(Resume.candidate_id == candidate_id)
-            .options(
-                selectinload(Resume.position),
-                selectinload(Resume.second_position),
-                selectinload(Resume.educations),
-                selectinload(Resume.experiences),
-                selectinload(Resume.qualifications),
-                selectinload(Resume.statements),
-            )
+            .options(selectinload(Resume.second_position))
         )
 
         if resume_id is not None:
@@ -103,13 +123,10 @@ class ResumeContextService:
         if position_id is not None:
             return await db.get(Position, position_id)
 
-        if resume.position:
-            return resume.position
-
         if candidate.position:
             return candidate.position
 
-        return None
+        return resume.second_position
 
     def _build_resume_text(self, resume: Resume, position: Position) -> str:
         lines: list[str] = [
@@ -118,71 +135,51 @@ class ResumeContextService:
             "## Target Position",
             f"- {self._value(position.position_name)}",
             "",
-            "## Experiences",
+            "## Resume Metadata",
+            f"- Desired location: {self._value(resume.desired_location)}",
+            f"- Desired salary: {self._value(resume.desired_salary)}",
         ]
 
-        if resume.experiences:
-            for index, experience in enumerate(resume.experiences, 1):
-                lines.extend(
-                    [
-                        f"### Experience {index}",
-                        f"- Company: {self._value(experience.company)}",
-                        f"- Role: {self._value(experience.role)}",
-                        f"- Job title: {self._value(experience.job_title)}",
-                        "- Period: "
-                        f"{self._period(experience.employment_start_period, experience.employment_end_period)}",
-                    ]
-                )
-                if self._clean(experience.reason_for_leaving):
-                    lines.append(
-                        f"- Reason for leaving: {self._clean(experience.reason_for_leaving)}"
-                    )
-        else:
-            lines.append("- No extracted experience.")
+        has_resume_content = False
+        if resume.ai_profile:
+            has_resume_content = True
+            lines.extend(
+                [
+                    "",
+                    "## AI Profile",
+                    self._format_json_for_context(resume.ai_profile),
+                ]
+            )
 
-        lines.extend(["", "## Education"])
-        if resume.educations:
-            for education in resume.educations:
-                parts = [
-                    self._clean(education.department),
-                    self._clean(education.completion_status),
-                    self._period(
-                        education.attendance_start_period,
-                        education.attendance_end_period,
+        if self._clean(resume.summary):
+            has_resume_content = True
+            lines.extend(["", "## Summary", self._clean(resume.summary) or ""])
+
+        if resume.parsed_json:
+            has_resume_content = True
+            lines.extend(
+                [
+                    "",
+                    "## Parsed Resume JSON",
+                    self._format_json_for_context(resume.parsed_json),
+                ]
+            )
+
+        if self._clean(resume.raw_text) and not has_resume_content:
+            has_resume_content = True
+            lines.extend(
+                [
+                    "",
+                    "## Raw Resume Text",
+                    self._truncate(
+                        self._redact_sensitive_text(self._clean(resume.raw_text) or ""),
+                        MAX_RAW_TEXT_CONTEXT_LENGTH,
                     ),
                 ]
-                lines.append(f"- {self._join_values(parts)}")
-        else:
-            lines.append("- No extracted education.")
+            )
 
-        lines.extend(["", "## Qualifications"])
-        if resume.qualifications:
-            for qualification in resume.qualifications:
-                parts = [
-                    self._clean(qualification.certificate),
-                    self._clean(qualification.organization),
-                    self._format_date(qualification.issue_date),
-                ]
-                lines.append(f"- {self._join_values(parts)}")
-        else:
-            lines.append("- No extracted qualifications.")
-
-        lines.extend(["", "## Statements"])
-        if resume.statements:
-            for index, statement in enumerate(resume.statements, 1):
-                question = self._clean(statement.question) or f"Statement {index}"
-                answer = self._truncate_statement(self._clean(statement.answer))
-                if not answer:
-                    continue
-
-                lines.extend(
-                    [
-                        f"### {question}",
-                        answer,
-                    ]
-                )
-        else:
-            lines.append("- No extracted statements.")
+        if not has_resume_content:
+            lines.extend(["", "## Resume Content", "- No parsed resume content is stored."])
 
         lines.extend(
             [
@@ -196,6 +193,47 @@ class ResumeContextService:
 
         return "\n".join(lines).strip()
 
+    def _format_json_for_context(self, value: dict[str, Any]) -> str:
+        filtered_value = self._remove_sensitive_fields(value)
+        formatted = json.dumps(filtered_value, ensure_ascii=False, indent=2, default=str)
+        return self._truncate(formatted, MAX_JSON_CONTEXT_LENGTH)
+
+    def _remove_sensitive_fields(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                key: self._remove_sensitive_fields(child)
+                for key, child in value.items()
+                if key not in SENSITIVE_RESUME_KEYS
+            }
+
+        if isinstance(value, list):
+            return [self._remove_sensitive_fields(child) for child in value]
+
+        return value
+
+    def _redact_sensitive_text(self, value: str) -> str:
+        lines = []
+        for line in value.splitlines():
+            if any(key.lower() in line.lower() for key in SENSITIVE_RESUME_KEYS):
+                continue
+
+            lines.append(line)
+
+        redacted = "\n".join(lines)
+        redacted = re.sub(
+            r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+            "[email]",
+            redacted,
+        )
+        redacted = re.sub(
+            r"(?:010|011|016|017|018|019|02|0[3-6]\d|070)[-\s]?\d{3,4}[-\s]?\d{4}",
+            "[phone]",
+            redacted,
+        )
+        redacted = re.sub(r"\b\d{6}[-\s]?\d{7}\b", "[personal-id]", redacted)
+        redacted = re.sub(r"\b\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}\b", "[date]", redacted)
+        return redacted.strip()
+
     def _clean(self, value: object) -> str | None:
         if value is None:
             return None
@@ -206,35 +244,11 @@ class ResumeContextService:
     def _value(self, value: object) -> str:
         return self._clean(value) or "Not provided"
 
-    def _join_values(self, values: list[str | None]) -> str:
-        cleaned_values = [value for value in values if value]
-        if not cleaned_values:
-            return "Not provided"
-
-        return " / ".join(cleaned_values)
-
-    def _format_date(self, value: date | None) -> str | None:
-        return value.isoformat() if value else None
-
-    def _period(self, start: date | None, end: date | None) -> str:
-        start_value = self._format_date(start) or "unknown"
-        end_value = self._format_date(end) or "unknown"
-        return f"{start_value} ~ {end_value}"
-
-    def _truncate_statement(self, value: str | None) -> str | None:
-        if not value:
-            return None
-
-        if len(value) <= MAX_STATEMENT_ANSWER_LENGTH:
+    def _truncate(self, value: str, max_length: int) -> str:
+        if len(value) <= max_length:
             return value
 
-        return value[:MAX_STATEMENT_ANSWER_LENGTH].rstrip()
-
-    def _truncate(self, value: str) -> str:
-        if len(value) <= MAX_RESUME_CONTEXT_LENGTH:
-            return value
-
-        return value[:MAX_RESUME_CONTEXT_LENGTH].rstrip()
+        return value[:max_length].rstrip()
 
 
 resume_context_service = ResumeContextService()
