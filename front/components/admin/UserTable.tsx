@@ -57,6 +57,9 @@ export default function UserTable({ data }: UserTableProps) {
   // 💡 1. 서버에서 받은 데이터를 로컬 상태에 저장 (삭제 연출용)
   const [userList, setUserList] = useState<User[]>(data.content);
 
+  // 삭제 // 업데이트시 로딩 화면 on off
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
   // 💡 2. 검색이나 페이징으로 data가 바뀌면 로컬 상태도 업데이트해줘야 합니다.
   useEffect(() => {
     setUserList(data.content);
@@ -192,6 +195,7 @@ export default function UserTable({ data }: UserTableProps) {
     )
       return;
 
+    setIsDeleting(true);
     try {
       // 실제 서버 호출
       await deleteUser(userId);
@@ -204,7 +208,7 @@ export default function UserTable({ data }: UserTableProps) {
 
       alert("계정이 성공적으로 삭제되었습니다."); // 사용자 피드백
       setIsDetailModalOpen(false); // 모달 닫기
-
+      setIsDeleting(false);
       // router.refresh(); // 지금은 목업 데이터를 다시 가져오면 안 되므로 주석 처리하거나 빼도 됩니다.
     }
   };
@@ -217,7 +221,7 @@ export default function UserTable({ data }: UserTableProps) {
     if (selectedIds.length === 0) return;
     if (!confirm(`선택한 ${selectedIds.length}명의 사용자를 삭제하시겠습니까?`))
       return;
-
+    setIsDeleting(true); // 💡 로딩 화면 켜기
     try {
       await Promise.all(selectedIds.map((id) => deleteUser(id)));
       alert(`${selectedIds.length}명의 계정이 삭제되었습니다.`);
@@ -225,6 +229,7 @@ export default function UserTable({ data }: UserTableProps) {
       router.refresh();
     } catch (error) {
       alert("일부 사용자를 삭제하는 중 오류가 발생했습니다.");
+      setIsDeleting(false); // 💡 로딩 화면 끄기
     }
   };
 
@@ -601,6 +606,16 @@ export default function UserTable({ data }: UserTableProps) {
               )}
             </div>
           </div>
+        </div>
+      )}
+      {/* 💡 3. 전역 삭제 로딩 오버레이 (z-[100] 적용) */}
+      {isDeleting && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center z-[100] animate-in fade-in duration-200">
+          {/* 회전하는 로딩 아이콘 (Boxicons) */}
+          <i className="bx bx-loader-alt bx-spin text-5xl text-white mb-4"></i>
+          <p className="text-white font-bold text-lg tracking-wide shadow-sm">
+            안전하게 삭제 중입니다...
+          </p>
         </div>
       )}
     </div>
