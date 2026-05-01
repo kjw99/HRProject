@@ -26,7 +26,7 @@ project 설명
 ## 맴버 구성 🧑‍🤝‍🧑
 - 김진우: Back, AI
 - 남건우: Back, AI
-- 박세형: PM, Front, Ai
+- 박세형: PM
 - 사비카: Back, AI
 - 한다솔: Front, AI
 

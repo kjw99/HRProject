@@ -6,6 +6,12 @@
 5. uv run alembic upgrade head 실행. (alembic를 실행해서 기존에 작성되어 있는 테이블 구조 적용.)
 6. 서버 실행. uv run fastapi dev
 
+## 백엔드 첫 시작시 admin 계정 추가
+1. back 폴더에 들어간다.
+2. .env 파일을 복붙해서 가져온다.
+3. uv run python scripts/create_initial_admin.py 입력.
+4. .env에 있는 admin 초기 계정이 생성된다.
+
 ## 🚨 alembic 주의사항!
 1. 절대 DB를 직접 수정하지 마라. 직접 sql 들어가서 테이블 건들면 안됨!
 2. 이미 공유된 마이그레이션 파일 수정, 삭제 금지!

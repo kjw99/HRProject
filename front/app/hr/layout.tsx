@@ -1,24 +1,24 @@
-import Navbar from "@/components/hr/layout/Navbar";
+import { requireRole } from "@app/server/auth/require-role";
+import LogoutButton from "@/components/auth/LogoutButton";
 
 export const metadata = {
-  title: "A-RECRUIT | HR Workspace",
+  title: "HR",
 };
 
-export default function HRLayout({ children }: { children: React.ReactNode }) {
+export default async function HRLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  await requireRole(["hr"]);
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans selection:bg-blue-100 selection:text-blue-900">
-      <Navbar />
-
-      <main className="max-w-400 mx-auto p-6 md:p-12 lg:p-16 w-full">
-        {children}
-      </main>
-
-      <footer className="max-w-400 w-full mx-auto px-10 py-16 text-center mt-auto">
-        <div className="h-px w-full bg-linear-to-r from-transparent via-slate-200 to-transparent mb-10"></div>
-        <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.6em]">
-          Core Intelligence powered by Gemini 2.5 & A-RECRUIT Architecture
-        </p>
-      </footer>
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+        <span className="text-lg font-semibold text-slate-900">HR</span>
+        <LogoutButton />
+      </header>
+      <main className="mx-auto max-w-4xl p-6">{children}</main>
     </div>
   );
 }
