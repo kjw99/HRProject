@@ -55,14 +55,13 @@ class ResumeContextService:
         self,
         db: AsyncSession,
         candidate_id: int,
-        resume_id: int | None = None,
         position_id: int | None = None,
     ) -> ResumeQuestionContext:
         candidate = await self._find_candidate(db, candidate_id)
         if not candidate:
             raise NotFoundException("Candidate not found.")
 
-        resume = await self._find_resume(db, candidate_id, resume_id)
+        resume = await self._find_resume(db, candidate_id)
         if not resume:
             raise NotFoundException("Resume not found for candidate.")
 
@@ -94,21 +93,17 @@ class ResumeContextService:
         self,
         db: AsyncSession,
         candidate_id: int,
-        resume_id: int | None,
     ) -> Resume | None:
         query = (
             select(Resume)
             .where(Resume.candidate_id == candidate_id)
             .options(selectinload(Resume.second_position))
-        )
-
-        if resume_id is not None:
-            query = query.where(Resume.resume_id == resume_id)
-        else:
-            query = query.order_by(
+            .order_by(
                 desc(Resume.created_at),
                 desc(Resume.resume_id),
-            ).limit(1)
+            )
+            .limit(1)
+        )
 
         result = await db.scalars(query)
         return result.one_or_none()
@@ -120,11 +115,11 @@ class ResumeContextService:
         resume: Resume,
         position_id: int | None,
     ) -> Position | None:
-        if position_id is not None:
-            return await db.get(Position, position_id)
-
         if candidate.position:
             return candidate.position
+
+        if position_id is not None:
+            return await db.get(Position, position_id)
 
         return resume.second_position
 

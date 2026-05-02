@@ -1,10 +1,12 @@
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.generators.interview_question_generator import interview_question_generator
-from app.ai.schemas.question_generation import InterviewQuestionGenerationInput
+from app.ai.graphs.interview_question_graph import interview_question_graph
+from app.ai.schemas.question_generation import InterviewQuestionGraphInput
 from app.core.exceptions import NotFoundException
 from app.models.candidate import Candidate
 from app.models.question import Question
+from app.models.resume import Resume
 from app.repositories.position_repository import position_repository
 from app.repositories.question_repository import question_repository
 from app.schemas.question import (
@@ -12,8 +14,6 @@ from app.schemas.question import (
     QuestionGenerateRequest,
     QuestionSaveRequest,
 )
-from app.services.job_description_service import job_description_service
-from app.services.resume_context_service import resume_context_service
 
 
 POSITION_BASED_QUESTION_TYPE = "position_based"
@@ -27,50 +27,53 @@ class QuestionService:
         db: AsyncSession,
         data: QuestionGenerateRequest,
     ) -> list[GeneratedQuestionResponse]:
-        resume_context = await resume_context_service.build_context(
-            db=db,
-            candidate_id=data.candidate_id,
-            resume_id=data.resume_id,
-            position_id=data.position_id,
-        )
-
-        job_description_context = job_description_service.get_context_for_position(
-            resume_context.position,
-            data.job_description_section,
-        )
-
-        return await self._generate_questions(
-            generation_input=InterviewQuestionGenerationInput(
-                position_name=resume_context.position.position_name,
+        generation_result = await interview_question_graph.generate(
+            db,
+            InterviewQuestionGraphInput(
+                candidate_id=data.candidate_id,
+                position_id=data.position_id,
                 question_count=data.question_count,
                 additional_request=data.additional_request,
-                generation_mode=CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE,
-                job_description_context=job_description_context,
-                resume_context=resume_context.text,
+                job_description_section=data.job_description_section,
             ),
-            question_type=CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE,
         )
+
+        return [
+            GeneratedQuestionResponse(
+                question_text=generated_question.question_text,
+                question_type=CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE,
+                evaluation_intent=generated_question.evaluation_intent,
+                generation_basis=generated_question.generation_basis,
+            )
+            for generated_question in generation_result.questions
+        ]
 
     async def save_position_questions(
         self,
         db: AsyncSession,
         data: QuestionSaveRequest,
     ) -> None:
-        if data.position_id is not None and not await position_repository.find_by_id(
+        resolved_position_id = data.position_id
+
+        if data.candidate_id is not None:
+            candidate = await db.get(Candidate, data.candidate_id)
+            if not candidate:
+                raise NotFoundException("Candidate not found.")
+
+            resolved_position_id = await self._resolve_save_position_id(
+                db,
+                candidate,
+                data.position_id,
+            )
+        elif data.position_id is not None and not await position_repository.find_by_id(
             db,
             data.position_id,
         ):
             raise NotFoundException("Position not found.")
 
-        if data.candidate_id is not None and not await db.get(
-            Candidate,
-            data.candidate_id,
-        ):
-            raise NotFoundException("Candidate not found.")
-
         existing_questions = await question_repository.find_by_target(
             db,
-            position_id=data.position_id,
+            position_id=resolved_position_id,
             candidate_id=data.candidate_id,
         )
         existing_question_keys: set[tuple[str, str]] = set()
@@ -89,6 +92,7 @@ class QuestionService:
         question_items = self._get_unique_new_questions(
             data,
             existing_question_keys,
+            resolved_position_id,
         )
         if not question_items:
             return
@@ -96,7 +100,7 @@ class QuestionService:
         questions = [
             Question(
                 candidate_id=data.candidate_id,
-                position_id=data.position_id,
+                position_id=resolved_position_id,
                 question_text=question_text,
                 question_type=question_type,
                 evaluation_intent=evaluation_intent,
@@ -117,10 +121,14 @@ class QuestionService:
         self,
         data: QuestionSaveRequest,
         existing_question_keys: set[tuple[str, str]],
+        resolved_position_id: int | None,
     ) -> list[tuple[str, str, str | None, str | None]]:
         question_items: list[tuple[str, str, str | None, str | None]] = []
         seen_question_keys = set(existing_question_keys)
-        default_question_type = self._get_default_save_question_type(data)
+        default_question_type = self._get_default_save_question_type(
+            data,
+            resolved_position_id,
+        )
 
         for question in data.questions:
             question_type = (
@@ -180,28 +188,48 @@ class QuestionService:
         await question_repository.delete(db, question)
         await db.commit()
 
-    async def _generate_questions(
+    async def _resolve_save_position_id(
         self,
-        generation_input: InterviewQuestionGenerationInput,
-        question_type: str,
-    ) -> list[GeneratedQuestionResponse]:
-        generation_result = await interview_question_generator.generate(
-            generation_input,
+        db: AsyncSession,
+        candidate: Candidate,
+        fallback_position_id: int | None,
+    ) -> int | None:
+        if candidate.position_id is not None:
+            return candidate.position_id
+
+        if fallback_position_id is not None:
+            if not await position_repository.find_by_id(db, fallback_position_id):
+                raise NotFoundException("Position not found.")
+
+            return fallback_position_id
+
+        return await self._find_latest_second_position_id(db, candidate.candidate_id)
+
+    async def _find_latest_second_position_id(
+        self,
+        db: AsyncSession,
+        candidate_id: int,
+    ) -> int | None:
+        return await db.scalar(
+            select(Resume.second_position_id)
+            .where(
+                Resume.candidate_id == candidate_id,
+                Resume.second_position_id.is_not(None),
+            )
+            .order_by(
+                desc(Resume.created_at),
+                desc(Resume.resume_id),
+            )
+            .limit(1)
         )
 
-        return [
-            GeneratedQuestionResponse(
-                question_text=generated_question.question_text,
-                question_type=question_type,
-                evaluation_intent=generated_question.evaluation_intent,
-                generation_basis=generated_question.generation_basis,
-            )
-            for generated_question in generation_result.questions
-        ]
-
-    def _get_default_save_question_type(self, data: QuestionSaveRequest) -> str:
+    def _get_default_save_question_type(
+        self,
+        data: QuestionSaveRequest,
+        resolved_position_id: int | None,
+    ) -> str:
         if data.candidate_id is not None:
-            if data.position_id is not None:
+            if resolved_position_id is not None:
                 return CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE
 
             return CANDIDATE_RESUME_BASED_QUESTION_TYPE

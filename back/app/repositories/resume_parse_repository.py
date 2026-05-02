@@ -1,293 +1,234 @@
-import base64
-import json
-import os
-import re
-import tempfile
-from datetime import date, datetime
 from typing import Any
 
-from fastapi import UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
-import ParsingToExcel
-from ParsingToExcel import (
-    K_ADDR,
-    K_BIRTH_DATE,
-    K_CONTACT,
-    K_DESIRED_LOCATION,
-    K_DESIRED_SALARY,
-    K_EMAIL,
-    K_GENDER,
-    K_ID,
-    K_NAME,
-    export_data_list_to_excel_path,
-    parse_resume_file,
+from app.ai.schemas.resume_parsing import (
+    ParsedResumeJson,
+    PositionText,
+    ResumeParseAIOutput,
 )
-
 from app.models.candidate import Candidate
 from app.models.position import Position
 from app.models.resume import Resume
+from app.services.position_match_service import (
+    PositionMatchService,
+    position_match_service,
+)
+from app.services.resume_value_normalizer_service import (
+    ResumeValueNormalizerService,
+    resume_value_normalizer_service,
+)
 
 
-PARSE_UPLOAD_POSITION_NAME = "parse_upload_unclassified"
-RAW_TEXT_KEYS = ("rawText", "raw_text", "fullText", "full_text", "text")
-
-
-def resume_excel_output_basename() -> str:
-    return getattr(ParsingToExcel, "OUTPUT_FILENAME", "resume_parse_result.xlsx")
-
-
-def _empty_to_none(v: object) -> str | None:
-    if v is None:
-        return None
-
-    s = str(v).strip()
-    return s if s else None
-
-
-def _parse_birth_date(value: object) -> date | None:
-    raw = _empty_to_none(value)
-    if not raw:
-        return None
-
-    m = re.match(r"^\s*(\d{4})\D?(\d{1,2})\D?(\d{1,2})", raw.replace(" ", ""))
-    if m:
-        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        try:
-            return date(y, mo, d)
-        except ValueError:
-            if mo == 0 and d == 0:
-                try:
-                    return date(y, 1, 1)
-                except ValueError:
-                    return None
-
-            if 1 <= mo <= 12 and d == 0:
-                try:
-                    return date(y, mo, 1)
-                except ValueError:
-                    return None
-
-            return None
-
-    for fmt in ("%Y-%m-%d", "%Y.%m.%d", "%d.%m.%Y"):
-        try:
-            return datetime.strptime(raw[:19], fmt).date()
-        except ValueError:
-            continue
-
-    return None
-
-
-def _desired_salary_to_int(raw: object) -> int | None:
-    s = _empty_to_none(raw)
-    if not s:
-        return None
-
-    digits = re.sub(r"\D", "", s)
-    if not digits:
-        return None
-
-    try:
-        n = int(digits)
-        return n if n > 0 else None
-    except ValueError:
-        return None
-
-
-def _ensure_parse_position(session: Session) -> Position:
-    row = session.execute(
-        select(Position)
-        .where(Position.position_name == PARSE_UPLOAD_POSITION_NAME)
-        .limit(1)
-    ).scalar_one_or_none()
-
-    if row:
-        return row
-
-    row = Position(position_name=PARSE_UPLOAD_POSITION_NAME)
-    session.add(row)
-    session.flush()
-    return row
-
-
-def _json_safe(value: Any) -> Any:
-    return json.loads(json.dumps(value, ensure_ascii=False, default=str))
-
-
-def _extract_raw_text(record: dict[str, Any]) -> str | None:
-    for key in RAW_TEXT_KEYS:
-        value = _empty_to_none(record.get(key))
-        if value:
-            return value
-
-    if not record:
-        return None
-
-    return json.dumps(record, ensure_ascii=False, indent=2, default=str)
-
-
-def _extract_ai_profile(record: dict[str, Any]) -> dict[str, Any] | None:
-    value = record.get("aiProfile")
-    if value is None:
-        value = record.get("ai_profile")
-
-    return _json_safe(value) if isinstance(value, dict) else None
+DEFAULT_APPLICATION_STATUS = "\uc11c\ub958"
 
 
 class ResumeParseRepository:
-    @staticmethod
-    async def read_upload_to_tempfile(upload: UploadFile) -> str:
-        original = upload.filename or "unnamed"
-        ext = os.path.splitext(original)[1] or ".bin"
+    def __init__(
+        self,
+        matcher: PositionMatchService | None = None,
+        normalizer: ResumeValueNormalizerService | None = None,
+    ) -> None:
+        self._matcher = matcher or position_match_service
+        self._normalizer = normalizer or resume_value_normalizer_service
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
-            tmp.write(await upload.read())
-
-        return tmp.name
-
-    @staticmethod
-    def remove_silent(path: str | None) -> None:
-        if not path or not os.path.exists(path):
-            return
-
-        try:
-            os.remove(path)
-        except OSError:
-            pass
-
-    @staticmethod
-    def parse_file_at_path(path: str) -> dict[str, Any]:
-        return parse_resume_file(path)
-
-    @staticmethod
-    async def persist_parse_to_db(
+    async def persist_resume_to_db(
+        self,
         session: AsyncSession,
-        record: dict[str, Any],
-        uploaded_original_name: str | None = None,
+        ai_output: ResumeParseAIOutput,
+        raw_text: str,
+        file_path: str,
     ) -> dict[str, Any]:
-        return await session.run_sync(
-            lambda sync_session: ResumeParseRepository._persist_parse_to_db_sync(
-                sync_session,
-                record,
-                uploaded_original_name,
-            )
+        positions = await self._find_positions(session)
+        parsed = ai_output.parsed_json
+        personal_info = parsed.personal_info
+
+        primary_match = self._matcher.match_position(
+            self._position_text(personal_info.applied_position),
+            positions,
+        )
+        secondary_match = self._matcher.match_position(
+            self._position_text(personal_info.second_applied_position),
+            positions,
         )
 
-    @staticmethod
-    def _persist_parse_to_db_sync(
-        session: Session,
-        record: dict[str, Any],
-        uploaded_original_name: str | None = None,
-    ) -> dict[str, Any]:
-        pos = _ensure_parse_position(session)
-        dob = _parse_birth_date(record.get(K_BIRTH_DATE))
-        email_val = _empty_to_none(record.get(K_EMAIL))
-        phone_val = _empty_to_none(record.get(K_CONTACT))
-        name_val = _empty_to_none(record.get(K_NAME))
+        candidate = await self._find_candidate(session, parsed)
+        if candidate is None:
+            candidate = self._build_candidate(parsed, primary_match)
+            session.add(candidate)
+            await session.flush()
+        else:
+            self._update_candidate(candidate, parsed, primary_match)
 
-        cand = None
-        if email_val:
-            cand = session.execute(
+        resume = Resume(
+            candidate_id=candidate.candidate_id,
+            desired_location=self._normalizer.limit(
+                self._normalizer.clean(parsed.desired_conditions.desired_location),
+                100,
+            ),
+            second_position_id=secondary_match["matchedPositionId"],
+            desired_salary=self._normalizer.money_amount(
+                parsed.desired_conditions.desired_salary
+            ),
+            file_path=self._normalizer.limit(file_path, 500),
+            raw_text=raw_text,
+            parsed_json=self._normalizer.model_json(parsed),
+            summary=self._normalizer.clean(ai_output.summary),
+            ai_profile=self._normalizer.model_json(ai_output.ai_profile),
+        )
+        session.add(resume)
+        await session.flush()
+
+        record = {
+            "candidateId": candidate.candidate_id,
+            "resumeId": resume.resume_id,
+            "positionMatch": primary_match,
+            "secondPositionMatch": secondary_match,
+            "candidate": {
+                "candidateId": candidate.candidate_id,
+                "positionId": candidate.position_id,
+                "name": candidate.name,
+                "dateOfBirth": (
+                    candidate.date_of_birth.isoformat()
+                    if candidate.date_of_birth
+                    else None
+                ),
+                "gender": candidate.gender,
+                "address": candidate.address,
+                "phone": candidate.phone,
+                "email": candidate.email,
+                "applicationStatus": candidate.application_status,
+            },
+            "resume": {
+                "resumeId": resume.resume_id,
+                "candidateId": resume.candidate_id,
+                "desiredLocation": resume.desired_location,
+                "secondPositionId": resume.second_position_id,
+                "desiredSalary": resume.desired_salary,
+                "filePath": resume.file_path,
+                "summary": resume.summary,
+            },
+            "parsedJson": resume.parsed_json,
+            "aiProfile": resume.ai_profile,
+        }
+        await session.commit()
+        return record
+
+    async def _find_positions(self, session: AsyncSession) -> list[Position]:
+        result = await session.scalars(
+            select(Position).order_by(Position.position_id.asc())
+        )
+        return list(result.all())
+
+    async def _find_candidate(
+        self,
+        session: AsyncSession,
+        parsed: ParsedResumeJson,
+    ) -> Candidate | None:
+        email = self._normalizer.email(parsed.personal_info.email)
+        phone = self._normalizer.clean(parsed.personal_info.phone)
+        name = self._normalizer.clean(parsed.personal_info.name)
+
+        if email:
+            candidate = await session.scalar(
                 select(Candidate)
-                .where(Candidate.email == email_val)
+                .where(Candidate.email == email)
                 .order_by(Candidate.candidate_id.asc())
                 .limit(1)
-            ).scalar_one_or_none()
+            )
+            if candidate is not None:
+                return candidate
 
-        if cand is None and phone_val and name_val:
-            cand = session.execute(
+        if phone and name:
+            return await session.scalar(
                 select(Candidate)
                 .where(
-                    Candidate.phone == phone_val,
-                    Candidate.name == name_val,
+                    Candidate.phone == phone,
+                    Candidate.name == name,
                 )
                 .order_by(Candidate.candidate_id.asc())
                 .limit(1)
-            ).scalar_one_or_none()
-
-        if cand is None:
-            cand = Candidate(
-                position_id=pos.position_id,
-                name=name_val,
-                date_of_birth=dob,
-                gender=_empty_to_none(record.get(K_GENDER)),
-                address=_empty_to_none(record.get(K_ADDR)),
-                phone=phone_val,
-                email=email_val,
-                application_status="서류",
             )
-            session.add(cand)
-            session.flush()
-        else:
-            new_name = _empty_to_none(record.get(K_NAME))
-            if new_name:
-                cand.name = new_name
 
-            if dob:
-                cand.date_of_birth = dob
+        return None
 
-            gender = _empty_to_none(record.get(K_GENDER))
-            if gender:
-                cand.gender = gender
-
-            address = _empty_to_none(record.get(K_ADDR))
-            if address:
-                cand.address = address
-
-            phone = _empty_to_none(record.get(K_CONTACT))
-            if phone:
-                cand.phone = phone
-
-            email = _empty_to_none(record.get(K_EMAIL))
-            if email and not _empty_to_none(getattr(cand, "email", None)):
-                cand.email = email
-
-            if cand.position_id is None:
-                cand.position_id = pos.position_id
-
-        parsed_json = _json_safe(record)
-        res = Resume(
-            candidate_id=cand.candidate_id,
-            desired_location=_empty_to_none(record.get(K_DESIRED_LOCATION)),
-            second_position_id=None,
-            desired_salary=_desired_salary_to_int(record.get(K_DESIRED_SALARY)),
-            file_path=_empty_to_none(uploaded_original_name),
-            raw_text=_extract_raw_text(record),
-            parsed_json=parsed_json,
-            summary=_empty_to_none(record.get("summary")),
-            ai_profile=_extract_ai_profile(record),
+    def _build_candidate(
+        self,
+        parsed: ParsedResumeJson,
+        position_match: dict[str, Any],
+    ) -> Candidate:
+        personal_info = parsed.personal_info
+        return Candidate(
+            position_id=position_match["matchedPositionId"],
+            name=self._normalizer.limit(
+                self._normalizer.clean(personal_info.name),
+                50,
+            ),
+            date_of_birth=self._normalizer.parse_date(personal_info.birth_date),
+            gender=self._normalizer.limit(
+                self._normalizer.clean(personal_info.gender),
+                10,
+            ),
+            address=self._normalizer.limit(
+                self._normalizer.clean(personal_info.address),
+                255,
+            ),
+            phone=self._normalizer.limit(
+                self._normalizer.clean(personal_info.phone),
+                20,
+            ),
+            email=self._normalizer.limit(
+                self._normalizer.email(personal_info.email),
+                255,
+            ),
+            application_status=DEFAULT_APPLICATION_STATUS,
         )
 
-        session.add(res)
+    def _update_candidate(
+        self,
+        candidate: Candidate,
+        parsed: ParsedResumeJson,
+        position_match: dict[str, Any],
+    ) -> None:
+        personal_info = parsed.personal_info
+        self._set_if_present(candidate, "name", personal_info.name, 50)
 
-        try:
-            session.commit()
-            session.refresh(res)
-            session.refresh(cand)
-        except Exception:
-            session.rollback()
-            raise
+        birth_date = self._normalizer.parse_date(personal_info.birth_date)
+        if birth_date:
+            candidate.date_of_birth = birth_date
 
-        out = dict(record)
-        out[K_ID] = str(res.resume_id)
-        return out
+        self._set_if_present(candidate, "gender", personal_info.gender, 10)
+        self._set_if_present(candidate, "address", personal_info.address, 255)
+        self._set_if_present(candidate, "phone", personal_info.phone, 20)
 
-    @staticmethod
-    def records_to_excel_base64(records: list[dict[str, Any]]) -> str:
-        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as xtmp:
-            xls_path = xtmp.name
+        if not self._normalizer.clean(candidate.email):
+            candidate.email = self._normalizer.limit(
+                self._normalizer.email(personal_info.email),
+                255,
+            )
 
-        try:
-            export_data_list_to_excel_path(records, xls_path)
+        if candidate.position_id is None and position_match["matchedPositionId"]:
+            candidate.position_id = position_match["matchedPositionId"]
 
-            with open(xls_path, "rb") as f:
-                return base64.standard_b64encode(f.read()).decode("ascii")
-        finally:
-            if os.path.exists(xls_path):
-                try:
-                    os.remove(xls_path)
-                except OSError:
-                    pass
+    def _set_if_present(
+        self,
+        target: object,
+        attr_name: str,
+        value: object,
+        max_length: int,
+    ) -> None:
+        cleaned_value = self._normalizer.limit(
+            self._normalizer.clean(value),
+            max_length,
+        )
+        if cleaned_value:
+            setattr(target, attr_name, cleaned_value)
+
+    def _position_text(self, value: PositionText | None) -> str | None:
+        if value is None:
+            return None
+
+        return self._normalizer.clean(value.normalized) or self._normalizer.clean(
+            value.raw
+        )

@@ -14,7 +14,6 @@ class CaseModel(BaseModel):
 
 class QuestionGenerateRequest(CaseModel):
     candidate_id: int = Field(..., gt=0)
-    resume_id: int | None = Field(default=None, gt=0)
     position_id: int | None = Field(default=None, gt=0)
     question_count: int = Field(default=5, ge=1, le=20)
     additional_request: str | None = Field(default=None, max_length=1000)
