@@ -25,7 +25,7 @@ from app.services.resume_context_service import resume_context_service
 
 
 CANDIDATE_JOB_FIT_BASED_MODE = "candidate_job_fit_based"
-MAX_REVISION_COUNT = 2
+MAX_REVISION_COUNT = 3
 MIN_REVIEW_SCORE = 85
 
 
