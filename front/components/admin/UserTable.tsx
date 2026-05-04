@@ -344,16 +344,6 @@ export default function UserTable({ data }: UserTableProps) {
               className="pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none w-64 transition-all"
             />
           </form>
-
-          {selectedCount > 0 && (
-            <button
-              onClick={handleBulkDelete}
-              className="flex items-center gap-1.5 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-sm font-bold border border-rose-100 hover:bg-rose-100 transition-colors animate-in fade-in"
-            >
-              <i className="bx bx-trash text-lg"></i>
-              선택 삭제 ({selectedCount})
-            </button>
-          )}
         </div>
 
         <button
@@ -655,6 +645,41 @@ export default function UserTable({ data }: UserTableProps) {
           <p className="text-white font-bold text-lg tracking-wide shadow-sm">
             안전하게 삭제 중입니다...
           </p>
+        </div>
+      )}
+      {/* 💡 (새로 추가) 하단 플로팅 리모콘 (항목 선택 시 표시) */}
+      {selectedCount > 0 && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-8 fade-in duration-300">
+          <div className="bg-white/80 backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-200 rounded-full px-6 py-3 flex items-center gap-4">
+            {/* 몇 개 선택되었는지 안내 */}
+            <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+              <span className="flex items-center justify-center bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full text-xs">
+                {selectedCount}
+              </span>
+              명 선택됨
+            </div>
+
+            {/* 세로 구분선 */}
+            <div className="w-px h-5 bg-slate-300"></div>
+
+            {/* 삭제 버튼 */}
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-4 py-2 bg-rose-500 text-white rounded-full text-sm font-bold shadow-sm hover:bg-rose-600 hover:-translate-y-0.5 transition-all"
+            >
+              <i className="bx bx-trash text-lg"></i>
+              선택 삭제
+            </button>
+
+            {/* 선택 취소 버튼 (선택적) */}
+            <button
+              onClick={() => setRowSelection({})} // 💡 선택 초기화 함수
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors ml-1"
+              title="선택 취소"
+            >
+              <i className="bx bx-x text-xl"></i>
+            </button>
+          </div>
         </div>
       )}
     </div>
