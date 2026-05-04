@@ -16,6 +16,7 @@ import {
   getUserDetail,
   deleteUser,
 } from "@/lib/admin/adminUsers.client";
+import { resetUserPassword } from "@/lib/auth";
 
 interface UserTableProps {
   data: PaginatedResponse<User>;
@@ -59,6 +60,27 @@ export default function UserTable({ data }: UserTableProps) {
 
   // 삭제 // 업데이트시 로딩 화면 on off
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // 비밀번호 초기화 모달 상태
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // 💡 2. 추가: 비밀번호 초기화 실행 핸들러
+  const handleResetPassword = async (userId: number) => {
+    if (!confirm("해당 사용자의 비밀번호를 초기화하시겠습니까?")) return;
+
+    setIsResettingPassword(true);
+    try {
+      const res = await resetUserPassword(userId);
+      // 성공 시 발급된 임시 비밀번호를 알림창으로 확실히 보여줍니다.
+      alert(
+        `${res.message}\n\n🔑 임시 비밀번호: ${res.temporaryPassword}\n(사용자에게 이 비밀번호를 전달해 주세요.)`,
+      );
+    } catch (error) {
+      alert("비밀번호 초기화에 실패했습니다.");
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
 
   // 💡 2. 검색이나 페이징으로 data가 바뀌면 로컬 상태도 업데이트해줘야 합니다.
   useEffect(() => {
@@ -584,19 +606,36 @@ export default function UserTable({ data }: UserTableProps) {
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 mt-2">
                     <button
                       onClick={() => setIsDetailModalOpen(false)}
-                      className="flex-1 px-4 py-2.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                      className="px-4 py-2.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
                     >
                       닫기
                     </button>
-                    <button
-                      onClick={() => handleDeleteSingle(selectedUser.userId)}
-                      className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-sm flex justify-center items-center gap-1.5 transition-colors"
-                    >
-                      <i className="bx bx-trash"></i> 계정 삭제
-                    </button>
+
+                    <div className="flex-1 flex gap-2">
+                      {/* 💡 새로 추가된 비밀번호 초기화 버튼 (노란색 톤) */}
+                      <button
+                        onClick={() => handleResetPassword(selectedUser.userId)}
+                        disabled={isResettingPassword}
+                        className="flex-1 px-3 py-2.5 rounded-xl font-bold text-white bg-amber-500 hover:bg-amber-600 shadow-sm flex justify-center items-center gap-1.5 transition-colors disabled:opacity-50"
+                      >
+                        <i
+                          className={`bx ${isResettingPassword ? "bx-loader-alt bx-spin" : "bx-key"} text-lg`}
+                        ></i>
+                        <span className="text-sm">비밀번호 초기화</span>
+                      </button>
+
+                      {/* 기존 계정 삭제 버튼 */}
+                      <button
+                        onClick={() => handleDeleteSingle(selectedUser.userId)}
+                        className="flex-1 px-3 py-2.5 rounded-xl font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-sm flex justify-center items-center gap-1.5 transition-colors"
+                      >
+                        <i className="bx bx-trash text-lg"></i>
+                        <span className="text-sm">계정 삭제</span>
+                      </button>
+                    </div>
                   </div>
                 </>
               ) : (
