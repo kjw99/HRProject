@@ -1,7 +1,6 @@
 from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.clients.openai_client import get_chat_model
 from app.ai.prompts.interview_question_prompt import (
@@ -14,28 +13,18 @@ from app.ai.schemas.question_generation import (
     GeneratedQuestion,
     InterviewQuestionGenerationInput,
     InterviewQuestionGenerationOutput,
-    InterviewQuestionGraphInput,
     QuestionFitAnalysis,
     QuestionReviewIssue,
     QuestionReviewOutput,
 )
 from app.core.exceptions import ExternalServiceException
-from app.services.job_description_service import job_description_service
-from app.services.resume_context_service import resume_context_service
 
 
-CANDIDATE_JOB_FIT_BASED_MODE = "candidate_job_fit_based"
 MAX_REVISION_COUNT = 3
 MIN_REVIEW_SCORE = 85
 
 
 class InterviewQuestionGraphState(TypedDict, total=False):
-    db: AsyncSession
-    candidate_id: int
-    position_id: int | None
-    question_count: int
-    additional_request: str | None
-    job_description_section: str | None
     generation_input: InterviewQuestionGenerationInput
     analysis: QuestionFitAnalysis
     questions: list[GeneratedQuestion]
@@ -51,16 +40,10 @@ class InterviewQuestionGraph:
 
     async def generate(
         self,
-        db: AsyncSession,
-        data: InterviewQuestionGraphInput,
+        data: InterviewQuestionGenerationInput,
     ) -> InterviewQuestionGenerationOutput:
         initial_state: InterviewQuestionGraphState = {
-            "db": db,
-            "candidate_id": data.candidate_id,
-            "position_id": data.position_id,
-            "question_count": data.question_count,
-            "additional_request": data.additional_request,
-            "job_description_section": data.job_description_section,
+            "generation_input": data,
             "revision_count": 0,
         }
 
@@ -84,15 +67,13 @@ class InterviewQuestionGraph:
     def _build_graph(self) -> Any:
         workflow = StateGraph(InterviewQuestionGraphState)
 
-        workflow.add_node("collect_context", self._collect_context)
         workflow.add_node("analyze_fit", self._analyze_fit)
         workflow.add_node("generate_questions", self._generate_questions)
         workflow.add_node("review_questions", self._review_questions)
         workflow.add_node("revise_questions", self._revise_questions)
         workflow.add_node("finalize_questions", self._finalize_questions)
 
-        workflow.set_entry_point("collect_context")
-        workflow.add_edge("collect_context", "analyze_fit")
+        workflow.set_entry_point("analyze_fit")
         workflow.add_edge("analyze_fit", "generate_questions")
         workflow.add_edge("generate_questions", "review_questions")
         workflow.add_conditional_edges(
@@ -107,33 +88,6 @@ class InterviewQuestionGraph:
         workflow.add_edge("finalize_questions", END)
 
         return workflow.compile()
-
-    async def _collect_context(
-        self,
-        state: InterviewQuestionGraphState,
-    ) -> InterviewQuestionGraphState:
-        db = state["db"]
-        resume_context = await resume_context_service.build_context(
-            db=db,
-            candidate_id=state["candidate_id"],
-            position_id=state.get("position_id"),
-        )
-        job_description_context = job_description_service.get_context_for_position(
-            resume_context.position,
-            state.get("job_description_section"),
-        )
-        generation_input = InterviewQuestionGenerationInput(
-            position_name=resume_context.position.position_name,
-            question_count=state["question_count"],
-            additional_request=state.get("additional_request"),
-            generation_mode=CANDIDATE_JOB_FIT_BASED_MODE,
-            job_description_context=job_description_context,
-            resume_context=resume_context.text,
-        )
-
-        return {
-            "generation_input": generation_input,
-        }
 
     async def _analyze_fit(
         self,

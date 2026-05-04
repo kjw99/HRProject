@@ -2,7 +2,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.graphs.interview_question_graph import interview_question_graph
-from app.ai.schemas.question_generation import InterviewQuestionGraphInput
+from app.ai.schemas.question_generation import InterviewQuestionGenerationInput
 from app.core.exceptions import NotFoundException
 from app.models.candidate import Candidate
 from app.models.question import Question
@@ -14,6 +14,8 @@ from app.schemas.question import (
     QuestionGenerateRequest,
     QuestionSaveRequest,
 )
+from app.services.job_description_service import job_description_service
+from app.services.resume_context_service import resume_context_service
 
 
 POSITION_BASED_QUESTION_TYPE = "position_based"
@@ -27,15 +29,25 @@ class QuestionService:
         db: AsyncSession,
         data: QuestionGenerateRequest,
     ) -> list[GeneratedQuestionResponse]:
+        resume_context = await resume_context_service.build_context(
+            db=db,
+            candidate_id=data.candidate_id,
+            position_id=data.position_id,
+        )
+        job_description_context = job_description_service.get_context_for_position(
+            resume_context.position,
+            data.job_description_section,
+        )
+
         generation_result = await interview_question_graph.generate(
-            db,
-            InterviewQuestionGraphInput(
-                candidate_id=data.candidate_id,
-                position_id=data.position_id,
+            InterviewQuestionGenerationInput(
+                position_name=resume_context.position.position_name,
                 question_count=data.question_count,
                 additional_request=data.additional_request,
-                job_description_section=data.job_description_section,
-            ),
+                generation_mode=CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE,
+                job_description_context=job_description_context,
+                resume_context=resume_context.text,
+            )
         )
 
         return [
