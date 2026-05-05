@@ -1,7 +1,8 @@
 from app.core.exceptions import NotFoundException
-from app.models.user import User
-from app.repositories.user_repository import user_repository 
 from app.core.security import get_password_hash
+from app.models.user import User
+from app.repositories.user_repository import user_repository
+
 
 class UserService:
     async def check_email_availability(self, db, email: str):
@@ -32,7 +33,11 @@ class UserService:
             user_name=request.user_name,
             role=role
         )
-       
-        return await user_repository.create_user(db, user)
+
+        user_repository.create_user(db, user)
+        await db.commit()
+        await db.refresh(user)
+        return user
+
 
 user_service = UserService()

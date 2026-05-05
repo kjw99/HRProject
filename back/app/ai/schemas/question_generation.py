@@ -72,6 +72,23 @@ class InterviewQuestionGenerationOutput(BaseModel):
     questions: list[GeneratedQuestion] = Field(..., min_length=1)
 
 
+class QuestionSelectionOutput(BaseModel):
+    selected_questions: list[GeneratedQuestion] = Field(..., min_length=1)
+    selection_reasons: list[str] = Field(default_factory=list)
+
+    @field_validator("selection_reasons")
+    @classmethod
+    def normalize_selection_reasons(cls, value: list[str]) -> list[str]:
+        normalized_values = []
+
+        for item in value:
+            stripped_item = str(item).strip()
+            if stripped_item:
+                normalized_values.append(stripped_item)
+
+        return normalized_values
+
+
 class QuestionFitAnalysis(BaseModel):
     jd_key_requirements: list[str] = Field(default_factory=list)
     resume_evidence: list[str] = Field(default_factory=list)

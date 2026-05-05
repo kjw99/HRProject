@@ -3,14 +3,15 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import NotFoundException
 from app.models.candidate import Candidate
 from app.models.position import Position
 from app.models.resume import Resume
+from app.repositories.candidate_repository import candidate_repository
+from app.repositories.position_repository import position_repository
+from app.repositories.resume_repository import resume_repository
 
 
 MAX_RESUME_CONTEXT_LENGTH = 12000
@@ -82,31 +83,20 @@ class ResumeContextService:
         db: AsyncSession,
         candidate_id: int,
     ) -> Candidate | None:
-        result = await db.scalars(
-            select(Candidate)
-            .where(Candidate.candidate_id == candidate_id)
-            .options(selectinload(Candidate.position))
+        return await candidate_repository.find_by_id_with_position(
+            db,
+            candidate_id,
         )
-        return result.one_or_none()
 
     async def _find_resume(
         self,
         db: AsyncSession,
         candidate_id: int,
     ) -> Resume | None:
-        query = (
-            select(Resume)
-            .where(Resume.candidate_id == candidate_id)
-            .options(selectinload(Resume.second_position))
-            .order_by(
-                desc(Resume.created_at),
-                desc(Resume.resume_id),
-            )
-            .limit(1)
+        return await resume_repository.find_latest_by_candidate_id_with_second_position(
+            db,
+            candidate_id,
         )
-
-        result = await db.scalars(query)
-        return result.one_or_none()
 
     async def _resolve_position(
         self,
@@ -119,7 +109,7 @@ class ResumeContextService:
             return candidate.position
 
         if position_id is not None:
-            return await db.get(Position, position_id)
+            return await position_repository.find_by_id(db, position_id)
 
         return resume.second_position
 

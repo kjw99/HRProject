@@ -1,14 +1,14 @@
-from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.graphs.interview_question_graph import interview_question_graph
+from app.ai.graphs.interview_question import interview_question_graph
 from app.ai.schemas.question_generation import InterviewQuestionGenerationInput
 from app.core.exceptions import NotFoundException
 from app.models.candidate import Candidate
 from app.models.question import Question
-from app.models.resume import Resume
+from app.repositories.candidate_repository import candidate_repository
 from app.repositories.position_repository import position_repository
 from app.repositories.question_repository import question_repository
+from app.repositories.resume_repository import resume_repository
 from app.schemas.question import (
     GeneratedQuestionResponse,
     QuestionGenerateRequest,
@@ -68,7 +68,7 @@ class QuestionService:
         resolved_position_id = data.position_id
 
         if data.candidate_id is not None:
-            candidate = await db.get(Candidate, data.candidate_id)
+            candidate = await candidate_repository.find_by_id(db, data.candidate_id)
             if not candidate:
                 raise NotFoundException("Candidate not found.")
 
@@ -179,7 +179,10 @@ class QuestionService:
         ):
             raise NotFoundException("Position not found.")
 
-        if candidate_id is not None and not await db.get(Candidate, candidate_id):
+        if candidate_id is not None and not await candidate_repository.find_by_id(
+            db,
+            candidate_id,
+        ):
             raise NotFoundException("Candidate not found.")
 
         return await question_repository.find_by_target(
@@ -215,24 +218,9 @@ class QuestionService:
 
             return fallback_position_id
 
-        return await self._find_latest_second_position_id(db, candidate.candidate_id)
-
-    async def _find_latest_second_position_id(
-        self,
-        db: AsyncSession,
-        candidate_id: int,
-    ) -> int | None:
-        return await db.scalar(
-            select(Resume.second_position_id)
-            .where(
-                Resume.candidate_id == candidate_id,
-                Resume.second_position_id.is_not(None),
-            )
-            .order_by(
-                desc(Resume.created_at),
-                desc(Resume.resume_id),
-            )
-            .limit(1)
+        return await resume_repository.find_latest_second_position_id(
+            db,
+            candidate.candidate_id,
         )
 
     def _get_default_save_question_type(
