@@ -9,15 +9,13 @@ import {
   flexRender,
   createColumnHelper,
 } from "@tanstack/react-table";
-import { User, PaginatedResponse, CreateUserRequest } from "@/types/admin";
-import {
-  createUser,
-  checkEmailAvailability,
-  getUserDetail,
-  deleteUser,
-} from "@/lib/admin/adminUsers.client";
+import { User, PaginatedResponse } from "@/types/admin";
+import { getUserDetail, deleteUser } from "@/lib/admin/adminUsers.client";
 import { resetUserPassword } from "@/lib/auth";
 import { exportToCSV } from "@/lib/utils/export";
+import FloatingActionBar from "./usertable/FloatingActionBar";
+import UserDetailModal from "./usertable/UserDetailModal";
+import CreateUserModal from "./usertable/CreateUserModal";
 
 interface UserTableProps {
   data: PaginatedResponse<User>;
@@ -41,15 +39,6 @@ export default function UserTable({ data }: UserTableProps) {
 
   // 사용자 추가 모달 상태
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [formData, setFormData] = useState<CreateUserRequest>({
-    userEmail: "",
-    password: "",
-    userName: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [isEmailChecked, setIsEmailChecked] = useState(false);
-  const [emailMessage, setEmailMessage] = useState("");
 
   // 단건 조회(상세) 모달 상태
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -104,63 +93,6 @@ export default function UserTable({ data }: UserTableProps) {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     updateURLParams({ keyword: searchInput, page: 0 });
-  };
-
-  // [추가 모달] 이메일 입력 및 중복 체크
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, userEmail: e.target.value });
-    setIsEmailChecked(false);
-    setEmailMessage("");
-  };
-
-  const handleEmailCheck = async () => {
-    if (!formData.userEmail) {
-      setEmailMessage("이메일을 먼저 입력해주세요.");
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.userEmail)) {
-      setEmailMessage("올바른 이메일 형식이 아닙니다.");
-      return;
-    }
-
-    setIsCheckingEmail(true);
-    try {
-      const res = await checkEmailAvailability(formData.userEmail);
-      setIsEmailChecked(res.available);
-      setEmailMessage(res.message);
-    } catch (error) {
-      setEmailMessage("중복 확인 중 오류가 발생했습니다.");
-      setIsEmailChecked(false);
-    } finally {
-      setIsCheckingEmail(false);
-    }
-  };
-
-  // [추가 모달] 사용자 생성 제출
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isEmailChecked) {
-      alert("이메일 중복 확인을 먼저 완료해주세요.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await createUser(formData);
-      alert(`${formData.userName}님이 성공적으로 추가되었습니다!`);
-
-      setIsCreateModalOpen(false);
-      setFormData({ userEmail: "", password: "", userName: "" });
-      setIsEmailChecked(false);
-      setEmailMessage("");
-
-      router.refresh();
-    } catch (error) {
-      alert("사용자 추가에 실패했습니다.");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   // [상세/삭제 모달] 단건 조회
@@ -448,224 +380,31 @@ export default function UserTable({ data }: UserTableProps) {
         </button>
       </div>
 
-      {/* 💡 1. 사용자 추가 모달 */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[24px] shadow-xl w-full max-w-md p-8 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-black text-slate-800">
-                새 사용자 추가
-              </h3>
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <i className="bx bx-x text-2xl"></i>
-              </button>
-            </div>
+      {/* 사용자 추가 모달 */}
+      <CreateUserModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => router.refresh()}
+      />
 
-            <form onSubmit={handleCreateUser} className="space-y-5">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  이름
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={formData.userName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, userName: e.target.value })
-                  }
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-none"
-                  placeholder="홍길동"
-                />
-              </div>
+      {/* 사용자 상세 조회 및 삭제 모달 */}
+      <UserDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        user={selectedUser}
+        isLoading={isLoadingDetail}
+        isResettingPassword={isResettingPassword}
+        onDelete={handleDeleteSingle}
+        onResetPassword={handleResetPassword}
+      />
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  이메일 (ID)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    required
-                    type="email"
-                    value={formData.userEmail}
-                    onChange={handleEmailChange}
-                    className={`flex-1 border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all
-                                            ${
-                                              emailMessage
-                                                ? isEmailChecked
-                                                  ? "border-emerald-500 focus:ring-emerald-200"
-                                                  : "border-rose-500 focus:ring-rose-200"
-                                                : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
-                                            }`}
-                    placeholder="hr1@company.com"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleEmailCheck}
-                    disabled={
-                      isCheckingEmail || !formData.userEmail || isEmailChecked
-                    }
-                    className="px-4 py-2.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 transition-colors whitespace-nowrap"
-                  >
-                    {isCheckingEmail
-                      ? "확인 중..."
-                      : isEmailChecked
-                        ? "확인 완료"
-                        : "중복 확인"}
-                  </button>
-                </div>
-                {emailMessage && (
-                  <p
-                    className={`mt-2 text-xs font-bold flex items-center gap-1 ${isEmailChecked ? "text-emerald-600" : "text-rose-600"}`}
-                  >
-                    <i
-                      className={`bx ${isEmailChecked ? "bx-check-circle" : "bx-error-circle"} text-base`}
-                    ></i>
-                    {emailMessage}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  임시 비밀번호
-                </label>
-                <input
-                  required
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-none"
-                  placeholder="password123!"
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="flex-1 px-4 py-2.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !isEmailChecked}
-                  className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:bg-slate-400 transition-colors"
-                >
-                  {isSubmitting ? "추가 중..." : "추가 완료"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 💡 2. 사용자 상세 조회 및 삭제 모달 */}
-      {isDetailModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[24px] shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="h-20 bg-gradient-to-r from-slate-100 to-slate-50 relative border-b border-slate-100">
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-white rounded-full p-1 shadow-sm"
-              >
-                <i className="bx bx-x text-xl"></i>
-              </button>
-            </div>
-
-            <div className="p-8 pt-0">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center border-4 border-white shadow-sm -mt-10 mb-4 mx-auto relative z-10 text-4xl text-indigo-500">
-                <i className="bx bxs-user-circle"></i>
-              </div>
-
-              {isLoadingDetail ? (
-                <div className="py-10 flex justify-center">
-                  <i className="bx bx-loader-alt bx-spin text-3xl text-indigo-500"></i>
-                </div>
-              ) : selectedUser ? (
-                <>
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl font-black text-slate-800">
-                      {selectedUser.userName}
-                    </h3>
-                    <p className="text-sm font-medium text-slate-500">
-                      {selectedUser.userEmail}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="font-bold text-slate-400">사원 ID</span>
-                      <span className="font-semibold text-slate-800">
-                        #{selectedUser.userId}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="font-bold text-slate-400">
-                        시스템 권한
-                      </span>
-                      <span className="font-bold uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">
-                        {selectedUser.role}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="font-bold text-slate-400">
-                        계정 생성일
-                      </span>
-                      <span className="font-semibold text-slate-800">
-                        {new Intl.DateTimeFormat("ko-KR").format(
-                          new Date(selectedUser.createdAt),
-                        )}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => setIsDetailModalOpen(false)}
-                      className="px-4 py-2.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
-                    >
-                      닫기
-                    </button>
-
-                    <div className="flex-1 flex gap-2">
-                      {/* 💡 새로 추가된 비밀번호 초기화 버튼 (노란색 톤) */}
-                      <button
-                        onClick={() => handleResetPassword(selectedUser.userId)}
-                        disabled={isResettingPassword}
-                        className="flex-1 px-3 py-2.5 rounded-xl font-bold text-white bg-amber-500 hover:bg-amber-600 shadow-sm flex justify-center items-center gap-1.5 transition-colors disabled:opacity-50"
-                      >
-                        <i
-                          className={`bx ${isResettingPassword ? "bx-loader-alt bx-spin" : "bx-key"} text-lg`}
-                        ></i>
-                        <span className="text-sm">비밀번호 초기화</span>
-                      </button>
-
-                      {/* 기존 계정 삭제 버튼 */}
-                      <button
-                        onClick={() => handleDeleteSingle(selectedUser.userId)}
-                        className="flex-1 px-3 py-2.5 rounded-xl font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-sm flex justify-center items-center gap-1.5 transition-colors"
-                      >
-                        <i className="bx bx-trash text-lg"></i>
-                        <span className="text-sm">계정 삭제</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center text-rose-500 font-bold py-10">
-                  데이터를 불러오지 못했습니다.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 하단 플로팅 리모콘 */}
+      <FloatingActionBar
+        selectedCount={selectedCount}
+        onDownload={handleDownloadSelected}
+        onDelete={handleBulkDelete}
+        onClearSelection={() => setRowSelection({})}
+      />
       {/* 💡 3. 전역 삭제 로딩 오버레이 (z-[100] 적용) */}
       {isDeleting && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center z-[100] animate-in fade-in duration-200">
@@ -674,48 +413,6 @@ export default function UserTable({ data }: UserTableProps) {
           <p className="text-white font-bold text-lg tracking-wide shadow-sm">
             안전하게 삭제 중입니다...
           </p>
-        </div>
-      )}
-      {/* 💡 (새로 추가) 하단 플로팅 리모콘 (항목 선택 시 표시) */}
-      {selectedCount > 0 && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-8 fade-in duration-300">
-          <div className="bg-white/80 backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-200 rounded-full px-6 py-3 flex items-center gap-4">
-            {/* 몇 개 선택되었는지 안내 */}
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-              <span className="flex items-center justify-center bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full text-xs">
-                {selectedCount}
-              </span>
-              명 선택됨
-            </div>
-
-            {/* 세로 구분선 */}
-            <div className="w-px h-5 bg-slate-300"></div>
-
-            <button
-              onClick={handleDownloadSelected}
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-sm font-bold hover:bg-indigo-100 transition-all"
-            >
-              <i className="bx bx-file-blank text-lg"></i>
-              엑셀 저장
-            </button>
-            {/* 삭제 버튼 */}
-            <button
-              onClick={handleBulkDelete}
-              className="flex items-center gap-1.5 px-4 py-2 bg-rose-500 text-white rounded-full text-sm font-bold shadow-sm hover:bg-rose-600 hover:-translate-y-0.5 transition-all"
-            >
-              <i className="bx bx-trash text-lg"></i>
-              선택 삭제
-            </button>
-
-            {/* 선택 취소 버튼 (선택적) */}
-            <button
-              onClick={() => setRowSelection({})} // 💡 선택 초기화 함수
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors ml-1"
-              title="선택 취소"
-            >
-              <i className="bx bx-x text-xl"></i>
-            </button>
-          </div>
         </div>
       )}
     </div>
