@@ -8,6 +8,7 @@ from app.dependencies.dependencies import require_roles
 from app.schemas.resume_parse import ResumeParseResponse
 from app.services.resume_parse_service import ResumeParseService
 
+
 router = APIRouter(prefix="/api", tags=["Resume Parse"])
 
 _resume_parse_service = ResumeParseService()
@@ -29,5 +30,6 @@ async def parse_resumes(
     files: list[UploadFile] = File(...),
 ) -> ResumeParseResponse:
     if not files:
-        raise HTTPException(status_code=400, detail="업로드된 파일이 없습니다.")
+        raise HTTPException(status_code=400, detail="No uploaded files.")
+
     return await service.parse_resumes(session, files)

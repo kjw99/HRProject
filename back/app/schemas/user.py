@@ -55,8 +55,8 @@ class EmailCheckResponse(CaseModel):
     message: str
 
 class PasswordChangeRequest(CaseModel):
-    currentPassword: str
-    newPassword: str
+    current_password: str
+    new_password: str
 
 
 

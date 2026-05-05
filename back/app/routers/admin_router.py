@@ -17,7 +17,7 @@ async def create_hr_user(
     request: UserCreate,
     db: AsyncSession = Depends(get_async_db),
 ):
-    return await user_service.create_user_service(db, request, role="hr")
+    return await user_service.create_user(db, request, role="hr")
 
 
 @router.get(

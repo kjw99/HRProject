@@ -26,4 +26,8 @@ class Base(DeclarativeBase):
 # Async DB 세션 의존성 주입 함수
 async def get_async_db():
     async with AsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise

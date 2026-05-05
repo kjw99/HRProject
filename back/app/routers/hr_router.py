@@ -17,4 +17,4 @@ async def create_interviewer(
     request: UserCreate,
     db: AsyncSession = Depends(get_async_db),
 ):
-    return await user_service.create_user_service(db, request, role="interviewer")
+    return await user_service.create_user(db, request, role="interviewer")

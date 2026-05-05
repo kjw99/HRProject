@@ -34,11 +34,6 @@ class Position(Base):
         back_populates="position",
     )
 
-    resumes_as_first: Mapped[list["Resume"]] = relationship(
-        foreign_keys="Resume.position_id",
-        back_populates="position",
-    )
-
     resumes_as_second: Mapped[list["Resume"]] = relationship(
         foreign_keys="Resume.second_position_id",
         back_populates="second_position",
