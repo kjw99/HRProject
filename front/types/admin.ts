@@ -57,3 +57,20 @@ export interface EmailAvailabilityResponse {
 export interface DeleteUserResponse {
   message: string;
 }
+
+// 💡 4. 페이지 차단 상태 인터페이스
+
+// 접근 제어 규칙(Route Rule) 인터페이스
+export interface PageAccessRule {
+  id: string; // 고유 식별자 (DB의 PK 역할)
+  path: string; // 차단/허용할 URL 경로 (예: /payment)
+  isActive: boolean; // true: 접근 허용(Active), false: 접근 차단(Maintenance)
+  message: string; // 차단 시 사용자에게 보여줄 점검 사유
+  updatedAt: string; // 마지막 수정일
+}
+
+// 폼 입력 시 사용할 Omit 타입 (id와 updatedAt은 서버에서 자동 생성된다고 가정)
+export type CreateRuleRequest = Omit<
+  PageAccessRule,
+  "id" | "updatedAt" | "isActive"
+>;

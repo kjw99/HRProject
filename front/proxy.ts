@@ -21,13 +21,13 @@ async function fetchPageStatuses() {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. 현재 접속하려는 경로가 Block 리스트에 있는지 확인합니다.
+  // // 1. 현재 접속하려는 경로가 Block 리스트에 있는지 확인합니다.
   // const pageStatuses = await fetchPageStatuses();
   // const blockedPage = pageStatuses.find(
   //   (page) => pathname.startsWith(page.path) && !page.isActive,
   // );
 
-  // 2. 만약 Block된 페이지라면 'maintenance(공사중)' 페이지로 리다이렉트합니다.
+  // // 2. 만약 Block된 페이지라면 'maintenance(공사중)' 페이지로 리다이렉트합니다.
   // if (blockedPage) {
   //   const url = request.nextUrl.clone();
   //   url.pathname = "/maintenance";
