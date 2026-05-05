@@ -17,6 +17,7 @@ import {
   deleteUser,
 } from "@/lib/admin/adminUsers.client";
 import { resetUserPassword } from "@/lib/auth";
+import { exportToCSV } from "@/lib/utils/export";
 
 interface UserTableProps {
   data: PaginatedResponse<User>;
@@ -326,6 +327,27 @@ export default function UserTable({ data }: UserTableProps) {
 
   const selectedCount = Object.keys(rowSelection).length;
 
+  // 💡 엑셀 출력용 헤더 매핑 정의 (일반화의 핵심)
+  const userHeaderMap = {
+    userId: "ID",
+    userName: "성함",
+    userEmail: "이메일",
+    role: "권한",
+    createdAt: "가입일",
+  };
+
+  // 💡 전체 다운로드 핸들러
+  const handleDownloadAll = () => {
+    exportToCSV(data.content, userHeaderMap, "전체_사용자_목록");
+  };
+
+  // 💡 선택 항목 다운로드 핸들러
+  const handleDownloadSelected = () => {
+    const selectedRows = table
+      .getSelectedRowModel()
+      .rows.map((row) => row.original);
+    exportToCSV(selectedRows, userHeaderMap, "선택_사용자_목록");
+  };
   /* ==========================================
        4. 렌더링 (JSX)
     ========================================== */
@@ -344,6 +366,13 @@ export default function UserTable({ data }: UserTableProps) {
               className="pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none w-64 transition-all"
             />
           </form>
+          <button
+            onClick={handleDownloadAll}
+            className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all"
+          >
+            <i className="bx bx-download text-lg"></i>
+            목록 다운로드
+          </button>
         </div>
 
         <button
@@ -662,6 +691,13 @@ export default function UserTable({ data }: UserTableProps) {
             {/* 세로 구분선 */}
             <div className="w-px h-5 bg-slate-300"></div>
 
+            <button
+              onClick={handleDownloadSelected}
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-sm font-bold hover:bg-indigo-100 transition-all"
+            >
+              <i className="bx bx-file-blank text-lg"></i>
+              엑셀 저장
+            </button>
             {/* 삭제 버튼 */}
             <button
               onClick={handleBulkDelete}
