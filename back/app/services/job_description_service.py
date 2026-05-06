@@ -46,7 +46,7 @@ class JobDescriptionService:
 
     def _read_document(self) -> str:
         if not JD_FILE_PATH.exists():
-            raise NotFoundException("Job description file not found.")
+            raise NotFoundException("직무기술서 파일을 찾을 수 없습니다.")
 
         try:
             return JD_FILE_PATH.read_text(encoding="utf-8-sig")
@@ -98,7 +98,7 @@ class JobDescriptionService:
             )
 
         if not sections:
-            raise NotFoundException("Job description sections not found.")
+            raise NotFoundException("직무기술서의 직무 섹션을 찾을 수 없습니다.")
 
         return sections
 
@@ -114,7 +114,7 @@ class JobDescriptionService:
                 if section.section_number == normalized_section_number:
                     return section
 
-            raise NotFoundException("Matching job description section not found.")
+            raise NotFoundException("일치하는 직무기술서 섹션을 찾을 수 없습니다.")
 
         normalized_position_name = self._normalize_text(position.position_name)
         for section in sections:
@@ -130,7 +130,7 @@ class JobDescriptionService:
             if section.section_number == str(position.position_id):
                 return section
 
-        raise NotFoundException("Matching job description section not found.")
+        raise NotFoundException("일치하는 직무기술서 섹션을 찾을 수 없습니다.")
 
     def _extract_common_context(self, document: str) -> str:
         lines = document.splitlines()

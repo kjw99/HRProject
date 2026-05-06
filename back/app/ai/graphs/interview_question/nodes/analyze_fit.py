@@ -11,7 +11,7 @@ async def analyze_fit(
     result = await invoke_structured(
         schema=QuestionFitAnalysis,
         messages=build_fit_analysis_messages(data),
-        error_message="Failed to analyze candidate fit for interview questions.",
+        error_message="면접 질문 생성을 위한 지원자 적합도 분석에 실패했습니다.",
     )
 
     return {

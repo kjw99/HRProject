@@ -14,7 +14,7 @@ class InterviewQuestionGenerationInput(BaseModel):
     def strip_position_name(cls, value: str) -> str:
         stripped_value = value.strip()
         if not stripped_value:
-            raise ValueError("position_name must not be blank.")
+            raise ValueError("position_name은 비어 있을 수 없습니다.")
 
         return stripped_value
 
@@ -32,7 +32,7 @@ class InterviewQuestionGenerationInput(BaseModel):
     def normalize_generation_mode(cls, value: str) -> str:
         stripped_value = value.strip()
         if not stripped_value:
-            raise ValueError("generation_mode must not be blank.")
+            raise ValueError("generation_mode는 비어 있을 수 없습니다.")
 
         return stripped_value
 
@@ -63,7 +63,7 @@ class GeneratedQuestion(BaseModel):
     def strip_required_text(cls, value: str) -> str:
         stripped_value = value.strip()
         if not stripped_value:
-            raise ValueError("Generated question fields must not be blank.")
+            raise ValueError("생성된 질문 필드는 비어 있을 수 없습니다.")
 
         return stripped_value
 
@@ -122,7 +122,7 @@ class QuestionFitAnalysis(BaseModel):
     def normalize_question_strategy(cls, value: str) -> str:
         stripped_value = value.strip()
         if not stripped_value:
-            raise ValueError("question_strategy must not be blank.")
+            raise ValueError("question_strategy는 비어 있을 수 없습니다.")
 
         return stripped_value
 
@@ -138,7 +138,7 @@ class QuestionReviewIssue(BaseModel):
     def normalize_required_text(cls, value: str) -> str:
         stripped_value = value.strip()
         if not stripped_value:
-            raise ValueError("Question review issue fields must not be blank.")
+            raise ValueError("질문 검토 이슈 필드는 비어 있을 수 없습니다.")
 
         return stripped_value
 
@@ -154,6 +154,6 @@ class QuestionReviewOutput(BaseModel):
     def normalize_summary(cls, value: str) -> str:
         stripped_value = value.strip()
         if not stripped_value:
-            raise ValueError("summary must not be blank.")
+            raise ValueError("summary는 비어 있을 수 없습니다.")
 
         return stripped_value

@@ -18,7 +18,7 @@ async def generate_question_candidates(
             candidate_count=candidate_count,
         ),
         question_count=candidate_count,
-        error_message="Failed to generate interview question candidates.",
+        error_message="면접 질문 후보를 생성하지 못했습니다.",
     )
 
     return {

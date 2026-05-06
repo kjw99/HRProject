@@ -60,15 +60,15 @@ class ResumeContextService:
     ) -> ResumeQuestionContext:
         candidate = await self._find_candidate(db, candidate_id)
         if not candidate:
-            raise NotFoundException("Candidate not found.")
+            raise NotFoundException("지원자를 찾을 수 없습니다.")
 
         resume = await self._find_resume(db, candidate_id)
         if not resume:
-            raise NotFoundException("Resume not found for candidate.")
+            raise NotFoundException("해당 지원자의 이력서를 찾을 수 없습니다.")
 
         position = await self._resolve_position(db, candidate, resume, position_id)
         if not position:
-            raise NotFoundException("Position not found.")
+            raise NotFoundException("직무를 찾을 수 없습니다.")
 
         text = self._build_resume_text(resume, position)
         return ResumeQuestionContext(

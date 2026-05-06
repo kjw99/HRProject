@@ -33,7 +33,9 @@ class ResumeFileStorageService:
         original_name = Path(upload.filename or "resume").name
         suffix = Path(original_name).suffix.lower()
         if suffix not in ALLOWED_RESUME_EXTENSIONS:
-            raise ValueError(f"Unsupported resume file type: {suffix or 'unknown'}")
+            raise ValueError(
+                f"지원하지 않는 이력서 파일 형식입니다: {suffix or '알 수 없음'}"
+            )
 
         today = datetime.now()
         upload_root = self._get_upload_root()
@@ -51,7 +53,7 @@ class ResumeFileStorageService:
 
         if bytes_written == 0:
             self.remove_silent(target_path)
-            raise ValueError("Uploaded resume file is empty.")
+            raise ValueError("업로드된 이력서 파일이 비어 있습니다.")
 
         return StoredResumeFile(
             absolute_path=target_path.resolve(),

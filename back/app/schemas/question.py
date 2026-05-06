@@ -56,7 +56,7 @@ class QuestionSaveItem(CaseModel):
     def normalize_question_text(cls, value: str) -> str:
         stripped_value = value.strip()
         if not stripped_value:
-            raise ValueError("question_text must not be blank.")
+            raise ValueError("question_text는 비어 있을 수 없습니다.")
 
         return stripped_value
 
@@ -97,7 +97,7 @@ class QuestionSaveRequest(CaseModel):
     @model_validator(mode="after")
     def validate_target(self) -> "QuestionSaveRequest":
         if self.position_id is None and self.candidate_id is None:
-            raise ValueError("position_id or candidate_id is required.")
+            raise ValueError("position_id 또는 candidate_id가 필요합니다.")
 
         return self
 

@@ -41,13 +41,13 @@ class InterviewQuestionGraph:
             raise
         except Exception as exc:
             raise ExternalServiceException(
-                "Failed to generate interview questions with LangGraph."
+                "LangGraph로 면접 질문을 생성하지 못했습니다."
             ) from exc
 
         output = result.get("final_output")
         if not output:
             raise ExternalServiceException(
-                "Question generation graph did not return final output."
+                "질문 생성 그래프가 최종 결과를 반환하지 않았습니다."
             )
 
         return output

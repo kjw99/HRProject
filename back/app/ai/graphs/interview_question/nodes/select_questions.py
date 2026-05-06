@@ -15,7 +15,7 @@ async def select_questions(
 
     if len(candidate_questions) < expected_candidate_count:
         raise ExternalServiceException(
-            "AI generated fewer interview question candidates than requested."
+            "AI가 요청한 개수보다 적은 면접 질문 후보를 생성했습니다."
         )
 
     result = await invoke_structured(
@@ -25,7 +25,7 @@ async def select_questions(
             analysis=state["analysis"],
             candidate_questions=candidate_questions[:expected_candidate_count],
         ),
-        error_message="Failed to select interview questions from candidates.",
+        error_message="면접 질문 후보 중 질문을 선택하지 못했습니다.",
     )
 
     try:
@@ -33,12 +33,12 @@ async def select_questions(
         selected_questions = normalize_questions(output.selected_questions)
     except Exception as exc:
         raise ExternalServiceException(
-            "AI returned an invalid interview question selection format."
+            "AI가 유효하지 않은 면접 질문 선택 형식을 반환했습니다."
         ) from exc
 
     if len(selected_questions) < data.question_count:
         raise ExternalServiceException(
-            "AI selected fewer interview questions than requested."
+            "AI가 요청한 개수보다 적은 면접 질문을 선택했습니다."
         )
 
     return {

@@ -17,7 +17,7 @@ class ResumeParser:
     ) -> ResumeParseAIOutput:
         cleaned_text = raw_text.strip()
         if not cleaned_text:
-            raise ExternalServiceException("Resume text is empty.")
+            raise ExternalServiceException("이력서 텍스트가 비어 있습니다.")
 
         try:
             llm = get_chat_model().with_structured_output(ResumeParseAIOutput)
@@ -30,13 +30,13 @@ class ResumeParser:
         except ExternalServiceException:
             raise
         except Exception as exc:
-            raise ExternalServiceException("Failed to parse resume with AI.") from exc
+            raise ExternalServiceException("AI로 이력서를 파싱하지 못했습니다.") from exc
 
         try:
             return ResumeParseAIOutput.model_validate(result)
         except Exception as exc:
             raise ExternalServiceException(
-                "AI returned an invalid resume parse format."
+                "AI가 유효하지 않은 이력서 파싱 형식을 반환했습니다."
             ) from exc
 
     def _truncate(self, value: str) -> str:

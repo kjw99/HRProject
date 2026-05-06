@@ -70,7 +70,7 @@ class QuestionService:
         if data.candidate_id is not None:
             candidate = await candidate_repository.find_by_id(db, data.candidate_id)
             if not candidate:
-                raise NotFoundException("Candidate not found.")
+                raise NotFoundException("지원자를 찾을 수 없습니다.")
 
             resolved_position_id = await self._resolve_save_position_id(
                 db,
@@ -81,7 +81,7 @@ class QuestionService:
             db,
             data.position_id,
         ):
-            raise NotFoundException("Position not found.")
+            raise NotFoundException("직무를 찾을 수 없습니다.")
 
         existing_questions = await question_repository.find_by_target(
             db,
@@ -177,13 +177,13 @@ class QuestionService:
             db,
             position_id,
         ):
-            raise NotFoundException("Position not found.")
+            raise NotFoundException("직무를 찾을 수 없습니다.")
 
         if candidate_id is not None and not await candidate_repository.find_by_id(
             db,
             candidate_id,
         ):
-            raise NotFoundException("Candidate not found.")
+            raise NotFoundException("지원자를 찾을 수 없습니다.")
 
         return await question_repository.find_by_target(
             db,
@@ -198,7 +198,7 @@ class QuestionService:
     ) -> None:
         question = await question_repository.find_by_id(db, question_id)
         if not question:
-            raise NotFoundException("Question not found.")
+            raise NotFoundException("질문을 찾을 수 없습니다.")
 
         await question_repository.delete(db, question)
         await db.commit()
@@ -214,7 +214,7 @@ class QuestionService:
 
         if fallback_position_id is not None:
             if not await position_repository.find_by_id(db, fallback_position_id):
-                raise NotFoundException("Position not found.")
+                raise NotFoundException("직무를 찾을 수 없습니다.")
 
             return fallback_position_id
 

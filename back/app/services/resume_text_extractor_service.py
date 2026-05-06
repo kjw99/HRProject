@@ -27,7 +27,9 @@ class ResumeTextExtractorService:
         if suffix in {".doc", ".ppt", ".pptx"}:
             return self._extract_via_libreoffice(file_path)
 
-        raise ValueError(f"Unsupported resume file type: {suffix or 'unknown'}")
+        raise ValueError(
+            f"지원하지 않는 이력서 파일 형식입니다: {suffix or '알 수 없음'}"
+        )
 
     def _extract_pdf(self, path: Path) -> str:
         parts: list[str] = []
@@ -61,7 +63,7 @@ class ResumeTextExtractorService:
             from hwp5.filestructure import Hwp5File
             from hwp5.recordstream import read_records
         except ImportError as exc:
-            raise ValueError("HWP extraction requires pyhwp.") from exc
+            raise ValueError("HWP 텍스트 추출을 위해 pyhwp 패키지가 필요합니다.") from exc
 
         document = Hwp5File(str(path))
         parts: list[str] = []
@@ -114,14 +116,14 @@ class ResumeTextExtractorService:
             )
             if result.returncode != 0:
                 raise ValueError(
-                    "Failed to convert resume to PDF with LibreOffice."
+                    "LibreOffice로 이력서를 PDF로 변환하지 못했습니다."
                 )
 
             converted_path = Path(temp_dir) / f"{path.stem}.pdf"
             if not converted_path.exists():
                 matches = list(Path(temp_dir).glob("*.pdf"))
                 if not matches:
-                    raise ValueError("Converted PDF was not created.")
+                    raise ValueError("변환된 PDF 파일이 생성되지 않았습니다.")
 
                 converted_path = matches[0]
 

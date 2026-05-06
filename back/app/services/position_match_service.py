@@ -124,14 +124,14 @@ class PositionMatchService:
             return self._position_match_result(
                 status="notProvided",
                 raw_position=None,
-                reason="No applied position was extracted from the resume.",
+                reason="이력서에서 지원 직무를 추출하지 못했습니다.",
             )
 
         if not positions:
             return self._position_match_result(
                 status="noPositions",
                 raw_position=cleaned_position,
-                reason="No positions exist in the database.",
+                reason="데이터베이스에 등록된 직무가 없습니다.",
             )
 
         terms = self._position_terms(cleaned_position)
@@ -146,7 +146,7 @@ class PositionMatchService:
             return self._position_match_result(
                 status="noMatch",
                 raw_position=cleaned_position,
-                reason="No database position matched the extracted position.",
+                reason="추출된 직무와 일치하는 데이터베이스 직무가 없습니다.",
             )
 
         scored_positions.sort(key=lambda item: (-item[0], item[1].position_id))
@@ -163,7 +163,7 @@ class PositionMatchService:
                     self._position_candidate(score, position, reason)
                     for score, position, reason in best_positions[:5]
                 ],
-                reason="Multiple database positions matched the extracted position.",
+                reason="추출된 직무와 일치하는 데이터베이스 직무가 여러 개입니다.",
             )
 
         score, position, reason = best_positions[0]
@@ -186,7 +186,7 @@ class PositionMatchService:
             return 0, ""
 
         if normalized_position in terms:
-            return 100, "Exact normalized position name match."
+            return 100, "정규화된 직무명이 정확히 일치합니다."
 
         best_score = 0
         best_reason = ""
@@ -196,11 +196,11 @@ class PositionMatchService:
 
             if normalized_position in term and len(normalized_position) >= 4:
                 best_score = max(best_score, 90)
-                best_reason = "Database position name is contained in extracted position."
+                best_reason = "추출된 직무에 데이터베이스 직무명이 포함되어 있습니다."
 
             if term in normalized_position and len(term) >= 4:
                 best_score = max(best_score, 85)
-                best_reason = "Extracted position is contained in database position name."
+                best_reason = "데이터베이스 직무명에 추출된 직무가 포함되어 있습니다."
 
         for synonym_group in POSITION_SYNONYM_GROUPS:
             if (
@@ -209,7 +209,7 @@ class PositionMatchService:
             ) and any(alias in normalized_position for alias in synonym_group):
                 if best_score < 80:
                     best_score = 80
-                    best_reason = "Position synonym group match."
+                    best_reason = "직무 동의어 그룹이 일치합니다."
 
         return best_score, best_reason
 

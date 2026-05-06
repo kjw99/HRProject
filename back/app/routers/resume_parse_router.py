@@ -30,6 +30,6 @@ async def parse_resumes(
     files: list[UploadFile] = File(...),
 ) -> ResumeParseResponse:
     if not files:
-        raise HTTPException(status_code=400, detail="No uploaded files.")
+        raise HTTPException(status_code=400, detail="업로드된 파일이 없습니다.")
 
     return await service.parse_resumes(session, files)

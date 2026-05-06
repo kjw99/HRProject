@@ -17,7 +17,7 @@ async def revise_questions(
             review=state["review"],
         ),
         question_count=data.question_count,
-        error_message="Failed to revise interview questions.",
+        error_message="면접 질문을 수정하지 못했습니다.",
     )
 
     return {

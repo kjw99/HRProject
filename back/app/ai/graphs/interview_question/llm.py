@@ -36,12 +36,12 @@ async def invoke_question_output(
         questions = normalize_questions(output.questions)
     except Exception as exc:
         raise ExternalServiceException(
-            "AI returned an invalid interview question format."
+            "AI가 유효하지 않은 면접 질문 형식을 반환했습니다."
         ) from exc
 
     if len(questions) < question_count:
         raise ExternalServiceException(
-            "AI generated fewer interview questions than requested."
+            "AI가 요청한 개수보다 적은 면접 질문을 생성했습니다."
         )
 
     return InterviewQuestionGenerationOutput(questions=questions[:question_count])
