@@ -47,7 +47,6 @@ class PersonalInfo(ResumeSchemaModel):
     phone: str | None = Field(default=None)
     email: str | None = Field(default=None)
     applied_position: PositionText | None = Field(default=None)
-    second_applied_position: PositionText | None = Field(default=None)
 
 
 class DesiredConditions(ResumeSchemaModel):
@@ -75,6 +74,9 @@ class MilitaryService(ResumeSchemaModel):
 class CareerItem(ResumeSchemaModel):
     company_name: str | None = Field(default=None)
     department: str | None = Field(default=None)
+    employment_type: str | None = Field(default=None)
+    is_company_employment: bool | None = Field(default=None)
+    exclusion_reason: str | None = Field(default=None)
     annual_salary: MoneyValue | None = Field(default=None)
     position: str | None = Field(default=None)
     resignation_reason: str | None = Field(default=None)

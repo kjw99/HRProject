@@ -1,7 +1,8 @@
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, func
+from sqlalchemy import Date, DateTime, ForeignKey, String, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.dependencies.database import Base
@@ -57,10 +58,31 @@ class Candidate(Base):
         nullable=True,
         comment="Email",
     )
+    experience_level: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="신입",
+        server_default="신입",
+        comment="Experience level",
+    )
     application_status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         comment="Application status",
+    )
+    final_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="진행중",
+        server_default="진행중",
+        comment="Final status",
+    )
+    meets_preferred_criteria: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
+        comment="Matched preferred criteria",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

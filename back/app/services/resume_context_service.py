@@ -66,7 +66,7 @@ class ResumeContextService:
         if not resume:
             raise NotFoundException("해당 지원자의 이력서를 찾을 수 없습니다.")
 
-        position = await self._resolve_position(db, candidate, resume, position_id)
+        position = await self._resolve_position(db, candidate, position_id)
         if not position:
             raise NotFoundException("직무를 찾을 수 없습니다.")
 
@@ -93,7 +93,7 @@ class ResumeContextService:
         db: AsyncSession,
         candidate_id: int,
     ) -> Resume | None:
-        return await resume_repository.find_latest_by_candidate_id_with_second_position(
+        return await resume_repository.find_latest_by_candidate_id(
             db,
             candidate_id,
         )
@@ -102,7 +102,6 @@ class ResumeContextService:
         self,
         db: AsyncSession,
         candidate: Candidate,
-        resume: Resume,
         position_id: int | None,
     ) -> Position | None:
         if candidate.position:
@@ -111,7 +110,7 @@ class ResumeContextService:
         if position_id is not None:
             return await position_repository.find_by_id(db, position_id)
 
-        return resume.second_position
+        return None
 
     def _build_resume_text(self, resume: Resume, position: Position) -> str:
         lines: list[str] = [

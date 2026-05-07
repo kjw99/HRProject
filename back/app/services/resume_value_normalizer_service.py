@@ -13,12 +13,12 @@ EMPTY_VALUE_MARKERS = {
     "null",
     "unknown",
     "notprovided",
-    "\uc5c6\uc74c",
-    "\ubbf8\uae30\uc7ac",
-    "\ud574\ub2f9\uc5c6\uc74c",
-    "\ubb34",
-    "\uc54c\uc218\uc5c6\uc74c",
-    "\ud655\uc778\ud544\uc694",
+    "없음",
+    "미기재",
+    "해당없음",
+    "무",
+    "알수없음",
+    "확인필요",
 }
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -61,7 +61,7 @@ class ResumeValueNormalizerService:
         if amount is None or amount <= 0:
             return None
 
-        if raw and amount < 100000 and "\ub9cc" in raw:
+        if raw and amount < 100000 and "만" in raw:
             amount *= 10000
 
         return amount

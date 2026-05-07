@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.candidate import Candidate
 from app.models.position import Position
-from app.models.resume import Resume
 
 
 class PositionRepository:
@@ -32,9 +31,6 @@ class PositionRepository:
         reference_queries = [
             select(Candidate.candidate_id)
             .where(Candidate.position_id == position_id)
-            .limit(1),
-            select(Resume.resume_id)
-            .where(Resume.second_position_id == position_id)
             .limit(1),
         ]
 

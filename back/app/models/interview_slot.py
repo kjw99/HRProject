@@ -70,6 +70,11 @@ class InterviewSlot(Base):
         nullable=True,
         comment="예약 마감 시각",
     )
+    interview_location: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="면접 장소",
+    )
     capacity: Mapped[int] = mapped_column(
         Integer,
         nullable=False,

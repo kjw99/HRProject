@@ -8,7 +8,6 @@ from app.models.question import Question
 from app.repositories.candidate_repository import candidate_repository
 from app.repositories.position_repository import position_repository
 from app.repositories.question_repository import question_repository
-from app.repositories.resume_repository import resume_repository
 from app.schemas.question import (
     GeneratedQuestionResponse,
     QuestionGenerateRequest,
@@ -218,10 +217,7 @@ class QuestionService:
 
             return fallback_position_id
 
-        return await resume_repository.find_latest_second_position_id(
-            db,
-            candidate.candidate_id,
-        )
+        return None
 
     def _get_default_save_question_type(
         self,

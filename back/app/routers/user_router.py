@@ -14,7 +14,6 @@ async def email_check(email: str, db: AsyncSession = Depends(get_async_db)):
     return await user_service.check_email_availability(db, email)
 
 
-
 @router.get("/me")
 async def get_my_info(current_user: User = Depends(get_current_user)):
     return {

@@ -8,11 +8,11 @@ from app.models.position import Position
 BROAD_POSITION_TERMS = {
     "developer",
     "engineer",
-    "\uac1c\ubc1c",
-    "\uac1c\ubc1c\uc790",
-    "\uc5d4\uc9c0\ub2c8\uc5b4",
-    "\uc9c1\ubb34",
-    "\uc9c0\uc6d0",
+    "개발",
+    "개발자",
+    "엔지니어",
+    "직무",
+    "지원",
 }
 POSITION_SYNONYM_GROUPS = (
     {
@@ -22,9 +22,9 @@ POSITION_SYNONYM_GROUPS = (
         "backended",
         "server",
         "serverdeveloper",
-        "\ubc31\uc5d4\ub4dc",
-        "\ubc31\uc564\ub4dc",
-        "\uc11c\ubc84",
+        "백엔드",
+        "백앤드",
+        "서버",
     },
     {
         "frontend",
@@ -33,24 +33,24 @@ POSITION_SYNONYM_GROUPS = (
         "front",
         "react",
         "vue",
-        "\ud504\ub860\ud2b8\uc5d4\ub4dc",
-        "\ud504\ub860\ud2b8",
-        "\uc6f9\ud504\ub860\ud2b8",
+        "프론트엔드",
+        "프론트",
+        "웹프론트",
     },
     {
         "fullstack",
         "fullstackdeveloper",
-        "\ud480\uc2a4\ud0dd",
-        "\ud480\uc2a4\ud14d",
+        "풀스택",
+        "풀스텍",
     },
     {
         "data",
         "dataengineer",
         "dataanalyst",
         "analytics",
-        "\ub370\uc774\ud130",
-        "\ub370\uc774\ud130\ubd84\uc11d",
-        "\ub370\uc774\ud130\uc5d4\uc9c0\ub2c8\uc5b4",
+        "데이터",
+        "데이터분석",
+        "데이터엔지니어",
     },
     {
         "ai",
@@ -58,9 +58,9 @@ POSITION_SYNONYM_GROUPS = (
         "machinelearning",
         "deeplearning",
         "llm",
-        "\uc778\uacf5\uc9c0\ub2a5",
-        "\uba38\uc2e0\ub7ec\ub2dd",
-        "\ub525\ub7ec\ub2dd",
+        "인공지능",
+        "머신러닝",
+        "딥러닝",
     },
     {
         "devops",
@@ -68,9 +68,9 @@ POSITION_SYNONYM_GROUPS = (
         "infra",
         "infrastructure",
         "cloud",
-        "\ub370\ube0c\uc635\uc2a4",
-        "\uc778\ud504\ub77c",
-        "\ud074\ub77c\uc6b0\ub4dc",
+        "데브옵스",
+        "인프라",
+        "클라우드",
     },
     {
         "mobile",
@@ -78,17 +78,17 @@ POSITION_SYNONYM_GROUPS = (
         "ios",
         "flutter",
         "reactnative",
-        "\ubaa8\ubc14\uc77c",
-        "\uc548\ub4dc\ub85c\uc774\ub4dc",
+        "모바일",
+        "안드로이드",
     },
     {
         "qa",
         "test",
         "tester",
         "qualityassurance",
-        "\ud488\uc9c8",
-        "\ud14c\uc2a4\ud2b8",
-        "qa\uc5d4\uc9c0\ub2c8\uc5b4",
+        "품질",
+        "테스트",
+        "qa엔지니어",
     },
     {
         "designer",
@@ -96,8 +96,8 @@ POSITION_SYNONYM_GROUPS = (
         "ui",
         "ux",
         "productdesigner",
-        "\ub514\uc790\uc778",
-        "\ub514\uc790\uc774\ub108",
+        "디자인",
+        "디자이너",
         "uiux",
     },
     {
@@ -106,9 +106,9 @@ POSITION_SYNONYM_GROUPS = (
         "productmanager",
         "planner",
         "planning",
-        "\uae30\ud68d",
-        "\uc11c\ube44\uc2a4\uae30\ud68d",
-        "\ud504\ub85c\ub355\ud2b8",
+        "기획",
+        "서비스기획",
+        "프로덕트",
     },
 )
 
@@ -218,7 +218,7 @@ class PositionMatchService:
         raw_terms.update(
             term
             for term in re.split(
-                "[,/|&()\\[\\]\n\r]+|\\s+\\+\\s+|\\s+\ubc0f\\s+",
+                "[,/|&()\\[\\]\n\r]+|\\s+\\+\\s+|\\s+및\\s+",
                 value,
             )
             if term.strip()
@@ -232,7 +232,7 @@ class PositionMatchService:
 
     def _normalize_position(self, value: str) -> str:
         normalized = unicodedata.normalize("NFKC", value).casefold()
-        return re.sub("[^0-9a-zA-Z\\uac00-\\ud7a3]+", "", normalized)
+        return re.sub("[^0-9a-zA-Z가-힣]+", "", normalized)
 
     def _position_match_result(
         self,

@@ -9,7 +9,6 @@ from app.dependencies.database import Base
 
 if TYPE_CHECKING:
     from app.models.candidate import Candidate
-    from app.models.position import Position
 
 
 class Resume(Base):
@@ -29,11 +28,6 @@ class Resume(Base):
         String(100),
         nullable=True,
         comment="Desired work location",
-    )
-    second_position_id: Mapped[int | None] = mapped_column(
-        ForeignKey("positions.position_id"),
-        nullable=True,
-        comment="Second-choice position foreign key",
     )
     desired_salary: Mapped[int | None] = mapped_column(
         Integer,
@@ -81,10 +75,6 @@ class Resume(Base):
 
     candidate: Mapped["Candidate"] = relationship(
         back_populates="resumes",
-    )
-    second_position: Mapped["Position | None"] = relationship(
-        foreign_keys=[second_position_id],
-        back_populates="resumes_as_second",
     )
 
     def __repr__(self) -> str:

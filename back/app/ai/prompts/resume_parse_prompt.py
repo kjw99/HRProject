@@ -28,6 +28,14 @@ def build_resume_parse_messages(
 - 정규화가 애매한 값은 raw 필드에 원문 표현을 함께 보존하세요.
 - 원문에 없는 정보는 절대 추측하지 말고 null 또는 빈 배열로 두세요.
 
+Career extraction rules:
+- For each parsed_json.careers item, set employment_type when the resume states it.
+- Set is_company_employment=true only for actual company employment records
+  such as full-time, regular, or contract employment.
+- Set is_company_employment=false for internships, part-time work, education,
+  bootcamps, personal/team projects, portfolio projects, and training courses.
+- When is_company_employment=false, write a short exclusion_reason.
+
 2. summary
 - 채용 담당자가 빠르게 읽을 수 있는 짧은 이력서 요약입니다.
 - 사실 기반으로 작성하고, 채용 검토에 불필요한 민감 정보는 포함하지 마세요.

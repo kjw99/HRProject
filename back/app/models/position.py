@@ -6,7 +6,6 @@ from app.dependencies.database import Base
 
 if TYPE_CHECKING:
     from app.models.candidate import Candidate
-    from app.models.resume import Resume
     from app.models.question import Question
     from app.models.interview_slot import InterviewSlot
 
@@ -34,10 +33,6 @@ class Position(Base):
         back_populates="position",
     )
 
-    resumes_as_second: Mapped[list["Resume"]] = relationship(
-        foreign_keys="Resume.second_position_id",
-        back_populates="second_position",
-    )
     questions: Mapped[list["Question"]] = relationship(
         back_populates="position",
     )
