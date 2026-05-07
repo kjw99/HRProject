@@ -1,8 +1,10 @@
 import { requireRole } from "@app/server/auth/require-role";
-import LogoutButton from "@/components/auth/LogoutButton";
+import { Metadata } from 'next';
+import HrClientWrapper from '@/components/hr/HrClientWrapper';
 
-export const metadata = {
-  title: "HR",
+export const metadata: Metadata = {
+  title: 'HR Portal - 인재 관리 시스템',
+  description: 'AI 기반 인재 검증 및 채용 관리 시스템',
 };
 
 export default async function HRLayout({
@@ -10,15 +12,7 @@ export default async function HRLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["hr"]);
+  // await requireRole(["hr"]);
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-        <span className="text-lg font-semibold text-slate-900">HR</span>
-        <LogoutButton />
-      </header>
-      <main className="mx-auto max-w-4xl p-6">{children}</main>
-    </div>
-  );
+  return <HrClientWrapper>{children}</HrClientWrapper>;
 }

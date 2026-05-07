@@ -281,51 +281,57 @@ export default function UserTable({ data }: UserTableProps) {
     exportToCSV(selectedRows, userHeaderMap, "선택_사용자_목록");
   };
   /* ==========================================
-       4. 렌더링 (JSX)
+       4. 렌더링 (JSX) - 반응형 & Figma 스타일 고도화
     ========================================== */
   return (
-    <div className="w-full">
-      {/* 상단 액션 바 */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex gap-4 items-center">
-          <form onSubmit={handleSearch} className="relative">
-            <i className="bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+    <div className="w-full animate-in fade-in duration-500">
+      {/* 💡 1. 상단 액션 바 (반응형: 모바일에서는 세로 배치, 데스크탑에서는 가로 배치) */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+
+        {/* 검색창 및 다운로드 버튼 그룹 */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto">
+          <form onSubmit={handleSearch} className="relative w-full sm:w-auto">
+            <i className="bx bx-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
             <input
               type="text"
               placeholder="이름/이메일 검색..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none w-64 transition-all"
+              className="w-full sm:w-64 pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all shadow-sm"
             />
           </form>
+
           <button
             onClick={handleDownloadAll}
-            className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 bg-white rounded-xl text-sm font-bold hover:bg-slate-50 hover:text-indigo-600 transition-all shadow-sm"
           >
             <i className="bx bx-download text-lg"></i>
             목록 다운로드
           </button>
         </div>
 
+        {/* 사용자 추가 버튼 */}
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold transition-colors shadow-sm"
+          className="w-full lg:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm hover:shadow-md"
         >
           <i className="bx bx-plus text-lg"></i> 사용자 추가
         </button>
       </div>
 
-      {/* 테이블 데이터 렌더링 */}
-      <div className="bg-white border border-slate-200 rounded-[24px] overflow-hidden mb-6 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50 border-b border-slate-200">
+      {/* 💡 2. 테이블 데이터 렌더링 (가로 스크롤 방어 및 모바일 패딩 최적화) */}
+      <div className="bg-white border border-slate-200/80 rounded-[24px] overflow-hidden mb-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        {/* 모바일 가로 스크롤 영역 */}
+        {/* table- 최소 너비를 주어 모바일에서 강제로 찌그러지지 않게 함 */}
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead className="bg-slate-50/80 border-b border-slate-200 backdrop-blur-sm">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
                   {hg.headers.map((h) => (
                     <th
                       key={h.id}
-                      className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider"
+                      className="px-4 py-4 md:px-6 md:py-5 text-xs font-black text-slate-500 uppercase tracking-wider"
                     >
                       {flexRender(h.column.columnDef.header, h.getContext())}
                     </th>
@@ -338,10 +344,11 @@ export default function UserTable({ data }: UserTableProps) {
                 <tr
                   key={row.id}
                   onClick={() => handleRowClick(row.original.userId)}
-                  className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${row.getIsSelected() ? "bg-indigo-50/30" : ""}`}
+                  className={`group hover:bg-slate-50/80 transition-colors cursor-pointer ${row.getIsSelected() ? "bg-indigo-50/40 hover:bg-indigo-50/60" : ""
+                    }`}
                 >
                   {row.getVisibleCells().map((c) => (
-                    <td key={c.id} className="px-6 py-4 whitespace-nowrap">
+                    <td key={c.id} className="px-4 py-3.5 md:px-6 md:py-4 whitespace-nowrap">
                       {flexRender(c.column.columnDef.cell, c.getContext())}
                     </td>
                   ))}
@@ -351,32 +358,38 @@ export default function UserTable({ data }: UserTableProps) {
           </table>
         </div>
 
+        {/* 검색 결과 없음 UI */}
         {data.content.length === 0 && (
-          <div className="text-center py-20 text-slate-400 flex flex-col items-center">
-            <i className="bx bx-ghost text-5xl mb-3"></i>
-            <p className="font-medium">검색 결과가 없습니다.</p>
+          <div className="text-center py-24 text-slate-400 flex flex-col items-center bg-slate-50/30">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 mb-4">
+              <i className="bx bx-ghost text-3xl text-slate-300"></i>
+            </div>
+            <p className="text-base font-bold text-slate-600">검색 결과가 없습니다.</p>
+            <p className="text-sm mt-1">다른 검색어를 입력하거나 필터를 변경해 보세요.</p>
           </div>
         )}
       </div>
 
-      {/* 하단 페이지네이션 */}
-      <div className="flex items-center justify-center gap-2 mt-8 mb-8">
+      {/* 💡 3. 하단 페이지네이션 (버튼 크기 및 간격 반응형) */}
+      <div className="flex items-center justify-center gap-3 mt-8 mb-8">
         <button
           onClick={() => updateURLParams({ page: data.page - 1 })}
           disabled={data.page === 0}
-          className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-slate-500 transition-all shadow-sm"
         >
-          <i className="bx bx-chevron-left text-2xl"></i>
+          <i className="bx bx-chevron-left text-xl"></i>
         </button>
-        <span className="text-sm font-semibold text-slate-600 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200">
-          {data.page + 1} / {data.totalPages === 0 ? 1 : data.totalPages} 페이지
+
+        <span className="text-sm font-bold text-slate-700 bg-white px-5 py-2.5 rounded-xl shadow-sm border border-slate-200">
+          {data.page + 1} <span className="text-slate-400 font-medium mx-1">/</span> {data.totalPages === 0 ? 1 : data.totalPages}
         </span>
+
         <button
           onClick={() => updateURLParams({ page: data.page + 1 })}
           disabled={data.page >= data.totalPages - 1}
-          className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-slate-500 transition-all shadow-sm"
         >
-          <i className="bx bx-chevron-right text-2xl"></i>
+          <i className="bx bx-chevron-right text-xl"></i>
         </button>
       </div>
 
@@ -405,14 +418,16 @@ export default function UserTable({ data }: UserTableProps) {
         onDelete={handleBulkDelete}
         onClearSelection={() => setRowSelection({})}
       />
-      {/* 💡 3. 전역 삭제 로딩 오버레이 (z-[100] 적용) */}
+
+      {/* 💡 전역 삭제 로딩 오버레이 (디자인 고도화) */}
       {isDeleting && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center z-[100] animate-in fade-in duration-200">
-          {/* 회전하는 로딩 아이콘 (Boxicons) */}
-          <i className="bx bx-loader-alt bx-spin text-5xl text-white mb-4"></i>
-          <p className="text-white font-bold text-lg tracking-wide shadow-sm">
-            안전하게 삭제 중입니다...
-          </p>
+          <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center">
+            <i className="bx bx-loader-alt bx-spin text-4xl text-indigo-600 mb-3"></i>
+            <p className="text-slate-800 font-black text-sm tracking-wide">
+              안전하게 처리 중입니다...
+            </p>
+          </div>
         </div>
       )}
     </div>
