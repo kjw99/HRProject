@@ -13,12 +13,12 @@ export const createUser = async (data: CreateUserRequest): Promise<User> => {
 };
 
 export const checkEmailAvailability = async (
-  userEmail: string,
+  email: string,
 ): Promise<EmailAvailabilityResponse> => {
   const response = await api.get<EmailAvailabilityResponse>(
     "/api/users/email-availability",
     {
-      params: { userEmail },
+      params: { email },
     },
   );
   return response.data;
