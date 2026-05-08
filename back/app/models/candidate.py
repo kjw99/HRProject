@@ -27,8 +27,10 @@ class Candidate(Base):
         nullable=True,
         comment="Position foreign key",
     )
+    # 스키마에서 정의한 큰 글자 수 제한을 수용할 수 있도록 String 길이를 수정
     name: Mapped[str | None] = mapped_column(
-        String(50),
+        # String(50),
+        String(255),
         nullable=True,
         comment="Name",
     )
@@ -38,17 +40,20 @@ class Candidate(Base):
         comment="Date of birth",
     )
     gender: Mapped[str | None] = mapped_column(
-        String(10),
+        # String(10),
+        String(100),
         nullable=True,
         comment="Gender",
     )
     address: Mapped[str | None] = mapped_column(
-        String(255),
+        # String(255),
+        String(2000),
         nullable=True,
         comment="Address",
     )
     phone: Mapped[str | None] = mapped_column(
-        String(20),
+        # String(20),
+        String(100),
         nullable=True,
         comment="Phone",
     )
