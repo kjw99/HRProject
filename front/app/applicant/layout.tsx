@@ -1,5 +1,5 @@
 import React from "react";
-import { requireRole } from "@app/server/auth/require-role";
+import { requireRole } from "@/app/server/auth/require-role.server";
 import LogoutButton from "@/components/auth/LogoutButton";
 
 export const metadata = {

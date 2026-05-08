@@ -1,7 +1,7 @@
 import { UserDetailModalProps } from '@/types/admin';
 
-export default function UserDetailModal({ 
-    isOpen, onClose, user, isLoading, isResettingPassword, onDelete, onResetPassword 
+export default function UserDetailModal({
+    isOpen, onClose, user, isLoading, isResettingPassword, onDelete, onResetPassword
 }: UserDetailModalProps) {
     if (!isOpen) return null;
 
@@ -46,7 +46,7 @@ export default function UserDetailModal({
                             <div className="flex gap-2 mt-2">
                                 <button onClick={onClose} className="px-4 py-2.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">닫기</button>
                                 <div className="flex-1 flex gap-2">
-                                    <button onClick={() => onResetPassword(user.userId)} disabled={isResettingPassword} className="flex-1 px-3 py-2.5 rounded-xl font-bold text-white bg-amber-500 hover:bg-amber-600 shadow-sm flex justify-center items-center gap-1.5 disabled:opacity-50">
+                                    <button onClick={() => onResetPassword(user.userEmail)} disabled={isResettingPassword} className="flex-1 px-3 py-2.5 rounded-xl font-bold text-white bg-amber-500 hover:bg-amber-600 shadow-sm flex justify-center items-center gap-1.5 disabled:opacity-50">
                                         <i className={`bx ${isResettingPassword ? "bx-loader-alt bx-spin" : "bx-key"} text-lg`}></i>
                                         <span className="text-sm">비밀번호 초기화</span>
                                     </button>

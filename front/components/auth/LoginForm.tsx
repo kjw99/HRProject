@@ -3,13 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useAuthStore from "@lib/stores/auth";
-import { loginApi } from "@lib/auth";
+import { loginApi } from "@/lib/common/auth";
 import { AuthResponse } from "@typings/auth";
 import { toast } from "sonner";
 import { ToastUI } from "@/components/ui/ToastUI";
 import { roleRouter } from "@lib/roleRouter";
 import { useRouter } from "next/navigation";
-import { saveCookies } from "@lib/cookies";
 
 
 // 배경 곡선 애니메이션 설정
@@ -60,9 +59,10 @@ const LoginForm = () => {
     try {
       const data: AuthResponse = await loginApi({ user_email: email, password: password });
       // Zustand 스토어 업데이트
-      setAuth(data.user.userName, data.accessToken, data.user.role);
-      saveCookies(data);
-      router.push(roleRouter(data.user.role));
+      const { user, accessToken } = data;
+      const { userName } = user;
+      setAuth(userName, accessToken);
+      router.push(roleRouter(user.role));
     } catch (error: Error | any) {
       // 에러 시 기존에 작성하신 테스트용 조건 로직 실행
       roleRouter(email);

@@ -1,4 +1,4 @@
-import { requireRole } from "@app/server/auth/require-role";
+import { requireRole } from "@/app/server/auth/require-role.server";
 import { Metadata } from 'next';
 import HrClientWrapper from '@/components/hr/HrClientWrapper';
 

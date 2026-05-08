@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { CreateUserModalProps, CreateUserRequest } from "@/types/admin";
 import {
-  createUser,
-  checkEmailAvailability,
+  createUser
 } from "@/lib/admin/adminUsers.client";
+import { checkEmailAvailability } from "@/lib/common/api";
 
 export default function CreateUserModal({
   isOpen,

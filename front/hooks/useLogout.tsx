@@ -19,9 +19,6 @@ export default function useLogout() {
     setTimeout(() => {
       clearAuth();
       // TODO: 실제 로그아웃 로직 추가 (예: signOut(), 로컬 스토리지 삭제 등)
-      localStorage.removeItem('candidate_info');
-      localStorage.removeItem('last_job_posting');
-      sessionStorage.removeItem('auth-storage');
       Cookies.remove('accessToken', { path: '/' });
       Cookies.remove('userRole', { path: '/' });
       Cookies.remove('userName', { path: '/' });

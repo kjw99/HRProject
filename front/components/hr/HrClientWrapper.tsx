@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import HrSidebar from './HrSidebar';
-import HrHeader from './HrHeader';
+import HrSidebar from './wrapper/HrSidebar';
+import HrHeader from './wrapper/HrHeader';
 
 export default function HrClientWrapper({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);

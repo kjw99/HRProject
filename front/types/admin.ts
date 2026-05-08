@@ -1,6 +1,9 @@
 // src/types/admin.ts
 
-export interface User {
+// 💡 1. 인터페이스 정의 (컴포넌트에서 수정하기 쉽도록 내부에 정의)
+
+
+export interface AdminUser {
   userId: number;
   userName: string;
   userEmail: string;
@@ -28,11 +31,11 @@ export interface CreateUserModalProps {
 export interface UserDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: User | null;
+  user: AdminUser | null;
   isLoading: boolean;
   isResettingPassword: boolean;
   onDelete: (userId: number) => void;
-  onResetPassword: (userId: number) => void;
+  onResetPassword: (userEmail: string) => void;
 }
 
 export interface CreateUserRequest {
@@ -41,12 +44,9 @@ export interface CreateUserRequest {
   userName: string;
 }
 
-export interface PaginatedResponse<T> {
-  content: T[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
+export interface AdminUserListResponse {
+  content: AdminUser[];
+  // 백엔드 명세에 페이징 메타데이터가 추가될 경우를 대비해 확장 가능하게 구조화
 }
 
 export interface EmailAvailabilityResponse {

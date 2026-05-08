@@ -16,6 +16,7 @@ export interface LoginRequest {
 export interface UserInfo {
   userName: string;
   userId: number;
+  userEmail: string;
   role: "admin" | "user" | "hr"; // 역할이 고정되어 있다면 유니온 타입을 사용하세요
 }
 
@@ -31,4 +32,25 @@ export interface AuthResponse {
 export interface ResetPasswordResponse {
   message: string;
   temporaryPassword?: string; // 초기화된 임시 비밀번호
+}
+
+/**
+ * 비밀번호 변경 요청 인터페이스
+ */
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+// 응답(Response) 데이터 타입 정의
+export interface ChangePasswordResponse {
+  message: string;
+}
+
+// 💡 응답 타입 정의
+export interface AuthMeResponse {
+  userId: number;
+  userEmail: string;
+  userName: string;
+  role: 'admin' | 'hr' | 'user'; // 시스템 역할
 }

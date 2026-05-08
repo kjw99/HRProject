@@ -36,21 +36,23 @@ export default async function HrDashboardPage() {
       <DashboardHeader />
 
       {/* 2x2 사분면 그리드 레이아웃 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
 
         {/* 상단 행 (1, 2사분면) */}
-        <div className="h-40 lg:h-48">
+        {/* 💡 반응형 높이 조정: 모바일은 auto로 자연스럽게, 태블릿/PC는 h-32(128px)로 아주 슬림하게! */}
+        <div className="h-auto md:h-32">
           <Q2Summary data={q2Data} />
         </div>
-        <div className="h-40 lg:h-48">
+        <div className="h-auto md:h-32">
           <Q1Summary data={q1Data} />
         </div>
 
+
         {/* 하단 행 (3, 4사분면) */}
-        <div className="min-h-100">
+        <div className="min-h-100 lg:h-125">
           <Q3TodayInterviews data={q3Data} />
         </div>
-        <div className="min-h-125">
+        <div className="min-h-100 lg:h-125">
           <Q4UpcomingInterviews initialData={q4Data} />
         </div>
 
