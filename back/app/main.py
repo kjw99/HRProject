@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.routers.interview_slot_router import router as interview_slot_router
 from app.routers.position_router import router as position_router
 from app.routers.question_router import router as question_router
 from app.routers.resume_parse_router import router as resume_parse_router
@@ -20,6 +21,7 @@ app = FastAPI()
 register_exception_handlers(app)
 
 app.include_router(auth_router)
+app.include_router(interview_slot_router)
 app.include_router(position_router)
 app.include_router(user_router)
 app.include_router(admin_router)
