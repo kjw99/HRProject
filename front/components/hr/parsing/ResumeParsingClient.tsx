@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useDropzone, Accept } from 'react-dropzone';
 import { parseResumes } from '@/lib/hr/parsing.client';
 import { ParsingItem, TableRowData } from '@/types/parsing';
 import {
@@ -11,88 +12,119 @@ import {
     createColumnHelper,
     ColumnFiltersState,
 } from '@tanstack/react-table';
+import ResumeDetailModal from './ResumeDetailModal';
+
+// --- Types & Interfaces ---
+interface FileUploadProps {
+    files: File[];
+    onDrop: (acceptedFiles: File[]) => void;
+    onRemove: (index: number) => void;
+    onStart: () => void;
+    isParsing: boolean;
+}
 
 const columnHelper = createColumnHelper<TableRowData>();
+
+// 허용할 파일 확장자 정의
+const ACCEPTED_FILES: Accept = {
+    'application/pdf': ['.pdf'],
+    'application/msword': ['.doc'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    'application/x-hwp': ['.hwp'],
+    'text/plain': ['.txt', '.md'],
+    'application/vnd.ms-powerpoint': ['.ppt'],
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
+};
 
 export default function ResumeParsingClient() {
     const [files, setFiles] = useState<File[]>([]);
     const [results, setResults] = useState<TableRowData[]>([]);
     const [isParsing, setIsParsing] = useState(false);
     const [filterPosition, setFilterPosition] = useState<string>('ALL');
-    // 컴포넌트 상단 상태 영역에 추가
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-
-    // 필터링할 직무 목록 (추후 API로 받아오거나 확장이 가능하도록 배열로 분리)
-    const [POSITIONS, setPOSITIONS] = useState<string[]>(['ALL', '마케팅', '개발', '디자인', '기획', '영업', '인사', '재무', '기타']);
-
-    // 필터링 input이 변경될 때마다 테이블이 자동으로 필터링되도록 useMemo로 설정
     const [globalSearch, setGlobalSearch] = useState('');
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedRowData, setSelectedRowData] = useState<TableRowData | null>(null);
 
-    // 직무 필터 변경 시 columnFilters 상태를 업데이트하는 로직
-    const handlePositionFilter = (pos: string) => {
-        setFilterPosition(pos);
-        if (pos === 'ALL') {
-            // '전체' 선택 시 직무 필터 제거
-            setColumnFilters([]);
-        } else {
-            // 특정 직무 선택 시 해당 컬럼(position)에 필터 적용
-            setColumnFilters([{ id: 'position', value: pos }]);
-        }
-    };
+    const POSITIONS = ['ALL', '마케팅', '개발', '디자인', '기획', '영업', '인사', '재무', '기타'];
+
     /* -----------------------------------------------------------
-       1. 파일 핸들링 (Drop & Delete)
+       1. 파일 핸들링 (React Dropzone)
     ----------------------------------------------------------- */
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
-        }
-    };
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        setFiles((prev) => {
+            const newFiles = [...prev, ...acceptedFiles];
+            return newFiles.slice(0, 20); // 최대 20개 제한
+        });
+    }, []);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: ACCEPTED_FILES,
+        multiple: true,
+        maxFiles: 20
+    });
 
     const removeFile = (index: number) => {
         setFiles((prev) => prev.filter((_, i) => i !== index));
     };
 
     /* -----------------------------------------------------------
-       2. 파싱 실행 (단일 bulk 요청)
+       2. 파싱 및 필터 로직
     ----------------------------------------------------------- */
+    const handlePositionFilter = (pos: string) => {
+        setFilterPosition(pos);
+        setColumnFilters(pos === 'ALL' ? [] : [{ id: 'position', value: pos }]);
+    };
+
     const startParsing = async () => {
         if (files.length === 0) return;
         setIsParsing(true);
+
         try {
             const data = await parseResumes(files);
 
-            // 데이터 평탄화 및 중복 의심 로직 (이름/생년월일/연락처 기준)
-            const mapped = data.items.map((item, idx) => {
+            // 💡 'any'를 제거하고 앞서 만든 ParsingItem 인터페이스를 적용하여 타입 안정성을 확보합니다.
+            const mapped: TableRowData[] = data.items.map((item: ParsingItem, idx: number) => {
                 const c = item.record.candidate;
+
                 return {
-                    id: `${c.name}-${idx}`,
+                    id: `${c.name}-${idx}-${Date.now()}`,
                     name: c.name,
                     birth: c.dateOfBirth,
                     phone: c.phone,
                     email: c.email || '-',
                     position: item.record.aiProfile.target_position || '미지정',
                     channel: '파일 업로드',
-                    // 임시 중복 체크 (결과 내에서 동일인이 있는지 검사)
-                    isDuplicate: data.items.some((other, oi) =>
+
+                    // 💡 비교 대상(other)에도 ParsingItem 타입을 명확히 지정합니다.
+                    isDuplicate: data.items.some((other: ParsingItem, oi: number) =>
                         oi !== idx &&
                         other.record.candidate.name === c.name &&
                         other.record.candidate.phone === c.phone
                     ),
-                    criteriaMet: c.meetsPreferredCriteria.length > 0,
-                    raw: item
+
+                    criteriaMet: (c.meetsPreferredCriteria || []).length > 0,
+                    raw: item // 모달에 넘겨줄 원본 데이터
                 };
             });
+
             setResults(mapped);
+
+            // 💡 UX 디테일: 파싱이 성공적으로 끝나면 대기열(Dropzone)을 비워주어 깔끔한 상태를 유지합니다.
+            setFiles([]);
+
         } catch (error) {
             alert('파싱 중 오류가 발생했습니다.');
+            console.error(error);
         } finally {
             setIsParsing(false);
         }
     };
 
     /* -----------------------------------------------------------
-       3. TanStack Table 설정
+       3. Table 설정
     ----------------------------------------------------------- */
     const columns = [
         columnHelper.accessor('name', { header: '이름', cell: info => <b className="text-slate-800">{info.getValue()}</b> }),
@@ -114,65 +146,92 @@ export default function ResumeParsingClient() {
         columnHelper.display({
             id: 'action',
             header: '상세',
-            cell: () => <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><i className="bx bx-search-alt text-lg text-slate-400"></i></button>
+            cell: ({ row }) => ( // 💡 여기서 row 객체를 꺼냅니다.
+                <button
+                    onClick={() => {
+                        setSelectedRowData(row.original); // 1. 클릭한 행의 데이터를 상태에 저장
+                        setIsModalOpen(true);             // 2. 모달 창 열기
+                    }}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors group"
+                >
+                    <i className="bx bx-search-alt text-lg text-slate-400 group-hover:text-indigo-600"></i>
+                </button>
+            )
         })
     ];
 
     const table = useReactTable({
         data: results,
         columns,
-        state: {
-            globalFilter: globalSearch, // 텍스트 검색 연결
-            columnFilters: columnFilters, // 직무 드롭다운 필터 연결
-        },
+        state: { globalFilter: globalSearch, columnFilters },
         onGlobalFilterChange: setGlobalSearch,
         onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(), // 필터링 기능 활성화
-        // 💡 팁: 글로벌 필터가 특정 컬럼만 검색하게 하고 싶다면 아래 옵션을 추가하세요.
-        // globalFilterFn: 'includesString', 
+        getFilteredRowModel: getFilteredRowModel(),
     });
 
     return (
-        <div className="space-y-6">
-            {/* 상단: 업로드 영역 */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-50 transition-colors group relative">
-                    <input
-                        type="file"
-                        multiple
-                        onChange={handleFileChange}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        accept=".doc,.docx,.hwp,.md,.pdf,.ppt,.pptx,.txt"
-                    />
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform">
-                        <i className="bx bx-cloud-upload text-3xl text-indigo-500"></i>
+        <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
+            {/* 상단: 업로드 영역 (React Dropzone 통합) */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+                <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-2xl p-8 sm:p-10 flex flex-col items-center justify-center transition-all cursor-pointer group relative
+                        ${isDragActive ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'}`}
+                >
+                    <input {...getInputProps()} />
+                    <div className={`w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 transition-transform group-hover:scale-110 
+                        ${isDragActive ? 'scale-110 ring-4 ring-indigo-100' : ''}`}>
+                        <i className={`bx bx-cloud-upload text-3xl ${isDragActive ? 'text-indigo-600' : 'text-indigo-500'}`}></i>
                     </div>
-                    <p className="text-slate-700 font-bold">이력서 파일을 드래그하거나 클릭하여 업로드</p>
-                    <p className="text-xs text-slate-400 mt-2">PDF, DOCX, HWP, TXT (최대 20개)</p>
+                    <p className="text-slate-700 font-bold text-center">
+                        {isDragActive ? '파일을 여기에 놓으세요' : '이력서 파일을 드래그하거나 클릭하여 업로드'}
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-slate-400 mt-2 text-center">PDF, DOCX, HWP, TXT (최대 20개)</p>
                 </div>
 
                 {/* 파일 리스트 */}
                 {files.length > 0 && (
-                    <div className="mt-6 space-y-2">
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">대기 중인 파일 ({files.length})</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="mt-6 space-y-2 animate-in fade-in">
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                대기 중인 파일 ({files.length})
+                            </p>
+                            {/* 파일이 많을 때 스크롤이 생기지 않도록 높이 제한을 줄 수도 있습니다 */}
+                        </div>
+
+                        {/* 💡 1. 그리드 변경: 데스크탑에서 2칸 -> 3~4칸으로 늘려 컴팩트하게 배치 */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                             {files.map((file, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
-                                    <div className="flex items-center gap-3 overflow-hidden">
-                                        <i className="bx bxs-file-pdf text-2xl text-rose-500"></i>
-                                        <span className="text-sm font-bold text-slate-700 truncate">{file.name}</span>
+                                <div
+                                    key={`${file.name}-${idx}`}
+                                    // 💡 2. 패딩(p-3 -> px-3 py-2)과 모서리(rounded-xl -> rounded-lg) 축소
+                                    className="flex items-center justify-between px-3 py-2 bg-white border border-slate-100 rounded-lg shadow-sm group hover:border-indigo-200 transition-colors"
+                                >
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                        {/* 💡 3. 아이콘 크기 축소 (text-2xl -> text-lg) */}
+                                        <i className="bx bxs-file-pdf text-lg text-rose-500"></i>
+                                        {/* 💡 4. 텍스트 크기 축소 (text-sm -> text-xs) */}
+                                        <span className="text-xs font-bold text-slate-600 truncate">{file.name}</span>
                                     </div>
-                                    <button onClick={() => removeFile(idx)} className="text-slate-300 hover:text-rose-500 transition-colors">
-                                        <i className="bx bx-trash text-lg"></i>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Dropzone 클릭 이벤트 전파 방지
+                                            removeFile(idx);
+                                        }}
+                                        // 💡 5. UX 디테일: 평소엔 휴지통을 숨기고(opacity-0), 카드에 마우스를 올리면 나타나게(group-hover:opacity-100) 처리
+                                        className="text-slate-300 hover:text-rose-500 transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100 ml-2 shrink-0"
+                                    >
+                                        <i className="bx bx-trash text-sm"></i>
                                     </button>
                                 </div>
                             ))}
                         </div>
+
                         <button
                             onClick={startParsing}
                             disabled={isParsing}
-                            className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isParsing ? <i className="bx bx-loader-alt bx-spin text-xl"></i> : <i className="bx bx-wand text-xl"></i>}
                             {isParsing ? 'AI 분석 중...' : '이력서 데이터 추출 시작'}
@@ -183,7 +242,7 @@ export default function ResumeParsingClient() {
 
             {/* 하단: 결과 테이블 */}
             {results.length > 0 && (
-                <div className="bg-white rounded-[24px] border border-slate-200 overflow-hidden shadow-sm">
+                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                     {/* 테이블 헤더 & 필터 */}
                     <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                         {/* 💡 좌측: 타이틀 및 뱃지 영역 */}
@@ -296,6 +355,11 @@ export default function ResumeParsingClient() {
                     </div>
                 </div>
             )}
+            <ResumeDetailModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                data={selectedRowData}
+            />
         </div>
     );
 }
