@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -33,15 +35,30 @@ class InterviewSlotRepository:
     async def find_all_with_details(
         self,
         db: AsyncSession,
+        starts_at_from: datetime | None = None,
+        starts_at_to: datetime | None = None,
+        position_id: int | None = None,
     ) -> list[InterviewSlot]:
-        result = await db.scalars(
+        query = (
             select(InterviewSlot)
             .options(
                 selectinload(InterviewSlot.position),
                 selectinload(InterviewSlot.interviewers),
                 selectinload(InterviewSlot.bookings),
             )
-            .order_by(InterviewSlot.interview_starts_at, InterviewSlot.slot_id)
+        )
+
+        if starts_at_from is not None:
+            query = query.where(InterviewSlot.interview_starts_at >= starts_at_from)
+
+        if starts_at_to is not None:
+            query = query.where(InterviewSlot.interview_starts_at < starts_at_to)
+
+        if position_id is not None:
+            query = query.where(InterviewSlot.position_id == position_id)
+
+        result = await db.scalars(
+            query.order_by(InterviewSlot.interview_starts_at, InterviewSlot.slot_id)
         )
         return result.all()
 

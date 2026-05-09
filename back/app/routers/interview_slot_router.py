@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.database import get_async_db
@@ -24,9 +24,19 @@ router = APIRouter(prefix="/api/interview-slots", tags=["InterviewSlot"])
     dependencies=[Depends(require_roles(("admin", "hr")))],
 )
 async def get_interview_slots(
+    year: int | None = Query(None),
+    month: int | None = Query(None),
+    day: int | None = Query(None),
+    position_id: int | None = Query(None, alias="positionId"),
     db: AsyncSession = Depends(get_async_db),
 ):
-    return await interview_slot_service.get_interview_slots(db)
+    return await interview_slot_service.get_interview_slots(
+        db,
+        year=year,
+        month=month,
+        day=day,
+        position_id=position_id,
+    )
 
 
 @router.get(

@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ConflictException, NotFoundException
+from app.core.exceptions import BadRequestException, ConflictException, NotFoundException
 from app.models.interview_slot import InterviewSlot
 from app.models.interview_slot_interviewer import InterviewSlotInterviewer
 from app.repositories.interview_booking_repository import interview_booking_repository
@@ -77,8 +77,29 @@ class InterviewSlotService:
     async def get_interview_slots(
         self,
         db: AsyncSession,
+        year: int | None = None,
+        month: int | None = None,
+        day: int | None = None,
+        position_id: int | None = None,
     ) -> list[InterviewSlotListItemResponse]:
-        slots = await interview_slot_repository.find_all_with_details(db)
+        starts_at_from, starts_at_to = self._get_interview_search_range(
+            year,
+            month,
+            day,
+        )
+
+        if position_id is not None:
+            if position_id <= 0:
+                raise BadRequestException("직무 id는 1 이상의 정수여야 합니다.")
+
+            await self._validate_position(db, position_id)
+
+        slots = await interview_slot_repository.find_all_with_details(
+            db,
+            starts_at_from=starts_at_from,
+            starts_at_to=starts_at_to,
+            position_id=position_id,
+        )
         now = datetime.now(KST)
 
         return [
@@ -329,6 +350,64 @@ class InterviewSlotService:
         position = await position_repository.find_by_id(db, position_id)
         if not position:
             raise NotFoundException("직무를 찾을 수 없습니다.")
+
+    def _get_interview_search_range(
+        self,
+        year: int | None,
+        month: int | None,
+        day: int | None,
+    ) -> tuple[datetime | None, datetime | None]:
+        if year is None and month is None and day is None:
+            return None, None
+
+        if month is not None and year is None:
+            raise BadRequestException("월 검색을 하려면 연도를 함께 입력해주세요.")
+
+        if day is not None and (year is None or month is None):
+            raise BadRequestException(
+                "일 검색을 하려면 연도와 월을 함께 입력해주세요."
+            )
+
+        if year is None:
+            return None, None
+
+        if year < 1 or year > 9999:
+            raise BadRequestException("연도는 1부터 9999 사이로 입력해주세요.")
+
+        if month is not None and (month < 1 or month > 12):
+            raise BadRequestException("월은 1부터 12 사이로 입력해주세요.")
+
+        if day is not None and (day < 1 or day > 31):
+            raise BadRequestException("일은 1부터 31 사이로 입력해주세요.")
+
+        try:
+            if month is None:
+                starts_on = date(year, 1, 1)
+                ends_before = date(year + 1, 1, 1) if year < 9999 else None
+            elif day is None:
+                starts_on = date(year, month, 1)
+                if month == 12:
+                    ends_before = date(year + 1, 1, 1) if year < 9999 else None
+                else:
+                    ends_before = date(year, month + 1, 1)
+            else:
+                starts_on = date(year, month, day)
+                ends_before = (
+                    starts_on + timedelta(days=1)
+                    if starts_on < date.max
+                    else None
+                )
+        except ValueError:
+            raise BadRequestException("존재하지 않는 날짜입니다.") from None
+
+        starts_at_from = datetime.combine(starts_on, time.min).replace(tzinfo=KST)
+        starts_at_to = (
+            datetime.combine(ends_before, time.min).replace(tzinfo=KST)
+            if ends_before is not None
+            else None
+        )
+
+        return starts_at_from, starts_at_to
 
     async def _validate_interviewers(
         self,
