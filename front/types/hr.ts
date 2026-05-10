@@ -55,3 +55,17 @@ export interface UpdatePositionResponse {
 export interface DeletePositionResponse {
     message: string;
 }
+
+export interface InterviewerInput {
+    name: string;
+    email: string;
+}
+
+export interface AssignInterviewerRequest {
+    interviewId: string;
+    interviewers: InterviewerInput[];
+}
+
+export interface AssignInterviewerResponse {
+    message: string;
+}
