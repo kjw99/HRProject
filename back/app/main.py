@@ -1,9 +1,10 @@
 from fastapi import FastAPI
-from app.routers.interview_booking_router import router as interview_booking_router
 from app.routers.interview_slot_router import router as interview_slot_router
 from app.routers.position_router import router as position_router
 from app.routers.question_router import router as question_router
 from app.routers.resume_parse_router import router as resume_parse_router
+# mailsend.py router/service split added
+from app.routers.mail_router import router as mail_router
 from app.core.exception_handlers import register_exception_handlers
 
 
@@ -25,7 +26,6 @@ app = FastAPI()
 register_exception_handlers(app)
 
 app.include_router(auth_router)
-app.include_router(interview_booking_router)
 app.include_router(interview_slot_router)
 app.include_router(position_router)
 app.include_router(user_router)
@@ -33,6 +33,8 @@ app.include_router(admin_router)
 app.include_router(hr_router)
 app.include_router(question_router)
 app.include_router(resume_parse_router)
+# mailsend.py router/service split added
+app.include_router(mail_router)
 app.include_router(interviewer_router)
 
 # 건우 작성
