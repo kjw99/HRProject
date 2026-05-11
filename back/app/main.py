@@ -9,12 +9,10 @@ from app.routers.auth_router import router as auth_router
 from app.routers.user_router import router as user_router
 from app.routers.admin_router import router as admin_router
 from app.routers.hr_router import router as hr_router
-
 # 건우 작성
 from app.routers.candidate_router import router as candidate_router
 
-
-# import app.models.user
+from app.routers.interviewer_router import router as interviewer_router
 
 # alembic 사용중.
 # Base.metadata.create_all(bind=async_engine)
@@ -31,6 +29,7 @@ app.include_router(admin_router)
 app.include_router(hr_router)
 app.include_router(question_router)
 app.include_router(resume_parse_router)
+app.include_router(interviewer_router)
 
 # 건우 작성
 app.include_router(candidate_router)

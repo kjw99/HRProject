@@ -17,6 +17,7 @@
 #     print("❌ Connection failed:", e)
 
 # uvicorn app.main:app --reload
+# uv run fastapi dev
 
 
 # {
