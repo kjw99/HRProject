@@ -1,31 +1,34 @@
-# Split mailsend.py into router/service structure.
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
-from app.dependencies.dependencies import require_roles
+from app.dependencies.database import get_async_db
 from app.schemas.common import MessageResponse
 from app.services.mail_service import mail_service
 
 
-router = APIRouter(prefix="/api/mail", tags=["Mail"])
+router = APIRouter(prefix="/api", tags=["Email-Send"])
 
 
-class MailSendRequest(BaseModel):
-    to_email: EmailStr = Field(..., alias="toEmail")
+class CandidateMailSendRequest(BaseModel):
     subject: str = Field(..., min_length=1)
     content: str = Field(..., min_length=1)
 
 
 @router.post(
-    "/send",
+    "/mail-send/{candidate_id}",
     response_model=MessageResponse,
-    dependencies=[Depends(require_roles(("admin", "hr")))],
 )
-async def send_mail(data: MailSendRequest):
+async def send_candidate_mail(
+    candidate_id: int,
+    data: CandidateMailSendRequest,
+    db: AsyncSession = Depends(get_async_db),
+):
+    to_email = await mail_service.get_candidate_email(db, candidate_id)
     await run_in_threadpool(
         mail_service.send_mail,
-        str(data.to_email),
+        to_email,
         data.subject,
         data.content,
     )
