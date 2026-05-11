@@ -9,6 +9,7 @@ from app.dependencies.database import Base
 
 if TYPE_CHECKING:
     from app.models.interview_booking import InterviewBooking
+    from app.models.interview_booking_invitation import InterviewBookingInvitation
     from app.models.position import Position
     from app.models.question import Question
     from app.models.resume import Resume
@@ -116,6 +117,10 @@ class Candidate(Base):
     booking: Mapped["InterviewBooking | None"] = relationship(
         back_populates="candidate",
         uselist=False,
+    )
+    booking_invitations: Mapped[list["InterviewBookingInvitation"]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

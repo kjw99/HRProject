@@ -7,6 +7,7 @@ from app.models.resume import Resume
 from app.models.question import Question
 from app.models.interview_slot import InterviewSlot
 from app.models.interview_booking import InterviewBooking
+from app.models.interview_booking_invitation import InterviewBookingInvitation
 from app.models.interview_slot_interviewer import InterviewSlotInterviewer
 from app.models.email_template import EmailTemplate
 
@@ -20,6 +21,7 @@ __all__ = [
     "Question",
     "InterviewSlot",
     "InterviewBooking",
+    "InterviewBookingInvitation",
     "InterviewSlotInterviewer",
     "EmailTemplate",
     ]
