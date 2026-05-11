@@ -20,6 +20,17 @@ class InterviewSlotRepository:
     ) -> InterviewSlot | None:
         return await db.get(InterviewSlot, slot_id)
 
+    async def find_by_id_for_update(
+        self,
+        db: AsyncSession,
+        slot_id: int,
+    ) -> InterviewSlot | None:
+        return await db.scalar(
+            select(InterviewSlot)
+            .where(InterviewSlot.slot_id == slot_id)
+            .with_for_update()
+        )
+
     async def find_by_id_with_interviewers(
         self,
         db: AsyncSession,
