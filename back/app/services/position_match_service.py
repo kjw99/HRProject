@@ -121,14 +121,17 @@ POSITION_SYNONYM_GROUPS = (
 class PositionMatchInput:
     applied_position: str | None = None
     target_position: str | None = None
+    summary: str | None = None
     career_positions: list[str] = field(default_factory=list)
     skills: list[str] = field(default_factory=list)
     responsibilities: list[str] = field(default_factory=list)
+    profile_domains: list[str] = field(default_factory=list)
+    cover_letters: list[str] = field(default_factory=list)
     filename: str | None = None
 ###################
 
 class PositionMatchService:
-    
+
     ####사비카 코드########
     def match_resume_position(
         self,
@@ -277,15 +280,18 @@ class PositionMatchService:
         for term in terms:
             if not term or term in BROAD_POSITION_TERMS:
                 continue
-
+                #########사비카 수정############
             if normalized_position in term and len(normalized_position) >= 4:
-                best_score = max(best_score, 90)
-                best_reason = "추출된 직무에 데이터베이스 직무명이 포함되어 있습니다."
+                score = 95 if len(normalized_position) >= 8 else 90
+                best_score = max(best_score, score)
+                best_reason = "추출된 직무에 데이터베이스 직무명이 구체적으로 포함되어 있습니다."
 
             if term in normalized_position and len(term) >= 4:
-                best_score = max(best_score, 85)
+                score = 95 if len(term) >= 8 else 85
+                best_score = max(best_score, score)
                 best_reason = "데이터베이스 직무명에 추출된 직무가 포함되어 있습니다."
 
+ 
         for synonym_group in POSITION_SYNONYM_GROUPS:
             if (
                 any(alias in terms for alias in synonym_group)
@@ -307,12 +313,19 @@ class PositionMatchService:
         if match_input.target_position:
             values.append(match_input.target_position)
 
+        if match_input.summary:
+            values.append(match_input.summary)
+
+        
         values.extend(match_input.career_positions)
         values.extend(match_input.skills)
         values.extend(match_input.responsibilities)
+        values.extend(match_input.profile_domains)
+        values.extend(match_input.cover_letters)
 
-        if match_input.filename:
-            values.append(match_input.filename)
+
+        # if match_input.filename:
+        #     values.append(match_input.filename)
 
         return [value for value in values if self._clean(value)]
 

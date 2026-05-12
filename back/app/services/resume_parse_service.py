@@ -235,6 +235,7 @@ class ResumeParseService:
         return PositionMatchInput(
             applied_position=self._position_text(parsed.personal_info.applied_position),
             target_position=self._normalizer.clean(ai_output.ai_profile.target_position),
+            summary=self._normalizer.clean(ai_output.summary),
             career_positions=[
                 cleaned
                 for career in parsed.careers
@@ -251,6 +252,17 @@ class ResumeParseService:
                 for responsibility in career.responsibilities
                 if (cleaned := self._normalizer.clean(responsibility))
             ],
+            profile_domains=[
+                cleaned
+                for domain in ai_output.ai_profile.skills.domains
+                if (cleaned := self._normalizer.clean(domain))
+            ],
+            cover_letters=[
+                cleaned
+                for item in parsed.cover_letters
+                if (cleaned := self._normalizer.clean(item.content))
+            ],
+
         )
     ###################
 
@@ -318,11 +330,9 @@ class ResumeParseService:
                 self._normalizer.email(personal_info.email),
                 255,
             )
-
+             ########사비카 수정##########
         if candidate.position_id is None and position_match.get("matchedPositionId"):
             candidate.position_id = position_match.get("matchedPositionId")
-        # if candidate.position_id is None and position_match["matchedPositionId"]:
-            # candidate.position_id = position_match["matchedPositionId"]
 
         candidate.experience_level = experience_level
         candidate.meets_preferred_criteria = meets_preferred_criteria
@@ -592,10 +602,17 @@ class ResumeParseService:
         if cleaned_value:
             setattr(target, attr_name, cleaned_value)
 
+    
+    ############사비카 수정#############
     def _position_text(self, value: PositionText | None) -> str | None:
         if value is None:
             return None
 
-        return self._normalizer.clean(value.normalized) or self._normalizer.clean(
-            value.raw
-        )
+        raw = self._normalizer.clean(value.raw)
+        normalized = self._normalizer.clean(value.normalized)
+
+        if raw and normalized and normalized not in raw:
+            return f"{raw} {normalized}"
+
+        return raw or normalized
+
