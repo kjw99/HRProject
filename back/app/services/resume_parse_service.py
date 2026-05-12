@@ -37,8 +37,9 @@ from app.schemas.resume_parse import (
     ResumeParseResponse,
 )
 from app.services.position_match_service import (
+    PositionMatchInput,
     PositionMatchService,
-    position_match_service,
+    position_match_service   
 )
 from app.services.resume_file_storage_service import (
     StoredResumeFile,
@@ -105,6 +106,7 @@ class ResumeParseService:
         self._preferred_matcher = preferred_matcher or preferred_criteria_matcher
         self._jd_service = jd_service or job_description_service
 
+
     async def parse_resumes(
         self,
         session: AsyncSession,
@@ -151,22 +153,31 @@ class ResumeParseService:
             excel_file_name=None,
         )
 
+    
     async def _persist_parsed_resume(
         self,
         session: AsyncSession,
         ai_output: ResumeParseAIOutput,
         raw_text: str,
         file_path: str,
+        # filename: str | None = None,
     ) -> dict[str, Any]:
         positions = await position_repository.find_all(session)
         parsed = ai_output.parsed_json
         personal_info = parsed.personal_info
 
-        primary_match = self._matcher.match_position(
-            self._position_text(personal_info.applied_position),
+    #####사비카 수정########
+        primary_match = self._matcher.match_resume_position(
+            self._build_position_match_input(
+                parsed=parsed,
+                ai_output=ai_output,
+            ),
             positions,
         )
+    #######################
+
         experience_level = self._resolve_experience_level(parsed)
+
         meets_preferred_criteria = await self._match_preferred_criteria(
             parsed=parsed,
             ai_output=ai_output,
@@ -180,6 +191,7 @@ class ResumeParseService:
             phone=self._normalizer.clean(personal_info.phone),
             name=self._normalizer.clean(personal_info.name),
         )
+
         if candidate is None:
             candidate = self._build_candidate(
                 parsed=parsed,
@@ -213,6 +225,49 @@ class ResumeParseService:
             primary_match=primary_match,
         )
 
+    #####사비카 코드######
+    def _build_position_match_input(
+        self,
+        parsed: ParsedResumeJson,
+        ai_output: ResumeParseAIOutput,
+        # filename: str | None = None,
+    ) -> PositionMatchInput:
+        return PositionMatchInput(
+            applied_position=self._position_text(parsed.personal_info.applied_position),
+            target_position=self._normalizer.clean(ai_output.ai_profile.target_position),
+            summary=self._normalizer.clean(ai_output.summary),
+            career_positions=[
+                cleaned
+                for career in parsed.careers
+                if (cleaned := self._normalizer.clean(career.position))
+            ],
+            skills=[
+                cleaned
+                for skill in parsed.skills
+                if (cleaned := self._normalizer.clean(skill))
+            ],
+            responsibilities=[
+                cleaned
+                for career in parsed.careers
+                for responsibility in career.responsibilities
+                if (cleaned := self._normalizer.clean(responsibility))
+            ],
+            profile_domains=[
+                cleaned
+                for domain in ai_output.ai_profile.skills.domains
+                if (cleaned := self._normalizer.clean(domain))
+            ],
+            cover_letters=[
+                cleaned
+                for item in parsed.cover_letters
+                if (cleaned := self._normalizer.clean(item.content))
+            ],
+
+        )
+    ###################
+
+
+
     def _build_candidate(
         self,
         parsed: ParsedResumeJson,
@@ -222,7 +277,8 @@ class ResumeParseService:
     ) -> Candidate:
         personal_info = parsed.personal_info
         return Candidate(
-            position_id=position_match["matchedPositionId"],
+            # position_id=position_match["matchedPositionId"],
+            position_id=position_match.get("matchedPositionId"),
             name=self._normalizer.limit(
                 self._normalizer.clean(personal_info.name),
                 50,
@@ -274,9 +330,9 @@ class ResumeParseService:
                 self._normalizer.email(personal_info.email),
                 255,
             )
-
-        if candidate.position_id is None and position_match["matchedPositionId"]:
-            candidate.position_id = position_match["matchedPositionId"]
+             ########사비카 수정##########
+        if candidate.position_id is None and position_match.get("matchedPositionId"):
+            candidate.position_id = position_match.get("matchedPositionId")
 
         candidate.experience_level = experience_level
         candidate.meets_preferred_criteria = meets_preferred_criteria
@@ -546,10 +602,17 @@ class ResumeParseService:
         if cleaned_value:
             setattr(target, attr_name, cleaned_value)
 
+    
+    ############사비카 수정#############
     def _position_text(self, value: PositionText | None) -> str | None:
         if value is None:
             return None
 
-        return self._normalizer.clean(value.normalized) or self._normalizer.clean(
-            value.raw
-        )
+        raw = self._normalizer.clean(value.raw)
+        normalized = self._normalizer.clean(value.normalized)
+
+        if raw and normalized and normalized not in raw:
+            return f"{raw} {normalized}"
+
+        return raw or normalized
+
