@@ -2,17 +2,22 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.database import get_async_db
+from app.dependencies.dependencies import require_roles
+from app.schemas.common import MessageResponse
 from app.schemas.interview_booking import (
     AvailableInterviewSlotResponse,
     InterviewBookingCancelRequest,
     InterviewBookingCreate,
     InterviewBookingResponse,
 )
-from app.schemas.common import MessageResponse
 from app.services.interview_booking_service import interview_booking_service
 
 
-router = APIRouter(prefix="/api/interview-bookings", tags=["InterviewBooking"])
+router = APIRouter(
+    prefix="/api/interview-bookings",
+    tags=["InterviewBooking"],
+    dependencies=[Depends(require_roles(("admin", "hr")))],
+)
 
 
 @router.get(
