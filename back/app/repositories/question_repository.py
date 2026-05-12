@@ -38,6 +38,35 @@ class QuestionRepository:
         )
         return result.all()
 
+    async def find_by_candidate_id(
+        self,
+        db: AsyncSession,
+        candidate_id: int,
+    ) -> list[Question]:
+        result = await db.scalars(
+            select(Question)
+            .where(Question.candidate_id == candidate_id)
+            .order_by(Question.question_id)
+        )
+        return result.all()
+
+    async def find_by_target(
+        self,
+        db: AsyncSession,
+        position_id: int | None = None,
+        candidate_id: int | None = None,
+    ) -> list[Question]:
+        query = select(Question)
+
+        if position_id is not None:
+            query = query.where(Question.position_id == position_id)
+
+        if candidate_id is not None:
+            query = query.where(Question.candidate_id == candidate_id)
+
+        result = await db.scalars(query.order_by(Question.question_id))
+        return result.all()
+
     async def delete(self, db: AsyncSession, question: Question) -> None:
         await db.delete(question)
 

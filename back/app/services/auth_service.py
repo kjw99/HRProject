@@ -6,6 +6,9 @@ from app.schemas.user import TokenResponse, UserInfo
 
 class AuthService:
     async def login(self, db, data):
+
+        # print("INPUT EMAIL:", data.user_email)
+        # print("INPUT PASSWORD:", data.password)
         user = await user_repository.get_user_by_email(db, data.user_email)
         # user = await user_repository.get_user_by_email(db, data.username)
 
@@ -28,3 +31,6 @@ class AuthService:
 
 
 auth_service = AuthService()
+
+
+

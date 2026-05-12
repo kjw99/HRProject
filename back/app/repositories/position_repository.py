@@ -1,9 +1,8 @@
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.candidate import Candidate
 from app.models.position import Position
-from app.models.resume import Resume
 
 
 class PositionRepository:
@@ -32,14 +31,6 @@ class PositionRepository:
         reference_queries = [
             select(Candidate.candidate_id)
             .where(Candidate.position_id == position_id)
-            .limit(1),
-            select(Resume.resume_id)
-            .where(
-                or_(
-                    Resume.position_id == position_id,
-                    Resume.second_position_id == position_id,
-                )
-            )
             .limit(1),
         ]
 

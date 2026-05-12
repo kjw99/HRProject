@@ -2,7 +2,7 @@ import 'server-only';
 
 import { redirect } from 'next/navigation';
 import { ROLE_DEFAULT_PATHS } from '@lib/route-guard';
-import { getAuthMeServer } from './controlOfAuthority';
+import { getAuthMeServer } from './controlOfAuthority.server';
 import { AuthMeResponse } from '@/types/auth';
 /**
  * 레이아웃·서버 컴포넌트·페이지에서만 사용하세요.

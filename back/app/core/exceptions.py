@@ -14,6 +14,12 @@ class NotFoundException(AppException):
     code = "NOT_FOUND"
 
 
+class BadRequestException(AppException):
+    """요청 본문·파라미터가 유효하지 않을 때"""
+    status_code = 400
+    code = "BAD_REQUEST"
+
+
 class DuplicateException(AppException):
     """중복된 데이터가 있을 때"""
     status_code = 409

@@ -69,3 +69,18 @@ export interface AssignInterviewerRequest {
 export interface AssignInterviewerResponse {
     message: string;
 }
+
+// 면접관 인터뷰어 정보: Q4
+export interface RecruitmentStat {
+    intervieweeCount: number;
+    applicantCount: number;
+}
+
+export interface DeptStatus {
+    id: string;
+    deptName: string;
+    currentProgress: string; // ex: "1차 실무 면접 진행 중"
+    experienced: RecruitmentStat;
+    newcomer: RecruitmentStat;
+    lastUpdated: string; // ISO String
+}

@@ -25,7 +25,7 @@ async def generate_questions(
     data: QuestionGenerateRequest,
     db: AsyncSession = Depends(get_async_db),
 ):
-    return await question_service.generate_position_questions(db, data)
+    return await question_service.generate_questions(db, data)
 
 
 @router.post(
@@ -49,9 +49,10 @@ async def save_questions(
 )
 async def get_questions(
     position_id: int | None = Query(None, gt=0, alias="positionId"),
+    candidate_id: int | None = Query(None, gt=0, alias="candidateId"),
     db: AsyncSession = Depends(get_async_db),
 ):
-    return await question_service.get_questions(db, position_id)
+    return await question_service.get_questions(db, position_id, candidate_id)
 
 
 @router.delete(
