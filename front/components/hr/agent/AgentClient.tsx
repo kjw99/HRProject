@@ -1,73 +1,123 @@
-"use client"; // 상태 관리가 집중되는 클라이언트 래퍼
+"use client";
 
-import React, { useState } from "react";
-import { JobPosting, Candidate, GeneratedQuestion } from "@/types/hr";
+import { useState, useEffect } from "react";
+import {
+  BackendPosition,
+  BackendCandidate,
+  BackendGeneratedQuestion,
+  questionApi,
+} from "@/apis/questionApi";
 import ControlPanel from "./ControlPanel";
 import ResultsPanel from "./ResultsPanel";
-import { fetchGeminiDeepAnalysis } from "@/lib/axios";
 
-interface AgentClientProps {
-  jobPostings: JobPosting[];
-  candidates: Candidate[];
-}
+const MOCK_POSITIONS: BackendPosition[] = [
+  { positionId: 1, positionName: "인사", createdAt: "" },
+  { positionId: 2, positionName: "개발", createdAt: "" },
+  { positionId: 3, positionName: "프론트", createdAt: "" },
+  { positionId: 4, positionName: "백엔드", createdAt: "" },
+];
 
-export default function AgentClient({
-  jobPostings,
-  candidates,
-}: AgentClientProps) {
-  const [selectedJob, setSelectedJob] = useState("");
-  const [selectedCandidate, setSelectedCandidate] = useState("");
+const MOCK_CANDIDATES: BackendCandidate[] = [
+  {
+    candidate_id: 1,
+    position_id: 3,
+    name: "김진우",
+    application_status: "진행중",
+    final_status: "진행중",
+    experience_level: "경력",
+    meets_preferred_criteria: [],
+  },
+  {
+    candidate_id: 2,
+    position_id: 3,
+    name: "남건우",
+    application_status: "진행중",
+    final_status: "진행중",
+    experience_level: "신입",
+    meets_preferred_criteria: [],
+  },
+];
+
+export default function AgentClient() {
+  const [positions, setPositions] = useState<BackendPosition[]>([]);
+  const [candidates, setCandidates] = useState<BackendCandidate[]>([]);
+  const [selectedPositionId, setSelectedPositionId] = useState<number | null>(null);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedQuestions, setGeneratedQuestions] = useState<
-    GeneratedQuestion[]
-  >([]);
+  const [generatedQuestions, setGeneratedQuestions] = useState<BackendGeneratedQuestion[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // 💡 실제 API 호출 로직을 여기에 연동합니다.
-  const handleGenerateAI = async () => {
+  useEffect(() => {
+    questionApi.getPositions()
+      .then(setPositions)
+      .catch(() => setPositions(MOCK_POSITIONS));
+
+    questionApi.getCandidates()
+      .then(setCandidates)
+      .catch(() => setCandidates(MOCK_CANDIDATES));
+  }, []);
+
+  const handlePositionSelect = (id: number | null) => {
+    setSelectedPositionId(id);
+    setSelectedCandidateId(null);
+  };
+
+  const handleGenerate = async () => {
+    if (!selectedCandidateId) return;
     setIsGenerating(true);
     setGeneratedQuestions([]);
-    const quesData: GeneratedQuestion[] = await fetchGeminiDeepAnalysis(jobPostings.filter((j) => j.id === selectedJob)[0], candidates.filter((c) => c.id === selectedCandidate)[0]);
-    setTimeout(() => {
-      // setGeneratedQuestions([
-      //   {
-      //     id: 1,
-      //     type: "기술 검증",
-      //     question:
-      //       "이커머스 성능을 30% 개선한 과정에서 Lighthouse의 어떤 지표(LCP, TTI 등)를 중점적으로 모니터링하셨나요?",
-      //     intent: "성과 진위 및 트러블슈팅 능력 검증",
-      //     ragContext:
-      //       "지원자의 '성능 30% 개선' 이력과 공고의 '성능 최적화' 스킬 대조",
-      //   },
-      //   {
-      //     id: 2,
-      //     type: "아키텍처 설계",
-      //     question:
-      //       "Vue에서 React로 전환할 때 상태 관리 전략은 어떻게 재수립하셨나요?",
-      //     intent: "아키텍처 이해도 및 프레임워크 전환 적응력 측정",
-      //     ragContext: "지원자의 'Vue -> React 마이그레이션' 이력 기반 도출",
-      //   },
-      // ]);
-      // setGeneratedQuestions(quesData);
-      setGeneratedQuestions(quesData);
+    try {
+      const result = await questionApi.generateQuestions({
+        candidateId: selectedCandidateId,
+        positionId: selectedPositionId ?? undefined,
+        questionCount: 10,
+      });
+      setGeneratedQuestions(result);
+    } catch (e) {
+      console.error("Question generation failed:", e);
+    } finally {
       setIsGenerating(false);
-    }, 2500);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!generatedQuestions.length) return;
+    setIsSaving(true);
+    try {
+      await questionApi.saveQuestions({
+        positionId: selectedPositionId ?? undefined,
+        candidateId: selectedCandidateId ?? undefined,
+        questions: generatedQuestions.map((q) => ({
+          questionText: q.questionText,
+          questionType: q.questionType,
+          evaluationIntent: q.evaluationIntent,
+          generationBasis: q.generationBasis,
+        })),
+      });
+    } catch (e) {
+      console.error("Question save failed:", e);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+    <div className="flex gap-5 h-full min-h-[640px]">
       <ControlPanel
-        selectedJob={selectedJob}
-        setSelectedJob={setSelectedJob}
-        selectedCandidate={selectedCandidate}
-        setSelectedCandidate={setSelectedCandidate}
-        isGenerating={isGenerating}
-        onGenerateAI={handleGenerateAI}
-        jobPostings={jobPostings}
+        positions={positions}
         candidates={candidates}
+        selectedPositionId={selectedPositionId}
+        setSelectedPositionId={handlePositionSelect}
+        selectedCandidateId={selectedCandidateId}
+        setSelectedCandidateId={setSelectedCandidateId}
+        isGenerating={isGenerating}
+        onGenerateAI={handleGenerate}
       />
       <ResultsPanel
         isGenerating={isGenerating}
-        generatedQuestions={generatedQuestions}
+        questions={generatedQuestions}
+        onSave={handleSave}
+        isSaving={isSaving}
       />
     </div>
   );

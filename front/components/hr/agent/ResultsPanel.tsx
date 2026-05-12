@@ -1,131 +1,192 @@
-import React from "react";
-import { GeneratedQuestion } from "@/types/hr";
+"use client";
+
+import { useState } from "react";
+import { BackendGeneratedQuestion } from "@/apis/questionApi";
 
 interface ResultsPanelProps {
   isGenerating: boolean;
-  generatedQuestions: GeneratedQuestion[];
+  questions: BackendGeneratedQuestion[];
+  onSave: () => void;
+  isSaving: boolean;
+}
+
+const TYPE_MAP: Record<string, { label: string; className: string }> = {
+  job_based: { label: "기술 역량", className: "bg-blue-100 text-blue-700" },
+  candidate_based: { label: "조직 적합성", className: "bg-teal-100 text-teal-700" },
+  candidate_job_fit_based: { label: "문제 해결", className: "bg-orange-100 text-orange-700" },
+};
+
+function getTypeInfo(questionType: string) {
+  return TYPE_MAP[questionType] ?? { label: questionType, className: "bg-gray-100 text-gray-600" };
 }
 
 export default function ResultsPanel({
   isGenerating,
-  generatedQuestions,
+  questions,
+  onSave,
+  isSaving,
 }: ResultsPanelProps) {
+  const [chatInput, setChatInput] = useState("");
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editedTexts, setEditedTexts] = useState<Record<number, string>>({});
+
+  const isEmpty = !isGenerating && questions.length === 0;
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+  };
+
   return (
-    <div className="lg:col-span-8">
-      <div className="bg-white rounded-[40px] border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full min-h-150 flex flex-col overflow-hidden group">
-        {/* 패널 헤더 */}
-        <div className="px-8 lg:px-10 py-7 border-b border-slate-100 flex justify-between bg-white items-center sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-              <i className="bx bx-brain text-indigo-600 text-2xl"></i>
+    <div className="flex-1 flex flex-col min-h-[640px] min-w-0">
+      {/* 질문 카드 영역 */}
+      <div className="flex-1 overflow-y-auto space-y-3 pb-4">
+
+        {/* 빈 상태 */}
+        {isEmpty && (
+          <div className="h-full flex flex-col items-center justify-center py-24 gap-4">
+            <div className="w-20 h-20 rounded-3xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+              <i className="bx bx-ghost text-5xl text-gray-200" />
             </div>
-            <div>
-              <h3 className="font-black text-slate-900 tracking-tight leading-none">
-                ✨ AI 심층 면접 리포트
-              </h3>
-              <p className="text-[10px] text-slate-400 mt-2 font-black uppercase tracking-widest">
-                Gemini 2.5 Flash Inference
+            <div className="text-center">
+              <p className="text-[15px] font-bold text-gray-500">질문이 아직 없습니다</p>
+              <p className="text-[13px] text-gray-400 mt-1">
+                좌측에서 부서와 지원자를 선택한 뒤 생성 버튼을 눌러주세요.
               </p>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2.5 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100 text-[11px] font-black shadow-sm">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-            </span>
-            Real-time Connected
+        )}
+
+        {/* 로딩 상태 */}
+        {isGenerating && (
+          <div className="flex flex-col items-center justify-center py-24 gap-5">
+            <div className="relative w-14 h-14">
+              <div className="absolute inset-0 border-4 border-blue-100 rounded-full" />
+              <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+            <div className="text-center">
+              <p className="text-[15px] font-bold text-gray-700 animate-pulse">
+                AI가 질문을 생성하고 있습니다...
+              </p>
+              <p className="text-[13px] text-gray-400 mt-1">
+                이력서와 직무 기술서를 분석 중입니다.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* 패널 콘텐츠 영역 */}
-        <div className="p-6 lg:p-12 flex-1 bg-slate-50/30 overflow-y-auto">
-          {/* 상태 1: 빈 화면 (대기) */}
-          {!isGenerating && generatedQuestions.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 py-20 space-y-8">
-              <div className="w-32 h-32 rounded-[48px] bg-white border border-slate-100 flex items-center justify-center shadow-inner group-hover:rotate-12 transition-transform duration-700">
-                <i className="bx bx-ghost text-7xl text-slate-100 group-hover:text-indigo-50 transition-colors"></i>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-black text-slate-900">
-                  데이터가 비어 있습니다
-                </p>
-                <p className="text-sm text-slate-400 mt-2 font-bold px-10">
-                  좌측 패널에서 공고와 지원자를 선택하고 생성 버튼을 눌러주세요.
-                </p>
-              </div>
-            </div>
-          )}
+        {/* 질문 카드 목록 */}
+        {!isGenerating &&
+          questions.map((q, idx) => {
+            const typeInfo = getTypeInfo(q.questionType);
+            const isEditing = editingIdx === idx;
+            const displayText = editedTexts[idx] ?? q.questionText;
 
-          {/* 상태 2: 로딩 중 */}
-          {isGenerating && (
-            <div className="h-full flex flex-col items-center justify-center py-24 space-y-12">
-              <div className="relative">
-                <div className="w-28 h-28 border-12 border-indigo-50 rounded-full"></div>
-                <div className="w-28 h-28 border-12 border-indigo-500 rounded-full border-t-transparent animate-spin absolute top-0 left-0 shadow-[0_0_20px_rgba(99,102,241,0.4)]"></div>
-                <i className="bx bxs-zap text-5xl text-indigo-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse"></i>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-black text-slate-900 tracking-tight animate-pulse">
-                  Gemini가 심층 역량을 추론 중입니다...
+            return (
+              <div key={idx}>
+                {/* Figma 스타일 Article 레이블 */}
+                <p className="text-[11px] text-gray-400 mb-1.5 px-1">
+                  Article - Question Card {idx + 1}
                 </p>
-                <p className="text-sm text-slate-400 mt-3 font-bold max-w-sm italic">
-                  지원자의 이력과 사내 RAG 지식 베이스를 교차 대조하고 있습니다.
-                </p>
-              </div>
-            </div>
-          )}
 
-          {/* 상태 3: 결과 출력 */}
-          {!isGenerating && generatedQuestions.length > 0 && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-12 duration-1000">
-              {generatedQuestions.map((q, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white p-8 lg:p-11 rounded-[40px] border border-indigo-100/60 shadow-[0_15px_40px_-20px_rgba(0,0,0,0.08)] hover:border-indigo-300 hover:shadow-xl transition-all duration-300 group/card relative"
-                >
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="px-4 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 text-[11px] font-black uppercase tracking-widest border border-indigo-100">
-                      {q.type}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                  {/* 카드 헤더: 태그 + 아이콘 */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span
+                      className={`px-3 py-1 rounded-full text-[11px] font-semibold ${typeInfo.className}`}
+                    >
+                      {typeInfo.label}
                     </span>
-                    <div className="h-px flex-1 bg-slate-100"></div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingIdx(isEditing ? null : idx)}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="수정"
+                      >
+                        <i className="bx bx-edit text-[15px]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(displayText)}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="복사"
+                      >
+                        <i className="bx bx-copy text-[15px]" />
+                      </button>
+                    </div>
                   </div>
 
-                  <h4 className="text-slate-900 font-bold text-xl lg:text-[22px] leading-relaxed mb-8">
-                    <span className="text-indigo-500/20 italic font-black mr-4 text-4xl">
-                      Q{idx + 1}.
-                    </span>
-                    {q.question}
-                  </h4>
+                  {/* 질문 텍스트 */}
+                  {isEditing ? (
+                    <textarea
+                      value={displayText}
+                      onChange={(e) =>
+                        setEditedTexts((prev) => ({ ...prev, [idx]: e.target.value }))
+                      }
+                      rows={3}
+                      className="w-full text-[13px] font-medium text-gray-900 leading-relaxed mb-4 border border-blue-300 rounded-lg px-3 py-2 outline-none resize-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  ) : (
+                    <p className="text-[13px] font-medium text-gray-900 leading-relaxed mb-4">
+                      &ldquo;{displayText}&rdquo;
+                    </p>
+                  )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-slate-50/80 p-7 rounded-[28px] border border-slate-100 transition-colors">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <i className="bx bx-target-lock text-lg"></i> 설계 의도
+                  {/* 의도 섹션 */}
+                  <div className="border-l-4 border-blue-400 bg-blue-50/60 pl-3.5 py-2.5 rounded-r-xl">
+                    <p className="text-[11px] font-semibold text-blue-600 mb-1 flex items-center gap-1">
+                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-blue-500 text-[8px] font-black leading-none">
+                        i
                       </span>
-                      <p className="text-slate-700 text-[14px] leading-relaxed font-bold">
-                        {q.intent}
-                      </p>
-                    </div>
-                    <div className="bg-indigo-50/30 border border-indigo-100/50 p-7 rounded-[28px] transition-colors group-hover/card:bg-indigo-50/50">
-                      <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <i className="bx bx-data text-lg"></i> RAG 분석 근거
-                      </span>
-                      <p className="text-[14px] leading-relaxed font-black italic underline underline-offset-8 decoration-2 text-indigo-900/70 decoration-indigo-200">
-                        {q.ragContext}
-                      </p>
-                    </div>
+                      의도
+                    </p>
+                    <p className="text-[12px] text-gray-600 leading-relaxed">
+                      {q.evaluationIntent}
+                    </p>
                   </div>
                 </div>
-              ))}
-
-              <button className="w-full py-8 border-3 border-dashed border-slate-200 rounded-[40px] text-slate-400 font-black text-[15px] hover:border-indigo-400 hover:text-indigo-500 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-4 active:scale-95">
-                <i className="bx bx-plus-circle text-3xl"></i>
-                <span>에이전트에게 추가 질문 요청하기</span>
-              </button>
-            </div>
-          )}
-        </div>
+              </div>
+            );
+          })}
       </div>
+
+      {/* 하단: Chat 입력 + 저장 버튼 */}
+      {(questions.length > 0 || isGenerating) && (
+        <div className="pt-3 border-t border-gray-100 flex flex-col gap-2 mt-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-gray-400 flex-shrink-0">Chat</span>
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="추가 요청사항을 입력하세요..."
+              className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] outline-none focus:border-blue-400 focus:bg-white transition-colors"
+            />
+            <button
+              type="button"
+              className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-[13px] font-medium transition-colors flex-shrink-0"
+            >
+              전송
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isSaving || questions.length === 0}
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[13px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isSaving ? (
+              <>
+                <i className="bx bx-loader-alt bx-spin text-base" />
+                저장 중...
+              </>
+            ) : (
+              "저장"
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
