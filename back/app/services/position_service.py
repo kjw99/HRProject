@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictException, NotFoundException
 from app.models.position import Position
+from app.repositories.interviewer_repository import interviewer_repository
 from app.repositories.position_repository import position_repository
 from app.schemas.position import PositionCreate, PositionUpdate
 
@@ -50,6 +51,10 @@ class PositionService:
         if await position_repository.has_blocking_references(db, position_id):
             raise ConflictException("지원서 또는 이력서에서 사용 중인 직무는 삭제할 수 없습니다.")
 
+        await interviewer_repository.delete_assignments_by_position_id(
+            db,
+            position_id,
+        )
         await position_repository.delete(db, position)
         await db.commit()
 

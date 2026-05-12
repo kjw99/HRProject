@@ -28,6 +28,10 @@ class InterviewSlot(Base):
             "slot_status IN ('open', 'full', 'closed')",
             name="check_slot_status_valid",
         ),
+        CheckConstraint(
+            "interview_round IN ('1차', '2차', '3차')",
+            name="check_interview_slot_round_valid",
+        ),
         # 시작 < 종료 시간 보장
         CheckConstraint(
             "interview_starts_at < interview_ends_at",

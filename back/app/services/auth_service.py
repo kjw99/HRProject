@@ -7,11 +7,8 @@ from app.schemas.user import TokenResponse, UserInfo
 class AuthService:
     async def login(self, db, data):
 
-        # print("INPUT EMAIL:", data.user_email)
-        # print("INPUT PASSWORD:", data.password)
         user = await user_repository.get_user_by_email(db, data.user_email)
-        # user = await user_repository.get_user_by_email(db, data.username)
-
+        
         if not user:
             raise UnauthorizedException("아이디 또는 비밀번호가 올바르지 않습니다.")
 

@@ -1,4 +1,7 @@
 from fastapi import FastAPI
+from app.routers.interview_booking_invitation_router import (
+    router as interview_booking_invitation_router,
+)
 from app.routers.interview_booking_router import router as interview_booking_router
 from app.routers.interview_slot_router import router as interview_slot_router
 from app.routers.position_router import router as position_router
@@ -29,6 +32,7 @@ app.add_middleware(
 register_exception_handlers(app)
 
 app.include_router(auth_router)
+app.include_router(interview_booking_invitation_router)
 app.include_router(interview_booking_router)
 app.include_router(interview_slot_router)
 app.include_router(position_router)

@@ -168,9 +168,19 @@ class InterviewSlotService:
             for slot_interviewer in slot.slot_interviewers
         ]
 
-        position_id = data.position_id or slot.position_id
-        interview_round = data.interview_round or slot.interview_round
-        interviewer_ids = data.interviewer_ids or current_interviewer_ids
+        position_id = data.position_id if data.position_id is not None else slot.position_id
+        interview_round = (
+            data.interview_round if data.interview_round is not None else slot.interview_round
+        )
+        interviewer_ids_was_set = "interviewer_ids" in data.model_fields_set
+        slot_assignment_changed = bool(
+            {"position_id", "interview_round"} & data.model_fields_set
+        )
+        interviewer_ids = (
+            data.interviewer_ids
+            if interviewer_ids_was_set and data.interviewer_ids is not None
+            else current_interviewer_ids
+        )
         interview_date = data.interview_date or self._get_local_date(
             slot.interview_starts_at
         )
@@ -192,7 +202,22 @@ class InterviewSlotService:
             raise ConflictException("면접 시작 시간은 종료 시간보다 빨라야 합니다.")
 
         await self._validate_position(db, position_id)
-        await self._validate_interviewers(db, interviewer_ids)
+        if interviewer_ids_was_set:
+            await self._validate_interviewer_assignments(
+                db,
+                interviewer_ids,
+                position_id,
+                interview_round,
+            )
+        elif slot_assignment_changed:
+            interviewer_ids = await self._filter_assignable_interviewer_ids(
+                db,
+                interviewer_ids,
+                position_id,
+                interview_round,
+            )
+        else:
+            await self._validate_interviewers(db, interviewer_ids)
         await self._validate_interviewer_time_conflicts(
             db,
             interviewer_ids,
@@ -253,7 +278,12 @@ class InterviewSlotService:
         data: InterviewSlotCreate,
     ) -> PreparedInterviewSlot:
         await self._validate_position(db, data.position_id)
-        await self._validate_interviewers(db, data.interviewer_ids)
+        await self._validate_interviewer_assignments(
+            db,
+            data.interviewer_ids,
+            data.position_id,
+            data.interview_round,
+        )
 
         starts_at = self._combine_datetime(data.interview_date, data.interview_start_time)
         ends_at = self._combine_datetime(data.interview_date, data.interview_end_time)
@@ -603,6 +633,119 @@ class InterviewSlotService:
         interview_time: time,
     ) -> datetime:
         return datetime.combine(interview_date, interview_time).replace(tzinfo=KST)
+
+    async def _validate_interviewers(
+        self,
+        db: AsyncSession,
+        interviewer_ids: list[int],
+    ):
+        if not interviewer_ids:
+            return []
+
+        interviewers = await interviewer_repository.find_by_ids(
+            db,
+            interviewer_ids,
+        )
+        found_interviewer_ids = {
+            interviewer.interviewer_id for interviewer in interviewers
+        }
+        missing_interviewer_ids = [
+            interviewer_id
+            for interviewer_id in interviewer_ids
+            if interviewer_id not in found_interviewer_ids
+        ]
+
+        if missing_interviewer_ids:
+            raise NotFoundException(
+                "존재하지 않는 면접관 id가 있습니다: "
+                f"{', '.join(map(str, missing_interviewer_ids))}"
+            )
+
+        return interviewers
+
+    async def _validate_interviewer_assignments(
+        self,
+        db: AsyncSession,
+        interviewer_ids: list[int],
+        position_id: int,
+        interview_round: str,
+    ) -> None:
+        interviewers = await self._validate_interviewers(db, interviewer_ids)
+        invalid_interviewer_ids = [
+            interviewer.interviewer_id
+            for interviewer in interviewers
+            if interviewer.position_id != position_id
+            or interviewer.interview_round != interview_round
+        ]
+
+        if invalid_interviewer_ids:
+            raise ConflictException(
+                "면접 일정의 직무와 차수에 맞지 않는 면접관이 있습니다: "
+                f"{', '.join(map(str, invalid_interviewer_ids))}"
+            )
+
+    async def _filter_assignable_interviewer_ids(
+        self,
+        db: AsyncSession,
+        interviewer_ids: list[int],
+        position_id: int,
+        interview_round: str,
+    ) -> list[int]:
+        interviewers = await self._validate_interviewers(db, interviewer_ids)
+        return [
+            interviewer.interviewer_id
+            for interviewer in interviewers
+            if interviewer.position_id == position_id
+            and interviewer.interview_round == interview_round
+        ]
+
+    async def _validate_interviewer_time_conflicts(
+        self,
+        db: AsyncSession,
+        interviewer_ids: list[int],
+        starts_at: datetime,
+        ends_at: datetime,
+        excluded_slot_id: int | None = None,
+    ) -> None:
+        if not interviewer_ids:
+            return
+
+        if excluded_slot_id is None:
+            conflicts = (
+                await interview_slot_interviewer_repository.find_interviewer_time_conflicts(
+                    db,
+                    interviewer_ids,
+                    starts_at,
+                    ends_at,
+                )
+            )
+        else:
+            conflicts = (
+                await interview_slot_interviewer_repository.find_interviewer_time_conflicts_excluding_slot(
+                    db,
+                    interviewer_ids,
+                    starts_at,
+                    ends_at,
+                    excluded_slot_id,
+                )
+            )
+
+        if not conflicts:
+            return
+
+        conflict_slots_by_interviewer_id: dict[int, list[int]] = defaultdict(list)
+        for interviewer_id, slot_id in conflicts:
+            conflict_slots_by_interviewer_id[interviewer_id].append(slot_id)
+
+        conflict_messages = [
+            f"면접관 {interviewer_id}: 기존 일정 {', '.join(map(str, slot_ids))}"
+            for interviewer_id, slot_ids in conflict_slots_by_interviewer_id.items()
+        ]
+
+        raise ConflictException(
+            "해당 시간에 이미 배정된 면접관이 있습니다. "
+            + "; ".join(conflict_messages)
+        )
 
 
 interview_slot_service = InterviewSlotService()

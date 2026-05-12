@@ -20,7 +20,7 @@ SlotStatus = Literal["open", "full", "closed"]
 class InterviewSlotCreate(CaseModel):
     position_id: int = Field(..., gt=0)
     interview_round: InterviewRound
-    interviewer_ids: list[int] = Field(..., min_length=1)
+    interviewer_ids: list[int] = Field(default_factory=list)
     interview_date: date
     interview_start_time: time
     interview_end_time: time
@@ -70,7 +70,7 @@ class InterviewSlotBatchCreate(CaseModel):
 class InterviewSlotUpdate(CaseModel):
     position_id: int | None = Field(None, gt=0)
     interview_round: InterviewRound | None = None
-    interviewer_ids: list[int] | None = Field(None, min_length=1)
+    interviewer_ids: list[int] | None = None
     interview_date: date | None = None
     interview_start_time: time | None = None
     interview_end_time: time | None = None
