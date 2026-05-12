@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends,Query
+from typing import Literal
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.database import get_async_db
@@ -35,13 +37,20 @@ async def get_interviewers(
     page: int = Query(default=0, ge=0),
     size: int = Query(default=20, ge=1, le=100),
     keyword: str | None = None,
+    position_id: int | None = Query(default=None, alias="positionId", gt=0),
+    interview_round: Literal["1차", "2차", "3차"] | None = Query(
+        default=None,
+        alias="interviewRound",
+    ),
     db: AsyncSession = Depends(get_async_db),
 ):
     return await interviewer_service.get_interviewers(
         db,
         page,
         size,
-        keyword
+        keyword,
+        position_id,
+        interview_round,
     )
 
 

@@ -6,6 +6,7 @@ from app.dependencies.database import Base
 
 if TYPE_CHECKING:
     from app.models.candidate import Candidate
+    from app.models.interviewer import Interviewer
     from app.models.question import Question
     from app.models.interview_slot import InterviewSlot
 
@@ -37,6 +38,9 @@ class Position(Base):
         back_populates="position",
     )
     interview_slots: Mapped[list["InterviewSlot"]] = relationship(
+        back_populates="position",
+    )
+    interviewers: Mapped[list["Interviewer"]] = relationship(
         back_populates="position",
     )
 
