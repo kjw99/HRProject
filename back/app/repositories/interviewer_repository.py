@@ -16,10 +16,11 @@ class InterviewerRepository:
     ):
         db.add(interviewer)
 
-        await db.commit()
-        await db.refresh(interviewer)
+        # await db.commit()
+        # await db.refresh(interviewer)
 
         return interviewer
+
 
     async def get_by_id(
         self,
@@ -34,6 +35,7 @@ class InterviewerRepository:
 
         return result.scalar_one_or_none()
 
+
     async def get_by_email(
         self,
         db: AsyncSession,
@@ -46,6 +48,7 @@ class InterviewerRepository:
         result = await db.execute(query)
 
         return result.scalar_one_or_none()
+
 
     async def get_list(
         self,
@@ -78,13 +81,14 @@ class InterviewerRepository:
 
         return result.scalars().all(), total
 
+
     async def delete(
         self,
         db: AsyncSession,
         interviewer: Interviewer
     ):
         await db.delete(interviewer)
-        await db.commit()
+        # await db.commit()
 
 
     async def find_by_ids(

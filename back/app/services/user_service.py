@@ -1,9 +1,4 @@
-from app.core.exceptions import (
-    BadRequestException,
-    DuplicateException,
-    NotFoundException,
-)
-
+from app.core.exceptions import BadRequestException, DuplicateException,NotFoundException
 from app.models.user import User
 from app.repositories.user_repository import user_repository 
 from app.core.security import get_password_hash, verify_password
