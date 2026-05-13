@@ -55,7 +55,9 @@ class InterviewSlotRepository:
             .options(
                 selectinload(InterviewSlot.position),
                 selectinload(InterviewSlot.interviewers),
-                selectinload(InterviewSlot.bookings),
+                selectinload(InterviewSlot.bookings).selectinload(
+                    InterviewBooking.candidate
+                ),
             )
         )
 

@@ -140,6 +140,7 @@ class InterviewSlotListItemResponse(CaseModel):
     slot_id: int
     position_name: str | None
     interviewer_names: list[str]
+    booked_candidate_names: list[str]
     interview_round: str
     interview_starts_at: datetime
     interview_ends_at: datetime
