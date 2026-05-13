@@ -22,6 +22,12 @@ class PositionService:
     async def get_positions(self, db: AsyncSession) -> list[Position]:
         return await position_repository.find_all(db)
 
+    async def get_department_recruitment_status(
+        self,
+        db: AsyncSession,
+    ) -> list[dict]:
+        return await position_repository.get_department_recruitment_status(db)
+
     async def update_position(
         self,
         db: AsyncSession,
