@@ -7,7 +7,17 @@ class AuthService:
     async def login(self, db, data):
 
         user = await user_repository.get_user_by_email(db, data.user_email)
-        
+        # print("FOUND USER:", user)
+        # if user:
+        #     print("INPUT PASSWORD:", data.password)
+        #     print("HASH:", user.pw_hash)
+
+        #     result = verify_password(
+        #         data.password,
+        #         user.pw_hash
+        #     )
+
+        #     print("VERIFY RESULT:", result)
         if not user:
             raise UnauthorizedException("아이디 또는 비밀번호가 올바르지 않습니다.")            
 
