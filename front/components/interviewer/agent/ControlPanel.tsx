@@ -72,7 +72,7 @@ export default function ControlPanel(props: ControlPanelProps) {
 
         <div className="flex flex-1 overflow-hidden">
           {/* 좌측: 부서 목록 */}
-          <div className="flex-1 border-r border-slate-100 overflow-y-auto custom-scrollbar overflow-x-hidden h-full ">
+          <div className="flex-1 border-r border-slate-100 overflow-y-auto custom-scrollbar hide-scrollbar overflow-x-hidden h-full ">
             {/* 
      1. scrollbar-thin 대신 custom-scrollbar 적용
      2. h-full 또는 h-[320px] 등 부모 높이에 맞게 고정 
@@ -115,7 +115,7 @@ export default function ControlPanel(props: ControlPanelProps) {
           </div>
 
           {/* 우측: 지원자 목록 (candidate_id 매핑) */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin bg-slate-50/30">
+          <div className="flex-1 overflow-y-auto hide-scrollbar scrollbar-thin bg-slate-50/30">
             {filteredCandidates.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center p-4 text-center">
                 <p className="text-[11px] font-bold text-slate-400">

@@ -86,39 +86,53 @@ body {
 
 @layer utilities {
 
-  /* 스크롤바 전체 스타일 */
+  /* 1. 기본 커스텀 스크롤바 (항상 노출되는 버전) */
   .custom-scrollbar::-webkit-scrollbar {
     width: 5px;
-    /* 아주 얇게 */
   }
 
-  /* 스크롤바 트랙(배경) */
+  /* ✨ 화살표(방향 버튼) 제거 */
+  .custom-scrollbar::-webkit-scrollbar-button {
+    display: none;
+  }
+
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  /* 스크롤바 핸들(움직이는 부분) */
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #e2e8f0;
-    /* slate-200 */
     border-radius: 10px;
   }
 
-  /* 마우스 올렸을 때만 선명하게 */
   .custom-scrollbar:hover::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    /* slate-300 */
   }
 
-  /* 스크롤바를 아예 숨기고 싶을 때 사용하는 클래스 */
-  .no-scrollbar::-webkit-scrollbar {
+  /* -------------------------------------------------- */
+
+  /* 2. 평소엔 숨김 → 호버 시 노출 (가장 세련된 버전) */
+  .hide-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  /* ✨ 여기서도 화살표 제거 */
+  .hide-scrollbar::-webkit-scrollbar-button {
     display: none;
   }
 
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    /* IE, Edge */
-    scrollbar-width: none;
-    /* Firefox */
+  .hide-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
+    /* 평소엔 투명 */
+    border-radius: 10px;
+  }
+
+  .hide-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    /* 호버 시 색상 노출 */
   }
 }

@@ -1,6 +1,7 @@
 // app/interviewer/layout.tsx
 import Header from "@/components/interviewer/layout/Header";
 import { Metadata } from "next";
+import { requireRole } from "../server/auth/require-role.server";
 
 export const metadata: Metadata = {
   title: "AI 면접 질문 생성기 | HR Portal",
@@ -12,6 +13,8 @@ export default function InterviewerLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // await requireRole(["interviewer"]); // 인터뷰어는 hr 역할이 있어야 접근 가능
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       {/* 💡 모든 페이지 상단에 공통 헤더 배치 */}
