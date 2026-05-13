@@ -43,7 +43,9 @@ class UserResponse(UserBase):
 class UserInfo(CaseModel):
     user_name: str
     user_id: int
+    user_email: EmailStr
     role: Literal["admin", "hr", "interviewer"]
+    created_at: datetime
 
 class TokenResponse(CaseModel):
     access_token: str

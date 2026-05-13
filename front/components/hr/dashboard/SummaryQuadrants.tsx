@@ -46,7 +46,7 @@ export function Q1Summary({ data }: { data: Q1Data }) {
         </div>
         <div>
           <h3 className="text-slate-500 text-xs font-bold uppercase tracking-tight mb-0.5">
-            채용 부서
+            채용 직무
           </h3>
           <p className="text-2xl font-black text-slate-800">
             {data.todayHiringTeamCount}

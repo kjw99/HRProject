@@ -20,7 +20,8 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_async_db)):
 async def get_me(current_user: User = Depends(get_current_user)):
     return {
         "user_id": current_user.user_id,
+        "user_email": current_user.user_email,
         "user_name": current_user.user_name,
-        "role": current_user.role
+        "role": current_user.role,
+        "created_at": current_user.created_at,
     }
-

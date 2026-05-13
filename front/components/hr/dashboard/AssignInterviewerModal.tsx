@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UpcomingInterview } from "./DeptStatusDashboard";
+import { UpcomingInterview } from "./dept-status/types";
 import { InterviewerInput } from "@/types/hr";
 import { assignInterviewers } from "@/lib/hr/interview.client";
 // import { assignInterviewers, InterviewerInput } from '@/lib/api/interview.client';

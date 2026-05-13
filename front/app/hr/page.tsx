@@ -11,16 +11,37 @@ import Q3TodayInterviews, {
 } from "@/components/hr/dashboard/Q3TodayInterviews";
 import DeptStatusDashboard from "@/components/hr/dashboard/DeptStatusDashboard";
 import { DeptStatus } from "@/types/hr";
-import { fetchApplicantsServer } from "../server/hr/applicant.server";
+import {
+  fetchApplicantsServer,
+  fetchDeptStatusServer,
+  fetchInterviewSlotsServer,
+} from "../server/hr/applicant.server";
 
 // 💡 SSR 데이터 패칭 시뮬레이션
 async function getDashboardData() {
-  const data = await fetchApplicantsServer();
+  const results = await Promise.all([
+    fetchApplicantsServer(),
+    fetchInterviewSlotsServer(),
+    fetchDeptStatusServer(),
+  ]);
+  const q2 = results[0];
+  const q1 = results[1];
+  const q4 = results[2];
 
-  const q1Data: Q1Data = { todayIntervieweeCount: 14, todayHiringTeamCount: 3 };
+  const totalApplicants: number = q2.length;
+  const activeJobs: number = new Set(
+    q2.map((applicant) => applicant.position_id),
+  ).size;
+  const todayHiringTeamCount = new Set(q1.map((slot) => slot.positionName))
+    .size;
+  const q1Data: Q1Data = {
+    todayIntervieweeCount: 14,
+    todayHiringTeamCount: todayHiringTeamCount,
+  };
+
   const q2Data: Q2Data = {
-    totalApplicants: data.length as number,
-    activeJobs: 8,
+    totalApplicants: totalApplicants,
+    activeJobs: activeJobs,
   };
 
   const q3Data: TodayInterview[] = [
@@ -50,59 +71,19 @@ async function getDashboardData() {
     },
   ];
 
-  const q4Data: DeptStatus[] = [
-    {
-      id: "dept-1",
-      deptName: "플랫폼개발팀",
-      currentProgress: "2차 기술 면접 진행 중",
-      experienced: { intervieweeCount: 3, applicantCount: 45 },
-      newcomer: { intervieweeCount: 0, applicantCount: 12 },
-      lastUpdated: new Date().toISOString(),
-    },
-    {
-      id: "dept-2",
-      deptName: "브랜드마케팅팀",
-      currentProgress: "1차 실무 면접 진행 중",
-      experienced: { intervieweeCount: 2, applicantCount: 30 },
-      newcomer: { intervieweeCount: 8, applicantCount: 120 },
-      lastUpdated: new Date().toISOString(),
-    },
-    {
-      id: "dept-3",
-      deptName: "인프라보안팀",
-      currentProgress: "최종 임원 면접 대기",
-      experienced: { intervieweeCount: 2, applicantCount: 15 },
-      newcomer: { intervieweeCount: 0, applicantCount: 0 },
-      lastUpdated: new Date().toISOString(),
-    },
-    {
-      id: "dept-4",
-      deptName: "영업기획팀",
-      currentProgress: "서류 심사 중",
-      experienced: { intervieweeCount: 0, applicantCount: 25 },
-      newcomer: { intervieweeCount: 0, applicantCount: 80 },
-      lastUpdated: new Date().toISOString(),
-    },
-    {
-      id: "dept-5",
-      deptName: "BX디자인팀",
-      currentProgress: "컬쳐핏 면접 진행 중",
-      experienced: { intervieweeCount: 1, applicantCount: 20 },
-      newcomer: { intervieweeCount: 4, applicantCount: 65 },
-      lastUpdated: new Date().toISOString(),
-    },
-  ];
+  const q4Data: DeptStatus[] = q4;
 
-  return { q1Data, q2Data, q3Data, q4Data };
+  return { q1Data, q2Data, q3Data, q4Data, applicants: q2 };
 }
 
 export default async function HrDashboardPage() {
-  const { q1Data, q2Data, q3Data, q4Data } = await getDashboardData();
+  const { q1Data, q2Data, q3Data, q4Data, applicants } =
+    await getDashboardData();
 
   return (
     <div className="w-full animate-in fade-in duration-500">
       {/* 상단 헤더 및 모달 버튼 */}
-      <DashboardHeader />
+      <DashboardHeader applicants={applicants} />
 
       {/* 2x2 사분면 그리드 레이아웃 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">

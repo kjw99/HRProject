@@ -1,21 +1,17 @@
-// src/components/hr/dashboard/DeptStatusDashboard.tsx
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { toast } from "sonner";
 import AssignInterviewerModal from "./AssignInterviewerModal";
-import DeptInterviewModal from "./DeptInterviewModal"; // 💡 새로 만든 상세 모달 임포트
+import DeptInterviewModal from "./DeptInterviewModal";
 import { DeptStatus } from "@/types/hr";
+import { deptStatusApi } from "@/lib/hr/dept-status.client";
+import DeptStatusCard from "./dept-status/DeptStatusCard";
+import DeptStatusFilterBar from "./dept-status/DeptStatusFilterBar";
+import DeptStatusRefreshButton from "./dept-status/DeptStatusRefreshButton";
+import type { UpcomingInterview } from "./dept-status/types";
 
-// 💡 AssignInterviewerModal에서 참조하는 인터페이스 유지
-export interface UpcomingInterview {
-  id: string;
-  date: string; // ISO String
-  team: string;
-  round: string;
-  expType: "신입" | "경력" | "무관";
-  intervieweeCount: number;
-  applicantCount: number;
-}
+export type { UpcomingInterview } from "./dept-status/types";
 
 interface DeptStatusProps {
   initialData: DeptStatus[];
@@ -23,49 +19,76 @@ interface DeptStatusProps {
 
 export default function DeptStatusDashboard({ initialData }: DeptStatusProps) {
   const [items, setItems] = useState<DeptStatus[]>(initialData);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
 
-  // 💡 1. [면접관 할당] 모달 상태
+  const [searchQuery, setSearchQuery] = useState("");
+  const [progressFilter, setProgressFilter] = useState<string>("ALL");
+
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assignData, setAssignData] = useState<UpcomingInterview | null>(null);
 
-  // 💡 2. [부서 상세 현황] 모달 상태
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDeptName, setSelectedDeptName] = useState<string | null>(null);
 
   const loaderRef = useRef<HTMLDivElement>(null);
-
-  // 💡 1. 스크롤 가능한 컨테이너를 가리킬 Ref 생성
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // 💡 컴포넌트 전용 새로고침 핸들러
-  const handleRefresh = async () => {
-    if (isLoading) return; // 중복 클릭 방지
-
-    setIsLoading(true);
-
-    // ✅ 스크롤을 부드럽게 맨 위로 올림
-    scrollContainerRef.current?.scrollTo({
-      top: 0,
-      behavior: "smooth", // 'smooth'는 스르륵 이동, 'auto'는 즉시 이동
-    });
-    // 실제 API 재호출 시간을 시뮬레이션 (0.8초)
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    // 무한 스크롤 상태와 데이터를 초기 상태로 리셋
+  useEffect(() => {
+    setItems(initialData);
     setPage(1);
     setHasMore(true);
-    setItems(initialData); // 실제로는 여기서 fetch 함수를 다시 호출하여 새로운 데이터를 세팅합니다.
+  }, [initialData]);
 
-    setIsLoading(false);
+  const progressOptions = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((i) => set.add(i.currentProgress));
+    return [...set].sort((a, b) => a.localeCompare(b, "ko"));
+  }, [items]);
+
+  const displayItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return items.filter((item) => {
+      if (q && !item.deptName.toLowerCase().includes(q)) return false;
+      if (progressFilter !== "ALL" && item.currentProgress !== progressFilter)
+        return false;
+      return true;
+    });
+  }, [items, searchQuery, progressFilter]);
+
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 || progressFilter !== "ALL";
+
+  const resetFilters = () => {
+    setSearchQuery("");
+    setProgressFilter("ALL");
   };
 
-  // 무한 스크롤 데이터 로드
+  const handleRefresh = async () => {
+    if (isRefreshing || isLoadingMore) return;
+
+    setIsRefreshing(true);
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+
+    try {
+      const next = await deptStatusApi.fetchRecruitmentStatus();
+      setItems(next);
+      setPage(1);
+      setHasMore(true);
+    } catch {
+      toast.error("데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.", {
+        duration: 2800,
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const fetchMoreData = useCallback(async () => {
-    if (isLoading || !hasMore) return;
-    setIsLoading(true);
+    if (isLoadingMore || !hasMore || isRefreshing) return;
+    setIsLoadingMore(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const depts = [
@@ -98,185 +121,133 @@ export default function DeptStatusDashboard({ initialData }: DeptStatusProps) {
     }));
 
     setItems((prev) => [...prev, ...newItems]);
-    setPage((prev) => prev + 1);
-    setIsLoading(false);
-    if (page >= 4) setHasMore(false);
-  }, [isLoading, hasMore, page]);
+    setPage((prev) => {
+      const next = prev + 1;
+      if (prev >= 4) setHasMore(false);
+      return next;
+    });
+    setIsLoadingMore(false);
+  }, [isLoadingMore, hasMore, page, isRefreshing]);
 
   useEffect(() => {
+    const canLoadMore =
+      !hasActiveFilters || displayItems.length > 0;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading) fetchMoreData();
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !isLoadingMore &&
+          !isRefreshing &&
+          canLoadMore
+        ) {
+          void fetchMoreData();
+        }
       },
       { threshold: 0.1 },
     );
     if (loaderRef.current) observer.observe(loaderRef.current);
     return () => observer.disconnect();
-  }, [fetchMoreData, hasMore, isLoading]);
+  }, [
+    fetchMoreData,
+    hasMore,
+    isLoadingMore,
+    isRefreshing,
+    hasActiveFilters,
+    displayItems.length,
+  ]);
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-[24px] shadow-sm flex flex-col h-[600px] w-full relative">
-      {/* 헤더 */}
-      <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/30 rounded-t-[24px]">
-        <h2 className="text-lg font-black text-slate-800 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
-            <i className="bx bx-buildings text-lg"></i>
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm sm:rounded-[24px]">
+      <div className="shrink-0 rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-white px-4 py-4 sm:rounded-t-[24px] sm:px-6 sm:py-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <h2 className="flex items-center gap-2.5 text-base font-black text-slate-800 sm:text-lg">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                <i className="bx bx-buildings text-lg" />
+              </div>
+              <span className="truncate">부서별 채용 근황</span>
+            </h2>
+            <span className="inline-flex w-fit items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 shadow-sm">
+              <i className="bx bx-show text-indigo-500" />
+              표시 {displayItems.length}
+              <span className="text-slate-300">/</span>
+              {items.length}
+            </span>
           </div>
-          부서별 채용 근황
-        </h2>
-        {/* 💡 정적 뱃지에서 인터랙티브 새로고침 버튼으로 고도화 */}
-        <button
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className={`group flex items-center gap-1.5 text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest transition-all shadow-sm active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed
-            ${
-              isLoading
-                ? "bg-indigo-50 border border-indigo-200 text-indigo-600"
-                : "bg-white border border-slate-200 text-slate-400 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600"
-            }`}
-        >
-          <i
-            className={`bx bx-refresh text-base transition-transform duration-500 
-            ${isLoading ? "animate-spin" : "group-hover:rotate-180"}`}
-          ></i>
-          {isLoading ? "Updating..." : "Live Update"}
-        </button>
+          <DeptStatusRefreshButton
+            isRefreshing={isRefreshing}
+            onRefresh={() => void handleRefresh()}
+          />
+        </div>
       </div>
 
-      {/* 스크롤 영역 */}
+      <DeptStatusFilterBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        progressFilter={progressFilter}
+        onProgressChange={setProgressFilter}
+        progressOptions={progressOptions}
+        onReset={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
+
       <div
-        className="p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent flex-1 bg-slate-50/20"
+        className="hide-scrollbar flex-1 overflow-y-auto overscroll-y-contain bg-slate-50/20 p-4 sm:p-6"
         ref={scrollContainerRef}
       >
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-          {items.map((item) => (
-            // 💡 3. 카드(div) 전체를 클릭 가능하게 만들고, Detail 모달을 띄웁니다.
-            <div
-              key={item.id}
-              onClick={() => {
-                setSelectedDeptName(item.deptName);
-                setIsDetailModalOpen(true);
-              }}
-              className="group border border-slate-200 bg-white rounded-[20px] p-5 transition-all duration-300 hover:border-indigo-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 cursor-pointer relative"
-            >
-              {/* 호버 시 우측 상단에 옅게 나타나는 상세보기 화살표 아이콘 (UX 디테일) */}
-              <i className="bx bx-right-top-arrow-circle absolute right-4 top-4 text-2xl text-slate-200 opacity-0 group-hover:opacity-100 group-hover:text-indigo-400 transition-all duration-300"></i>
-
-              {/* 상단: 부서명 및 현재 상태 */}
-              <div className="flex justify-between items-start mb-4 relative z-10">
-                <div>
-                  <h3 className="font-black text-base text-slate-800 mb-1 flex items-center gap-2">
-                    {item.deptName}
-                  </h3>
-                  <div className="flex items-center gap-1.5">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    <p className="text-xs font-bold text-indigo-600">
-                      {item.currentProgress}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 💡 4. 버튼 클릭 시 e.stopPropagation()으로 부모(카드) 클릭 이벤트 무시 */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // 카드의 onClick(상세보기)이 실행되지 않도록 막음
-
-                    // AssignInterviewerModal 규격에 맞게 데이터 가공
-                    setAssignData({
-                      id: item.id,
-                      date: item.lastUpdated,
-                      team: item.deptName,
-                      round: item.currentProgress,
-                      expType: "무관",
-                      intervieweeCount:
-                        item.experienced.intervieweeCount +
-                        item.newcomer.intervieweeCount,
-                      applicantCount:
-                        item.experienced.applicantCount +
-                        item.newcomer.applicantCount,
-                    });
-                    setIsAssignModalOpen(true);
-                  }}
-                  className="shrink-0 bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl text-[11px] font-black hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all flex items-center gap-1 border border-slate-200 shadow-sm"
-                >
-                  <i className="bx bx-user-plus text-sm"></i> 면접관 할당
-                </button>
-              </div>
-
-              {/* 하단: 통계 영역 (경력/신입 구분) */}
-              <div className="space-y-2.5 relative z-10">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  가장 최근 일정 기준
-                </p>
-
-                {/* 경력 Stat */}
-                <div className="flex items-center justify-between bg-slate-50/80 rounded-xl p-3 border border-slate-100/50">
-                  <span className="text-xs font-black text-slate-700 flex items-center gap-2">
-                    <div className="w-1.5 h-3 bg-indigo-500 rounded-full"></div>{" "}
-                    경력직
-                  </span>
-                  <div className="flex gap-4">
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">
-                        면접 대상
-                      </span>
-                      <span className="text-xs font-black text-slate-800">
-                        {item.experienced.intervieweeCount}명
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end border-l border-slate-200 pl-4">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">
-                        전체 지원
-                      </span>
-                      <span className="text-xs font-black text-slate-800">
-                        {item.experienced.applicantCount}명
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 신입 Stat */}
-                <div className="flex items-center justify-between bg-slate-50/80 rounded-xl p-3 border border-slate-100/50">
-                  <span className="text-xs font-black text-slate-700 flex items-center gap-2">
-                    <div className="w-1.5 h-3 bg-emerald-500 rounded-full"></div>{" "}
-                    신입(인턴)
-                  </span>
-                  <div className="flex gap-4">
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">
-                        면접 대상
-                      </span>
-                      <span className="text-xs font-black text-slate-800">
-                        {item.newcomer.intervieweeCount}명
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end border-l border-slate-200 pl-4">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">
-                        전체 지원
-                      </span>
-                      <span className="text-xs font-black text-slate-800">
-                        {item.newcomer.applicantCount}명
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {displayItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center sm:py-20">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-inner">
+              <i className="bx bx-filter-alt text-3xl text-slate-300" />
             </div>
-          ))}
-        </div>
+            <p className="text-sm font-black text-slate-600">
+              조건에 맞는 부서가 없습니다
+            </p>
+            <p className="mt-1 max-w-xs text-xs font-medium text-slate-400">
+              검색어·진행 단계를 바꾸거나 필터를 초기화해 보세요.
+            </p>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-[11px] font-black text-indigo-700 transition hover:bg-indigo-100"
+              >
+                <i className="bx bx-reset" />
+                필터 초기화
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+            {displayItems.map((item) => (
+              <DeptStatusCard
+                key={item.id}
+                item={item}
+                onOpenDetail={(name) => {
+                  setSelectedDeptName(name);
+                  setIsDetailModalOpen(true);
+                }}
+                onOpenAssign={(data) => {
+                  setAssignData(data);
+                  setIsAssignModalOpen(true);
+                }}
+              />
+            ))}
+          </div>
+        )}
 
-        {/* 로딩 인디케이터 */}
-        <div ref={loaderRef} className="py-8 flex justify-center w-full">
-          {isLoading ? (
-            <div className="flex items-center gap-2 text-indigo-600 font-black text-sm">
-              <i className="bx bx-loader-alt bx-spin"></i> 로딩 중
+        <div ref={loaderRef} className="flex w-full justify-center py-8">
+          {isLoadingMore ? (
+            <div className="flex items-center gap-2 text-sm font-black text-indigo-600">
+              <i className="bx bx-loader-alt bx-spin" />
+              로딩 중
             </div>
           ) : (
-            !hasMore && (
-              <div className="text-slate-400 text-[11px] font-black uppercase tracking-widest">
+            !hasMore &&
+            displayItems.length > 0 && (
+              <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">
                 모든 부서의 근황을 불러왔습니다
               </div>
             )
@@ -284,16 +255,12 @@ export default function DeptStatusDashboard({ initialData }: DeptStatusProps) {
         </div>
       </div>
 
-      {/* 💡 5. 두 개의 모달 마운트 */}
-
-      {/* (1) 면접관 할당 모달 (버튼 클릭 시) */}
       <AssignInterviewerModal
         isOpen={isAssignModalOpen}
         onClose={() => setIsAssignModalOpen(false)}
         interviewData={assignData}
       />
 
-      {/* (2) 부서 세부 현황 모달 (카드 전체 클릭 시) */}
       <DeptInterviewModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}

@@ -11,7 +11,8 @@ interface HrSidebarProps {
 
 const MENU_ITEMS: HrMenuItem[] = [
   { name: "대시보드", path: "/hr", icon: "bx-grid-alt" },
-  { name: "부서 관리", path: "/hr/departments", icon: "bx-buildings" }, // 추가된 항목
+  { name: "부서 관리", path: "/hr/positions", icon: "bx-buildings" }, // 추가된 항목
+  { name: "면접관 관리", path: "/hr/interviewers", icon: "bx-user-voice" },
   { name: "이력서 파싱", path: "/hr/parsing", icon: "bx-file-find" },
   { name: "면접 일정", path: "/hr/schedule", icon: "bx-calendar" },
   { name: "AI 질문 생성", path: "/hr/ai-gen", icon: "bx-brain" },

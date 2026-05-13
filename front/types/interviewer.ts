@@ -47,3 +47,42 @@ export interface QuestionSavePayload {
     generationBasis?: string;
   }>;
 }
+
+export type InterviewRound = "1차" | "2차" | "3차";
+
+export interface HrInterviewer {
+  interviewerId: number;
+  interviewerEmail: string;
+  interviewerName: string;
+  positionId: number | null;
+  positionName?: string | null;
+  interviewRound: InterviewRound | string | null;
+  createdAt: string;
+}
+
+export interface InterviewerListParams {
+  page?: number;
+  size?: number;
+  keyword?: string;
+  positionId?: number;
+  interviewRound?: InterviewRound;
+}
+
+export interface InterviewerListResponse {
+  content: HrInterviewer[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+}
+
+export interface InterviewerPayload {
+  interviewerEmail: string;
+  interviewerName: string;
+  positionId?: number | null;
+  interviewRound?: InterviewRound | null;
+}
+
+export interface InterviewerMutationResponse {
+  message: string;
+}

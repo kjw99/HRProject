@@ -1,7 +1,9 @@
 import "server-only";
 
+import { InterviewSlot, InterviewSlotParams } from "@/types/schedule";
 import { Applicant, ApplicantListResponse } from "@/types/applicant";
 import { apiServer } from "../axios-server";
+import { DeptStatus } from "@/types/hr";
 
 /**
  * [Server-side] 지원자 리스트 조회
@@ -70,5 +72,111 @@ export const fetchApplicantsServer = async (
     }
 
     return mockData;
+  }
+};
+
+/**
+ * [Server-side] 면접 슬롯 목록 조회
+ * GET /api/interview-slots
+ */
+export const fetchInterviewSlotsServer = async (
+  params?: InterviewSlotParams,
+): Promise<InterviewSlot[]> => {
+  try {
+    // 💡 Axios의 두 번째 인자인 config 객체에 params를 넣으면,
+    // 자동으로 ?year=2026&month=5 형태로 변환되어 URL에 붙습니다.
+    const response = await apiServer.get<InterviewSlot[]>(
+      "/api/interview-slots",
+      {
+        params,
+      },
+    );
+
+    return response.data;
+  } catch (error: any) {
+    console.warn(
+      "🚨 [Server API] 면접 슬롯 로드 실패. 목업 데이터를 반환합니다.",
+      error.message,
+    );
+
+    // 명세서 기반 목업 데이터 반환 (UI 개발용)
+    return [
+      {
+        slotId: 2,
+        positionName: "영업관리",
+        interviewerNames: ["테스트면접", "면접관테스트"],
+        interviewRound: "1차",
+        interviewStartsAt: "2026-05-20T07:00:00Z",
+        interviewEndsAt: "2026-05-20T07:30:00Z",
+        slotStatus: "open",
+        interviewLocation: "본사 3층 회의실 A",
+      },
+      {
+        slotId: 3,
+        positionName: "프론트엔드 개발",
+        interviewerNames: ["한다솔", "김팀장"],
+        interviewRound: "최종",
+        interviewStartsAt: "2026-05-21T05:00:00Z", // KST 14:00
+        interviewEndsAt: "2026-05-21T06:00:00Z", // KST 15:00
+        slotStatus: "closed",
+        interviewLocation: "본사 5층 대회의실",
+      },
+    ];
+  }
+};
+
+export const fetchDeptStatusServer = async (): Promise<DeptStatus[]> => {
+  try {
+    const response = await apiServer.get<DeptStatus[]>(
+      "/api/hr/recruitment-status",
+    );
+    return response.data;
+  } catch (error: any) {
+    console.warn(
+      "🚨 [Server API] 부서별 채용 현황 로드 실패. 목업 데이터를 반환합니다.",
+      error.message,
+    );
+    return [
+      {
+        id: "dept-1",
+        deptName: "플랫폼개발팀",
+        currentProgress: "2차 기술 면접 진행 중",
+        experienced: { intervieweeCount: 3, applicantCount: 45 },
+        newcomer: { intervieweeCount: 0, applicantCount: 12 },
+        lastUpdated: new Date().toISOString(),
+      },
+      {
+        id: "dept-2",
+        deptName: "브랜드마케팅팀",
+        currentProgress: "1차 실무 면접 진행 중",
+        experienced: { intervieweeCount: 2, applicantCount: 30 },
+        newcomer: { intervieweeCount: 8, applicantCount: 120 },
+        lastUpdated: new Date().toISOString(),
+      },
+      {
+        id: "dept-3",
+        deptName: "인프라보안팀",
+        currentProgress: "최종 임원 면접 대기",
+        experienced: { intervieweeCount: 2, applicantCount: 15 },
+        newcomer: { intervieweeCount: 0, applicantCount: 0 },
+        lastUpdated: new Date().toISOString(),
+      },
+      {
+        id: "dept-4",
+        deptName: "영업기획팀",
+        currentProgress: "서류 심사 중",
+        experienced: { intervieweeCount: 0, applicantCount: 25 },
+        newcomer: { intervieweeCount: 0, applicantCount: 80 },
+        lastUpdated: new Date().toISOString(),
+      },
+      {
+        id: "dept-5",
+        deptName: "BX디자인팀",
+        currentProgress: "컬쳐핏 면접 진행 중",
+        experienced: { intervieweeCount: 1, applicantCount: 20 },
+        newcomer: { intervieweeCount: 4, applicantCount: 65 },
+        lastUpdated: new Date().toISOString(),
+      },
+    ];
   }
 };

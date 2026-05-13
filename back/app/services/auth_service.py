@@ -22,14 +22,15 @@ class AuthService:
             access_token=access_token,
             user=UserInfo(
                 user_id=user.user_id,
+                user_email=user.user_email,
                 user_name=user.user_name,
-                role=user.role
+                role=user.role,
+                created_at=user.created_at,
             )
         )
 
         return token
 
 auth_service = AuthService()
-
 
 

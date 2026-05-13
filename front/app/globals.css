@@ -135,4 +135,23 @@ body {
     background: #cbd5e1;
     /* 호버 시 색상 노출 */
   }
+
+  /* Firefox: 평소 트랙만 얇게, 호버 시 thumb 색 */
+  .hide-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .hide-scrollbar:hover {
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #e2e8f0 transparent;
+  }
+
+  .custom-scrollbar:hover {
+    scrollbar-color: #cbd5e1 transparent;
+  }
 }
