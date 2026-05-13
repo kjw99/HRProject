@@ -21,6 +21,8 @@ from app.routers.candidate_router import router as candidate_router
 from app.routers.email_template_router import router as email_template_router
 
 from app.routers.interviewer_router import router as interviewer_router
+from app.routers.interviewer_invite_router import router as interviewer_invite_router
+from app.routers.interviewer_question_router import router as interviewer_question_router
 
 # alembic 사용중.
 # Base.metadata.create_all(bind=async_engine)
@@ -41,6 +43,8 @@ app.include_router(hr_router)
 app.include_router(question_router)
 app.include_router(resume_parse_router)
 app.include_router(interviewer_router)
+app.include_router(interviewer_invite_router)
+app.include_router(interviewer_question_router)
 
 # 건우 작성
 app.include_router(candidate_router)

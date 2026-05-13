@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Query, status
+﻿from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.database import get_async_db
-from app.dependencies.dependencies import require_roles
+from app.dependencies.dependencies import get_current_user, require_roles
+from app.models.user import User
 from app.schemas.common import MessageResponse
 from app.schemas.question import (
     GeneratedQuestionResponse,
@@ -37,9 +38,14 @@ async def generate_questions(
 async def save_questions(
     data: QuestionSaveRequest,
     db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
 ):
-    await question_service.save_position_questions(db, data)
-    return {"message": "질문 저장이 완료되었습니다."}
+    await question_service.save_position_questions(
+        db,
+        data,
+        created_by_user_id=current_user.user_id,
+    )
+    return {"message": "Questions saved"}
 
 
 @router.get(
@@ -65,4 +71,4 @@ async def delete_question(
     db: AsyncSession = Depends(get_async_db),
 ):
     await question_service.delete_question(db, question_id)
-    return {"message": "질문 삭제가 완료되었습니다."}
+    return {"message": "Question deleted"}

@@ -1,6 +1,7 @@
 from app.dependencies.database import Base
 from app.models.user import User
 from app.models.interviewer import Interviewer
+from app.models.interviewer_invite import InterviewerInvite
 from app.models.position import Position
 from app.models.candidate import Candidate
 from app.models.resume import Resume
@@ -15,6 +16,7 @@ __all__ = [
     "Base", 
     "User", 
     "Interviewer", 
+    "InterviewerInvite",
     "Position", 
     "Candidate", 
     "Resume",
