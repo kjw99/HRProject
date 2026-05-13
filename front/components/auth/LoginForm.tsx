@@ -10,7 +10,6 @@ import { ToastUI } from "@/components/ui/ToastUI";
 import { roleRouter } from "@lib/roleRouter";
 import { useRouter } from "next/navigation";
 
-
 // 배경 곡선 애니메이션 설정
 const bgVariants = {
   signIn: {
@@ -37,8 +36,8 @@ const LoginForm = () => {
   const [loading, setLoading] = useState<boolean>(false); // 로그인/회원가입 요청이 진행 중인지 여부를 나타내는 상태
   const [disabled, setDisabled] = useState<boolean>(false); // 입력 필드와 버튼을 비활성화할지 여부를 나타내는 상태 (예: 요청이 진행 중일 때)
   const setAuth = useAuthStore((state) => state.setAuth);
-  const clearAuth = useAuthStore(state => state.clearAuth);
-  const router = useRouter()
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const router = useRouter();
   useEffect(() => {
     setIsLoaded(true);
     clearAuth();
@@ -57,15 +56,22 @@ const LoginForm = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const data: AuthResponse = await loginApi({ user_email: email, password: password });
+      const data: AuthResponse = await loginApi({
+        user_email: email,
+        password: password,
+      });
       // Zustand 스토어 업데이트
       const { user, accessToken } = data;
-      const { userName } = user;
+      const { userName, role } = user;
       setAuth(userName, accessToken);
-      router.push(roleRouter(user.role));
-    } catch (error: Error | any) {
-      // 에러 시 기존에 작성하신 테스트용 조건 로직 실행
-      roleRouter(email);
+      router.push(roleRouter(role));
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.detail ??
+        "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+      toast.custom((t) => <ToastUI t={t} message={message} duration={2000} />, {
+        duration: 2000,
+      });
     } finally {
       setLoading(false);
     }
@@ -80,29 +86,26 @@ const LoginForm = () => {
     try {
       // 의도적 에러 발생
       throw new Error("회원가입 기능은 현재 준비 중입니다.");
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "알 수 없는 오류가 발생했습니다.";
 
       // 커스텀 토스트 호출
-      toast.custom((t) => (
-        <ToastUI
-          t={t}
-          message={errorMessage}
-          duration={DURATION}
-        />
-      ), {
-        duration: DURATION, // Sonner가 실제로 토스트를 제거하는 시간
-        onAutoClose: () => {
-          setLoading(false);
+      toast.custom(
+        (t) => <ToastUI t={t} message={errorMessage} duration={DURATION} />,
+        {
+          duration: DURATION, // Sonner가 실제로 토스트를 제거하는 시간
+          onAutoClose: () => {
+            setLoading(false);
 
-          toggle();
-        }
-      });
+            toggle();
+          },
+        },
+      );
     }
   };
-
-
 
   if (!isLoaded) return null;
 
@@ -168,7 +171,9 @@ const LoginForm = () => {
                 className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl space-y-4"
                 onSubmit={handleSignUp}
               >
-                <h3 className="text-2xl font-bold text-[#000000] mb-6">Sign Up</h3>
+                <h3 className="text-2xl font-bold text-[#000000] mb-6">
+                  Sign Up
+                </h3>
                 <InputGroup
                   icon="👤"
                   placeholder="Username"
@@ -235,7 +240,9 @@ const LoginForm = () => {
                 transition={{ delay: 0.5, duration: 0.5 }}
                 className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl space-y-4"
               >
-                <h3 className="text-2xl font-bold text-[#000000] mb-6">로그인</h3>
+                <h3 className="text-2xl font-bold text-[#000000] mb-6">
+                  로그인
+                </h3>
                 <InputGroup
                   icon="👤"
                   placeholder="E-mail"
@@ -257,10 +264,11 @@ const LoginForm = () => {
                   type="submit"
                   disabled={loading}
                   className={`w-full py-3 rounded-lg font-semibold text-lg transition-all flex items-center justify-center gap-2
-    ${loading
-                      ? "bg-[#7584ad] text-white/80 cursor-not-allowed shadow-inner" // 로딩 중: 색상 톤다운 및 클릭 방지 느낌
-                      : "bg-[#70a7f0] text-white hover:bg-[#7584ad] active:scale-[0.98]" // 평소: 원래 색상 및 클릭 액션
-                    }
+    ${
+      loading
+        ? "bg-[#7584ad] text-white/80 cursor-not-allowed shadow-inner" // 로딩 중: 색상 톤다운 및 클릭 방지 느낌
+        : "bg-[#70a7f0] text-white hover:bg-[#7584ad] active:scale-[0.98]" // 평소: 원래 색상 및 클릭 액션
+    }
   `}
                 >
                   {loading ? (
@@ -273,7 +281,9 @@ const LoginForm = () => {
                     <span>로그인</span>
                   )}
                 </button>
-                <p className="text-xs text-center font-bold cursor-pointer">비밀번호 찾기</p>
+                <p className="text-xs text-center font-bold cursor-pointer">
+                  비밀번호 찾기
+                </p>
                 <p className="text-xs text-center">
                   아이디 생성{" "}
                   <span
@@ -302,7 +312,14 @@ interface InputGroupProps {
 }
 
 // 재사용 가능한 인풋 컴포넌트
-const InputGroup = ({ icon, placeholder, type, value, onChange, disabled }: InputGroupProps) => (
+const InputGroup = ({
+  icon,
+  placeholder,
+  type,
+  value,
+  onChange,
+  disabled,
+}: InputGroupProps) => (
   <div className="relative group">
     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#4EA685]">
       {icon}

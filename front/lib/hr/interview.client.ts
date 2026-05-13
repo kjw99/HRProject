@@ -42,19 +42,16 @@ export const fetchApplicants = async (
   department: string = "ALL",
 ): Promise<ApplicantListResponse> => {
   try {
-    const response = await api.get<ApplicantListResponse>("/api/applicants", {
-      params: { department: department === "ALL" ? undefined : department },
-    });
+    const response = await api.get<ApplicantListResponse>("/api/candidates");
+    // console.log(response.data);
     return response.data;
   } catch (error: any) {
     console.error(
-      "🚨 [GET] 지원자 리스트 로드 실패. 목업 데이터를 반환합니다.",
+      "🚨 [GET] 지원자 리스트 로드 실패. 서버 데이터 구조의 목업을 반환합니다.",
     );
 
     // 네트워크 지연 시뮬레이션
     await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const DEPARTMENTS = ["개발팀", "디자인팀", "마케팅팀", "영업팀", "인사팀"];
 
     // 15명의 가상 지원자 생성
     let mockData: Applicant[] = Array.from({ length: 15 }).map((_, idx) => {
@@ -62,42 +59,57 @@ export const fetchApplicants = async (
         | "신입"
         | "경력"
         | "무관";
-      const status = ["서류 심사 중", "면접 진행 중", "합격", "불합격"][
-        idx % 4
-      ] as "합격" | "불합격" | "서류 심사 중" | "면접 진행 중";
 
-      // 인덱스에 따라 우대조건 가변적 부여
+      // application_status 매핑
+      const appStatus = ["서류", "면접", "서류", "면접"][idx % 4] as
+        | "서류"
+        | "면접";
+
+      // final_status 매핑
+      const finalStatus = ["진행중", "진행중", "합격", "불합격"][idx % 4] as
+        | "진행중"
+        | "합격"
+        | "불합격";
+
+      // 우대조건 가변적 부여
       const criteria: string[] = [];
       if (idx % 2 === 0) criteria.push("정보처리기사");
       if (idx % 3 === 0) criteria.push("TOEIC 900점 이상");
       if (idx % 5 === 0) criteria.push("관련 직무 인턴 경험 6개월");
 
       return {
-        id: `APP-${202600 + idx}`,
-        experienceLevel: expLevel,
+        candidate_id: 100 + idx, // number형 ID
+        position_id: 10 + (idx % 5), // 지원 공고 ID
         name: `지원자${idx + 1}`,
-        phone: `010-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
-        department: DEPARTMENTS[idx % 5],
-        appliedPosition: [
-          "프론트엔드",
-          "UI/UX 디자이너",
-          "퍼포먼스 마케터",
-          "B2B 세일즈",
-          "HR BP",
-        ][idx % 5],
-        status: status,
-        preferredCriteria: criteria,
+        date_of_birth: `199${idx % 9}-0${(idx % 9) + 1}-10`,
+        gender: idx % 2 === 0 ? "남" : "여",
+        address: `(우편번호: 0612${idx}) 서울특별시 강남구 테헤란로 ${idx}길`,
+        phone: `010-${1000 + idx}-${4000 + idx}`,
+        email: `applicant${idx}@example.com`,
+        experience_level: expLevel, // Snake Case
+        application_status: appStatus, // 전형 단계
+        final_status: finalStatus, // 최종 상태
+        meets_preferred_criteria: criteria, // 필드명 변경
       };
     });
 
-    // 클라이언트에서 넘긴 파라미터(부서)가 'ALL'이 아니면 필터링해서 반환
+    // 부서 필터링 (position_id를 부서 대용으로 활용하거나 로직 유지)
     if (department !== "ALL") {
-      mockData = mockData.filter((app) => app.department === department);
+      // 실제 서버 데이터에는 department 문자열이 없으므로,
+      // 테스트를 위해 특정 position_id를 부서처럼 매핑하여 필터링 예시를 둡니다.
+      const deptMap: Record<string, number> = {
+        개발팀: 10,
+        디자인팀: 11,
+        마케팅팀: 12,
+      };
+      const targetId = deptMap[department];
+      if (targetId) {
+        mockData = mockData.filter((app) => app.position_id === targetId);
+      }
     }
 
     return {
       content: mockData,
-      totalElements: mockData.length,
     };
   }
 };

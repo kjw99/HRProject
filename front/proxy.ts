@@ -48,9 +48,9 @@ export async function proxy(request: NextRequest) {
   }
 
   const token = request.cookies.get("accessToken")?.value;
-  const role = request.cookies.get("userRole")?.value;
+  // const role = request.cookies.get("userRole")?.value;
 
-  // if (!token || !role) {
+  // if (!token) {
   //   const loginUrl = request.nextUrl.clone();
   //   loginUrl.pathname = "/login";
   //   loginUrl.searchParams.set("from", pathname);

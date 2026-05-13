@@ -71,12 +71,21 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* 좌측: 부서 목록 (positionId 매핑) */}
-          <div className="flex-1 border-r border-slate-100 overflow-y-auto scrollbar-thin">
+          {/* 좌측: 부서 목록 */}
+          <div className="flex-1 border-r border-slate-100 overflow-y-auto custom-scrollbar overflow-x-hidden h-full ">
+            {/* 
+     1. scrollbar-thin 대신 custom-scrollbar 적용
+     2. h-full 또는 h-[320px] 등 부모 높이에 맞게 고정 
+  */}
             {positions.map((pos) => (
               <div
                 key={pos.positionId}
-                className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-l-2 ${selectedPositionId === pos.positionId ? "bg-indigo-50/50 border-indigo-500" : "border-transparent hover:bg-slate-50"}`}
+                title={pos.positionName}
+                className={`flex items-center gap-2.5 px-3 py-3 cursor-pointer transition-colors border-l-2 min-h-[48px] ${
+                  selectedPositionId === pos.positionId
+                    ? "bg-indigo-50/50 border-indigo-500"
+                    : "border-transparent hover:bg-slate-50"
+                }`}
                 onClick={() =>
                   setSelectedPositionId(
                     selectedPositionId === pos.positionId
@@ -87,19 +96,20 @@ export default function ControlPanel(props: ControlPanelProps) {
               >
                 <CheckBox
                   checked={selectedPositionId === pos.positionId}
-                  onClick={() =>
-                    setSelectedPositionId(
-                      selectedPositionId === pos.positionId
-                        ? null
-                        : pos.positionId,
-                    )
-                  }
+                  onClick={() => {}}
                 />
-                <span
-                  className={`text-[13px] font-bold ${selectedPositionId === pos.positionId ? "text-indigo-700" : "text-slate-600"}`}
-                >
-                  {pos.positionName}
-                </span>
+
+                <div className="min-w-0 flex-1">
+                  <span
+                    className={`block truncate text-[12px] font-bold tracking-tight ${
+                      selectedPositionId === pos.positionId
+                        ? "text-indigo-700"
+                        : "text-slate-600"
+                    }`}
+                  >
+                    {pos.positionName}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
@@ -109,7 +119,9 @@ export default function ControlPanel(props: ControlPanelProps) {
             {filteredCandidates.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center p-4 text-center">
                 <p className="text-[11px] font-bold text-slate-400">
-                  부서를 선택해주세요
+                  {selectedPositionId
+                    ? " (해당 부서에 지원자가 없습니다)"
+                    : "부서를 선택해주세요."}
                 </p>
               </div>
             ) : (

@@ -11,11 +11,17 @@ import Q3TodayInterviews, {
 } from "@/components/hr/dashboard/Q3TodayInterviews";
 import DeptStatusDashboard from "@/components/hr/dashboard/DeptStatusDashboard";
 import { DeptStatus } from "@/types/hr";
+import { fetchApplicantsServer } from "../server/hr/applicant.server";
 
 // 💡 SSR 데이터 패칭 시뮬레이션
 async function getDashboardData() {
+  const data = await fetchApplicantsServer();
+
   const q1Data: Q1Data = { todayIntervieweeCount: 14, todayHiringTeamCount: 3 };
-  const q2Data: Q2Data = { totalApplicants: 1245, activeJobs: 8 };
+  const q2Data: Q2Data = {
+    totalApplicants: data.length as number,
+    activeJobs: 8,
+  };
 
   const q3Data: TodayInterview[] = [
     {

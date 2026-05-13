@@ -5,7 +5,7 @@ export const API_URL = "http://localhost:8000/api/knowledge/upload";
 
 // 1. 공통 Axios 인스턴스 설정
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000", // FastAPI 서버 주소
+  baseURL: "http://localhost:8000", // FastAPI 서버 주소
   timeout: 10000, // 10초 이상 응답 없으면 에러 처리
   headers: {
     "Content-Type": "application/json",

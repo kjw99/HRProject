@@ -25,7 +25,6 @@ export interface UserInfo {
  */
 export interface AuthResponse {
   accessToken: string;
-  tokenType: string; // 주로 "bearer"
   user: UserInfo;
 }
 
@@ -52,5 +51,5 @@ export interface AuthMeResponse {
   userId: number;
   userEmail: string;
   userName: string;
-  role: 'admin' | 'hr' | 'user'; // 시스템 역할
+  role: "admin" | "hr" | "user"; // 시스템 역할
 }

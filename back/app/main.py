@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.routers.interview_booking_invitation_router import (
     router as interview_booking_invitation_router,
 )
@@ -14,20 +15,29 @@ from app.routers.auth_router import router as auth_router
 from app.routers.user_router import router as user_router
 from app.routers.admin_router import router as admin_router
 from app.routers.hr_router import router as hr_router
+
 # 건우 작성
+from app.routers.candidate_router import router as candidate_router
+
+from app.routers.interviewer_router import router as interviewer_router
 
 # alembic 사용중.
 # Base.metadata.create_all(bind=async_engine)
+
 app = FastAPI()
 
-
+# CORS 설정
 app.add_middleware(
-    # CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js 주소 허용
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # 예외 핸들러 등록
 register_exception_handlers(app)
 

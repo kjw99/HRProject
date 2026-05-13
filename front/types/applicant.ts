@@ -1,15 +1,26 @@
 export interface Applicant {
-  id: string;
-  experienceLevel: "신입" | "경력" | "무관";
+  candidate_id: number; // 기존 id -> candidate_id (number형)
+  position_id: number; // 지원 공고 ID
   name: string;
+  date_of_birth: string; // "YYYY-MM-DD"
+  gender: string | null; // null 허용
+  address: string;
   phone: string;
-  department: string;
-  appliedPosition: string;
-  status: "합격" | "불합격" | "서류 심사 중" | "면접 진행 중";
-  preferredCriteria: string[]; // 우대 조건 (자격증 등) 배열
+  email: string | null; // null 허용
+
+  // 경력 구분: 서버 데이터 기준
+  experience_level: "신입" | "경력" | "무관";
+
+  // 지원 단계 (예: 서류, 면접 등)
+  application_status: "서류" | "면접" | "최종합격" | "불합격";
+
+  // 최종 상태 (예: 진행중, 완료 등)
+  final_status: "진행중" | "합격" | "불합격";
+
+  // 우대 조건 충족 리스트
+  meets_preferred_criteria: string[];
 }
 
 export interface ApplicantListResponse {
   content: Applicant[];
-  totalElements: number;
 }
