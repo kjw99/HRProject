@@ -110,6 +110,11 @@ class InterviewSlotService:
                     interviewer.interviewer_name
                     for interviewer in slot.interviewers
                 ],
+                booked_candidate_names=[
+                    booking.candidate.name
+                    for booking in self._get_active_bookings(slot)
+                    if booking.candidate and booking.candidate.name
+                ],
                 interview_round=slot.interview_round,
                 interview_starts_at=slot.interview_starts_at,
                 interview_ends_at=slot.interview_ends_at,

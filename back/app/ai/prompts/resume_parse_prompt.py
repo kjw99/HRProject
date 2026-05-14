@@ -27,6 +27,10 @@ def build_resume_parse_messages(
 - 연봉이나 희망연봉은 가능하면 원화 기준 숫자 amount로 변환하세요.
 - 정규화가 애매한 값은 raw 필드에 원문 표현을 함께 보존하세요.
 - 원문에 없는 정보는 절대 추측하지 말고 null 또는 빈 배열로 두세요.
+- If the resume contains both 지원부문/지원본부 and 지원분야, combine them into personal_info.applied_position.raw and normalized.
+- Preserve business unit / division names 
+- Do not normalize applied_position to only a generic role like 국내영업 or 해외영업 when a division is present.
+
 
 Career extraction rules:
 - For each parsed_json.careers item, set employment_type when the resume states it.

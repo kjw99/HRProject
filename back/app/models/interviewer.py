@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, func
@@ -7,9 +7,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.dependencies.database import Base
 
 if TYPE_CHECKING:
+    from app.models.interviewer_invite import InterviewerInvite
     from app.models.interview_slot import InterviewSlot
     from app.models.interview_slot_interviewer import InterviewSlotInterviewer
     from app.models.position import Position
+    from app.models.question import Question
 
 
 class Interviewer(Base):
@@ -21,49 +23,35 @@ class Interviewer(Base):
         ),
     )
 
-    interviewer_id: Mapped[int] = mapped_column(
-        primary_key=True,
-        autoincrement=True,
-        comment="면접관 기본 id",
-    )
-    interviewer_email: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-        comment="면접관 이메일",
-    )
-    interviewer_name: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-        comment="면접관 이름",
-    )
+    interviewer_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    interviewer_email: Mapped[str] = mapped_column(String, nullable=False)
+    interviewer_name: Mapped[str] = mapped_column(String, nullable=False)
     position_id: Mapped[int | None] = mapped_column(
         ForeignKey("positions.position_id", ondelete="SET NULL"),
         nullable=True,
         index=True,
-        comment="면접관 배정 직무 FK",
     )
-    interview_round: Mapped[str | None] = mapped_column(
-        String(20),
-        nullable=True,
-        comment="면접관 배정 차수",
-    )
+    interview_round: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
-        comment="생성 시각",
     )
 
     slot_interviewers: Mapped[list["InterviewSlotInterviewer"]] = relationship(
-        back_populates="interviewer",
+        back_populates="interviewer"
     )
     slots: Mapped[list["InterviewSlot"]] = relationship(
         secondary="interview_slot_interviewers",
         back_populates="interviewers",
         viewonly=True,
     )
-    position: Mapped["Position | None"] = relationship(
-        back_populates="interviewers",
+    position: Mapped["Position | None"] = relationship(back_populates="interviewers")
+    created_questions: Mapped[list["Question"]] = relationship(
+        back_populates="created_by_interviewer"
+    )
+    invites: Mapped[list["InterviewerInvite"]] = relationship(
+        back_populates="interviewer"
     )
 
     @property

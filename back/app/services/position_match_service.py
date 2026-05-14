@@ -4,6 +4,10 @@ from typing import Any
 
 from app.models.position import Position
 
+from dataclasses import dataclass, field
+
+
+
 
 BROAD_POSITION_TERMS = {
     "developer",
@@ -112,8 +116,93 @@ POSITION_SYNONYM_GROUPS = (
     },
 )
 
+#####사비카 코드#######
+@dataclass(frozen=True)
+class PositionMatchInput:
+    applied_position: str | None = None
+    target_position: str | None = None
+    summary: str | None = None
+    career_positions: list[str] = field(default_factory=list)
+    skills: list[str] = field(default_factory=list)
+    responsibilities: list[str] = field(default_factory=list)
+    profile_domains: list[str] = field(default_factory=list)
+    cover_letters: list[str] = field(default_factory=list)
+    filename: str | None = None
+###################
 
 class PositionMatchService:
+
+    ####사비카 코드########
+    def match_resume_position(
+        self,
+        match_input: PositionMatchInput,
+        positions: list[Position],
+    ) -> dict[str, Any]:
+        evidence = self._collect_evidence(match_input)
+
+        if not evidence:
+            return self._position_match_result(
+                status="notProvided",
+                raw_position=None,
+                reason="No usable position evidence was extracted from the resume.",
+            )
+
+        if not positions:
+            return self._position_match_result(
+                status="noPositions",
+                raw_position=", ".join(evidence[:5]),
+                reason="No positions are registered in the database.",
+            )
+
+        scored_positions = []
+
+        for position in positions:
+            score, reasons = self._score_position_with_evidence(position, evidence)
+            if score > 0:
+                scored_positions.append((score, position, reasons))
+
+        if not scored_positions:
+            return self._position_match_result(
+                status="noMatch",
+                raw_position=", ".join(evidence[:5]),
+                reason="No database position matched the extracted resume evidence.",
+            )
+
+        scored_positions.sort(key=lambda item: (-item[0], item[1].position_id))
+        best_score, best_position, best_reasons = scored_positions[0]
+
+        candidates = [
+            self._position_candidate(score, position, "; ".join(reasons))
+            for score, position, reasons in scored_positions[:5]
+        ]
+
+        if best_score < 80:
+            return self._position_match_result(
+                status="lowConfidence",
+                raw_position=", ".join(evidence[:5]),
+                candidates=candidates,
+                reason="Only weak position evidence matched.",
+            )
+
+        tied_best = [item for item in scored_positions if item[0] == best_score]
+        if len(tied_best) > 1:
+            return self._position_match_result(
+                status="ambiguous",
+                raw_position=", ".join(evidence[:5]),
+                candidates=candidates,
+                reason="Multiple positions received the same best score.",
+            )
+
+        return self._position_match_result(
+            status="matched",
+            raw_position=", ".join(evidence[:5]),
+            matched_position_id=best_position.position_id,
+            matched_position_name=best_position.position_name,
+            candidates=candidates,
+            reason="; ".join(best_reasons),
+        )
+    ##################################
+
     def match_position(
         self,
         raw_position: str | None,
@@ -151,9 +240,7 @@ class PositionMatchService:
 
         scored_positions.sort(key=lambda item: (-item[0], item[1].position_id))
         best_score = scored_positions[0][0]
-        best_positions = [
-            item for item in scored_positions if item[0] == best_score
-        ]
+        best_positions = [item for item in scored_positions if item[0] == best_score]
 
         if len(best_positions) > 1:
             return self._position_match_result(
@@ -193,15 +280,18 @@ class PositionMatchService:
         for term in terms:
             if not term or term in BROAD_POSITION_TERMS:
                 continue
-
+                #########사비카 수정############
             if normalized_position in term and len(normalized_position) >= 4:
-                best_score = max(best_score, 90)
-                best_reason = "추출된 직무에 데이터베이스 직무명이 포함되어 있습니다."
+                score = 95 if len(normalized_position) >= 8 else 90
+                best_score = max(best_score, score)
+                best_reason = "추출된 직무에 데이터베이스 직무명이 구체적으로 포함되어 있습니다."
 
             if term in normalized_position and len(term) >= 4:
-                best_score = max(best_score, 85)
+                score = 95 if len(term) >= 8 else 85
+                best_score = max(best_score, score)
                 best_reason = "데이터베이스 직무명에 추출된 직무가 포함되어 있습니다."
 
+ 
         for synonym_group in POSITION_SYNONYM_GROUPS:
             if (
                 any(alias in terms for alias in synonym_group)
@@ -212,6 +302,63 @@ class PositionMatchService:
                     best_reason = "직무 동의어 그룹이 일치합니다."
 
         return best_score, best_reason
+
+    #####사비카 코드######
+    def _collect_evidence(self, match_input: PositionMatchInput) -> list[str]:
+        values = []
+
+        if match_input.applied_position:
+            values.append(match_input.applied_position)
+
+        if match_input.target_position:
+            values.append(match_input.target_position)
+
+        if match_input.summary:
+            values.append(match_input.summary)
+
+        
+        values.extend(match_input.career_positions)
+        values.extend(match_input.skills)
+        values.extend(match_input.responsibilities)
+        values.extend(match_input.profile_domains)
+        values.extend(match_input.cover_letters)
+
+
+        # if match_input.filename:
+        #     values.append(match_input.filename)
+
+        return [value for value in values if self._clean(value)]
+
+    def _score_position_with_evidence(
+        self,
+        position: Position,
+        evidence: list[str],
+    ) -> tuple[int, list[str]]:
+        best_score = 0
+        reasons = []
+
+        for index, text in enumerate(evidence):
+            terms = self._position_terms(text)
+            score, reason = self._score_position_match(terms, position.position_name)
+
+            if score <= 0:
+                continue
+
+            if index == 0:
+                weighted_score = score
+            elif index == 1:
+                weighted_score = min(score, 90)
+            else:
+                weighted_score = min(score, 75)
+
+            if weighted_score > best_score:
+                best_score = weighted_score
+
+            reasons.append(f"{text}: {reason}")
+
+        return best_score, reasons
+
+    ####################
 
     def _position_terms(self, value: str) -> set[str]:
         raw_terms = {value}
@@ -274,3 +421,133 @@ class PositionMatchService:
 
 
 position_match_service = PositionMatchService()
+
+
+# def _position_match_input(
+#         self,
+#         parsed: ParsedResumeJson,
+#         ai_output: ResumeParseAIOutput,
+#     ) -> PositionMatchInput:
+#         return PositionMatchInput(
+#             applied_position=self._position_text(parsed.personal_info.applied_position),
+#             target_position=ai_output.ai_profile.target_position,
+#             career_positions=[
+#                 career.position
+#                 for career in parsed.careers
+#                 if self._normalizer.clean(career.position)
+#             ],
+#             skills=parsed.skills,
+#             responsibilities=[
+#                 responsibility
+#                 for career in parsed.careers
+#                 for responsibility in career.responsibilities
+#             ],
+#         )
+
+#     def match_resume_position(
+#         self,
+#         match_input: PositionMatchInput,
+#         positions: list[Position],
+#     ) -> dict[str, Any]:
+#         evidence = self._collect_evidence(match_input)
+
+#         if not evidence:
+#             return self._position_match_result(
+#                 status="notProvided",
+#                 raw_position=None,
+#                 reason="No usable position evidence was extracted from the resume.",
+#             )
+
+#         scored_positions = []
+
+#         for position in positions:
+#             score, reasons = self._score_position_with_evidence(position, evidence)
+#             if score > 0:
+#                 scored_positions.append((score, position, reasons))
+
+#         if not scored_positions:
+#             return self._position_match_result(
+#                 status="noMatch",
+#                 raw_position=", ".join(evidence[:5]),
+#                 reason="No database position matched the extracted resume evidence.",
+#             )
+
+#         scored_positions.sort(key=lambda item: (-item[0], item[1].position_id))
+#         best_score, best_position, best_reasons = scored_positions[0]
+
+#         candidates = [
+#             self._position_candidate(score, position, "; ".join(reasons))
+#             for score, position, reasons in scored_positions[:5]
+#         ]
+
+#         if best_score < 70:
+#             return self._position_match_result(
+#                 status="lowConfidence",
+#                 raw_position=", ".join(evidence[:5]),
+#                 candidates=candidates,
+#                 reason="Only weak position evidence matched.",
+#             )
+
+#         tied_best = [item for item in scored_positions if item[0] == best_score]
+#         if len(tied_best) > 1:
+#             return self._position_match_result(
+#                 status="ambiguous",
+#                 raw_position=", ".join(evidence[:5]),
+#                 candidates=candidates,
+#                 reason="Multiple positions received the same best score.",
+#             )
+
+#         return self._position_match_result(
+#             status="matched",
+#             raw_position=", ".join(evidence[:5]),
+#             matched_position_id=best_position.position_id,
+#             matched_position_name=best_position.position_name,
+#             candidates=candidates,
+#             reason="; ".join(best_reasons),
+#         )
+
+#     def _collect_evidence(self, match_input: PositionMatchInput) -> list[str]:
+#         values = []
+
+#         if match_input.applied_position:
+#             values.append(match_input.applied_position)
+
+#         if match_input.target_position:
+#             values.append(match_input.target_position)
+
+#         values.extend(match_input.career_positions or [])
+#         values.extend(match_input.skills or [])
+#         values.extend(match_input.responsibilities or [])
+
+#         return [value for value in values if self._clean(value)]
+
+
+#     def _score_position_with_evidence(
+#         self,
+#         position: Position,
+#         evidence: list[str],
+#     ) -> tuple[int, list[str]]:
+#         best_score = 0
+#         reasons = []
+
+#         for index, text in enumerate(evidence):
+#             terms = self._position_terms(text)
+#             score, reason = self._score_position_match(terms, position.position_name)
+
+#             if score <= 0:
+#                 continue
+
+#             # Applied position / target position should matter more than skills.
+#             if index == 0:
+#                 weighted_score = score
+#             elif index == 1:
+#                 weighted_score = min(score, 90)
+#             else:
+#                 weighted_score = min(score, 75)
+
+#             if weighted_score > best_score:
+#                 best_score = weighted_score
+
+#             reasons.append(f"{text}: {reason}")
+
+#         return best_score, reasons
