@@ -76,6 +76,10 @@ export interface RecruitmentStat {
   applicantCount: number;
 }
 
+export interface DeptStatusListResponse {
+  content: DeptStatus[];
+}
+
 export interface DeptStatus {
   id: string;
   deptName: string;

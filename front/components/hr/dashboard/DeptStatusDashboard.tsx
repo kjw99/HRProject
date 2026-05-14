@@ -44,7 +44,9 @@ export default function DeptStatusDashboard({ initialData }: DeptStatusProps) {
 
   const progressOptions = useMemo(() => {
     const set = new Set<string>();
-    items.forEach((i) => set.add(i.currentProgress));
+    for (const item of items) {
+      set.add(item.currentProgress);
+    }
     return [...set].sort((a, b) => a.localeCompare(b, "ko"));
   }, [items]);
 
@@ -130,8 +132,7 @@ export default function DeptStatusDashboard({ initialData }: DeptStatusProps) {
   }, [isLoadingMore, hasMore, page, isRefreshing]);
 
   useEffect(() => {
-    const canLoadMore =
-      !hasActiveFilters || displayItems.length > 0;
+    const canLoadMore = !hasActiveFilters || displayItems.length > 0;
 
     const observer = new IntersectionObserver(
       (entries) => {

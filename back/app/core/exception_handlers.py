@@ -1,7 +1,11 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.core.exceptions import AppException
+
+logger = logging.getLogger(__name__)
 
 
 def register_exception_handlers(app: FastAPI):
@@ -19,6 +23,8 @@ def register_exception_handlers(app: FastAPI):
         
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
+        # 터미널/로그에서 실제 원인 확인 (브라우저는 보안상 상세 메시지를 숨김)
+        logger.exception("Unhandled server error: %s", exc)
         return JSONResponse(
             status_code=500,
             content={

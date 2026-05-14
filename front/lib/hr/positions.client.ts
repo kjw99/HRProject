@@ -1,7 +1,13 @@
-import { PositionPayload, PositionMutationResponse } from "@/types/position";
+import { Position, PositionPayload, PositionMutationResponse } from "@/types/position";
 import { api } from "../api";
 
 export const positionApi = {
+  /** GET /api/positions */
+  fetchPositions: async (): Promise<Position[]> => {
+    const response = await api.get<Position[]>("/api/positions");
+    return response.data;
+  },
+
   /**
    * 직무 생성 (Create)
    * POST /api/positions

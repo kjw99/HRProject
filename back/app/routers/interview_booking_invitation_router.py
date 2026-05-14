@@ -39,6 +39,7 @@ async def create_interview_booking_invitation(
         db,
         candidate_id=data.candidate_id,
         expires_at=data.expires_at,
+        slot_ids=data.slot_ids,
     )
 
 
@@ -70,9 +71,9 @@ async def get_available_interview_slots_by_invitation(
         db,
         token,
     )
-    return await interview_booking_service.get_available_slots(
+    return await interview_booking_invitation_service.get_available_slots_for_invitation(
         db,
-        invitation.candidate_id,
+        invitation,
     )
 
 
@@ -89,6 +90,10 @@ async def create_interview_booking_by_invitation(
     invitation = await interview_booking_invitation_service.validate_usable_invitation(
         db,
         token,
+    )
+    interview_booking_invitation_service.validate_slot_allowed_for_invitation(
+        invitation,
+        data.slot_id,
     )
     return await interview_booking_service.create_booking(
         db,

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { toast } from "sonner";
 import ControlPanel from "./ControlPanel";
 import ResultsPanel from "./ResultsPanel";
 import {
@@ -11,6 +12,17 @@ import {
   QuestionSavePayload,
 } from "@/types/interviewer";
 import { question as questionAPI } from "@/lib/interviewer/questions";
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const maybe = error as {
+    response?: { data?: { message?: string; detail?: string } };
+  };
+  return (
+    maybe.response?.data?.message ||
+    maybe.response?.data?.detail ||
+    fallback
+  );
+};
 interface AgentClientProps {
   initialPositions: BackendPosition[];
   initialCandidates: BackendCandidate[];
@@ -57,7 +69,9 @@ export default function AgentClient({
       setGeneratedQuestions((prev) => [...prev, ...uiQuestions]);
     } catch (error) {
       console.error(error);
-      alert("질문 생성 중 오류가 발생했습니다.");
+      toast.error(
+        getErrorMessage(error, "질문 생성 중 오류가 발생했습니다."),
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -78,10 +92,10 @@ export default function AgentClient({
         })),
       };
 
-      const success = await questionAPI.saveQuestions(payload);
-      if (success) alert("저장 완료!");
+      const result = await questionAPI.saveQuestions(payload);
+      toast.success(result.message ?? "저장이 완료되었습니다.");
     } catch (error) {
-      alert("저장에 실패했습니다.");
+      toast.error(getErrorMessage(error, "저장에 실패했습니다."));
     } finally {
       setIsSaving(false);
     }

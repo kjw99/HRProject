@@ -3,7 +3,7 @@ import "server-only";
 import { InterviewSlot, InterviewSlotParams } from "@/types/schedule";
 import { Applicant, ApplicantListResponse } from "@/types/applicant";
 import { apiServer } from "../axios-server";
-import { DeptStatus } from "@/types/hr";
+import { DeptStatus, DeptStatusListResponse } from "@/types/hr";
 
 /**
  * [Server-side] 지원자 리스트 조회
@@ -127,10 +127,12 @@ export const fetchInterviewSlotsServer = async (
 
 export const fetchDeptStatusServer = async (): Promise<DeptStatus[]> => {
   try {
-    const response = await apiServer.get<DeptStatus[]>(
+    const response = await apiServer.get<DeptStatus[] | DeptStatusListResponse>(
       "/api/hr/recruitment-status",
     );
-    return response.data;
+    const body = response.data;
+    const list = Array.isArray(body) ? body : (body?.content ?? []);
+    return list;
   } catch (error: any) {
     console.warn(
       "🚨 [Server API] 부서별 채용 현황 로드 실패. 목업 데이터를 반환합니다.",
