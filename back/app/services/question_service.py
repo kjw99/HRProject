@@ -1,13 +1,23 @@
 ﻿from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.graphs.interview_question import interview_question_graph
-from app.ai.schemas.question_generation import InterviewQuestionGenerationInput
-from app.core.exceptions import ForbiddenException, NotFoundException
+from app.ai.schemas.question_generation import (
+    GeneratedQuestion,
+    InterviewQuestionGenerationInput,
+)
+from app.core.exceptions import ConflictException, ForbiddenException, NotFoundException
 from app.models.candidate import Candidate
 from app.models.interviewer import Interviewer
 from app.models.question import Question
+from app.models.question_generation_job import (
+    QUESTION_GENERATION_STATUS_SUCCEEDED,
+    QuestionGenerationJob,
+)
 from app.repositories.candidate_repository import candidate_repository
 from app.repositories.position_repository import position_repository
+from app.repositories.question_generation_job_repository import (
+    question_generation_job_repository,
+)
 from app.repositories.question_repository import question_repository
 from app.schemas.question import (
     GeneratedQuestionResponse,
@@ -25,6 +35,14 @@ CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE = "candidate_job_fit_based"
 
 class QuestionService:
     async def generate_questions(self, db: AsyncSession, data: QuestionGenerateRequest) -> list[GeneratedQuestionResponse]:
+        generation_input = await self.build_generation_input(db, data)
+        return await self.generate_questions_from_input(generation_input)
+
+    async def build_generation_input(
+        self,
+        db: AsyncSession,
+        data: QuestionGenerateRequest,
+    ) -> InterviewQuestionGenerationInput:
         resume_context = await resume_context_service.build_context(
             db=db,
             candidate_id=data.candidate_id,
@@ -35,17 +53,26 @@ class QuestionService:
             data.job_description_section,
         )
 
-        generation_result = await interview_question_graph.generate(
-            InterviewQuestionGenerationInput(
-                position_name=resume_context.position.position_name,
-                question_count=data.question_count,
-                additional_request=data.additional_request,
-                generation_mode=CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE,
-                job_description_context=job_description_context,
-                resume_context=resume_context.text,
-            )
+        return InterviewQuestionGenerationInput(
+            position_name=resume_context.position.position_name,
+            question_count=data.question_count,
+            additional_request=data.additional_request,
+            generation_mode=CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE,
+            job_description_context=job_description_context,
+            resume_context=resume_context.text,
         )
 
+    async def generate_questions_from_input(
+        self,
+        generation_input: InterviewQuestionGenerationInput,
+    ) -> list[GeneratedQuestionResponse]:
+        generation_result = await interview_question_graph.generate(generation_input)
+        return self.to_generated_question_responses(generation_result.questions)
+
+    def to_generated_question_responses(
+        self,
+        generated_questions: list[GeneratedQuestion],
+    ) -> list[GeneratedQuestionResponse]:
         return [
             GeneratedQuestionResponse(
                 question_text=generated_question.question_text,
@@ -53,7 +80,7 @@ class QuestionService:
                 evaluation_intent=generated_question.evaluation_intent,
                 generation_basis=generated_question.generation_basis,
             )
-            for generated_question in generation_result.questions
+            for generated_question in generated_questions
         ]
 
     async def generate_questions_for_interviewer(
@@ -95,6 +122,15 @@ class QuestionService:
         question_items = self._get_unique_new_questions(data, existing_question_keys, resolved_position_id)
         if not question_items:
             return
+
+        await self._validate_generation_job_questions(
+            db=db,
+            data=data,
+            question_items=question_items,
+            resolved_position_id=resolved_position_id,
+            created_by_user_id=created_by_user_id,
+            created_by_interviewer_id=created_by_interviewer_id,
+        )
 
         questions = [
             Question(
@@ -197,6 +233,90 @@ class QuestionService:
                 return CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE
             return CANDIDATE_RESUME_BASED_QUESTION_TYPE
         return POSITION_BASED_QUESTION_TYPE
+
+    async def _validate_generation_job_questions(
+        self,
+        db: AsyncSession,
+        data: QuestionSaveRequest,
+        question_items: list[tuple[str, str, str | None, str | None]],
+        resolved_position_id: int | None,
+        created_by_user_id: int | None,
+        created_by_interviewer_id: int | None,
+    ) -> None:
+        if data.generation_job_id is None:
+            return
+
+        job = await question_generation_job_repository.find_by_id(
+            db,
+            data.generation_job_id,
+        )
+        if not job:
+            raise NotFoundException("질문 생성 작업을 찾을 수 없습니다.")
+
+        self._validate_generation_job_owner(
+            job=job,
+            created_by_user_id=created_by_user_id,
+            created_by_interviewer_id=created_by_interviewer_id,
+        )
+
+        if job.status != QUESTION_GENERATION_STATUS_SUCCEEDED:
+            raise ConflictException("완료된 질문 생성 작업만 저장할 수 있습니다.")
+
+        if job.candidate_id != data.candidate_id:
+            raise ConflictException("질문 생성 작업의 지원자 정보가 일치하지 않습니다.")
+
+        if job.position_id is not None and job.position_id != resolved_position_id:
+            raise ConflictException("질문 생성 작업의 직무 정보가 일치하지 않습니다.")
+
+        generated_question_keys = self._get_generated_question_keys(job)
+        for question_text, question_type, _, _ in question_items:
+            if (question_type, question_text) not in generated_question_keys:
+                raise ConflictException(
+                    "선택한 질문이 해당 생성 작업의 결과에 포함되어 있지 않습니다."
+                )
+
+    def _validate_generation_job_owner(
+        self,
+        job: QuestionGenerationJob,
+        created_by_user_id: int | None,
+        created_by_interviewer_id: int | None,
+    ) -> None:
+        if created_by_user_id is not None:
+            if job.created_by_user_id != created_by_user_id:
+                raise ForbiddenException("질문 생성 작업에 접근할 수 없습니다.")
+            return
+
+        if created_by_interviewer_id is not None:
+            if job.created_by_interviewer_id != created_by_interviewer_id:
+                raise ForbiddenException("질문 생성 작업에 접근할 수 없습니다.")
+            return
+
+        raise ForbiddenException("질문 생성 작업 소유자를 확인할 수 없습니다.")
+
+    def _get_generated_question_keys(
+        self,
+        job: QuestionGenerationJob,
+    ) -> set[tuple[str, str]]:
+        generated_question_keys: set[tuple[str, str]] = set()
+        for question in job.result_questions or []:
+            question_text = (
+                question.get("question_text")
+                or question.get("questionText")
+                or ""
+            )
+            question_type = (
+                question.get("question_type")
+                or question.get("questionType")
+                or CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE
+            )
+            stripped_question_text = str(question_text).strip()
+            stripped_question_type = str(question_type).strip()
+            if stripped_question_text and stripped_question_type:
+                generated_question_keys.add(
+                    (stripped_question_type, stripped_question_text)
+                )
+
+        return generated_question_keys
 
 
 question_service = QuestionService()
