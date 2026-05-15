@@ -6,6 +6,7 @@ from app.models.position import Position
 from app.models.candidate import Candidate
 from app.models.resume import Resume
 from app.models.question import Question
+from app.models.question_generation_job import QuestionGenerationJob
 from app.models.interview_slot import InterviewSlot
 from app.models.interview_booking import InterviewBooking
 from app.models.interview_booking_invitation import InterviewBookingInvitation
@@ -21,6 +22,7 @@ __all__ = [
     "Candidate", 
     "Resume",
     "Question",
+    "QuestionGenerationJob",
     "InterviewSlot",
     "InterviewBooking",
     "InterviewBookingInvitation",
