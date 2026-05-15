@@ -82,6 +82,7 @@ class QuestionSaveItem(CaseModel):
 class QuestionSaveRequest(CaseModel):
     position_id: int | None = Field(default=None, gt=0)
     candidate_id: int | None = Field(default=None, gt=0)
+    generation_job_id: int | None = Field(default=None, gt=0)
     question_type: str | None = Field(default=None, max_length=30)
     questions: list[QuestionSaveItem] = Field(..., min_length=1, max_length=20)
 

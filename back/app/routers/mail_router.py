@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.dependencies.database import get_async_db
+from app.dependencies.dependencies import require_roles
 from app.schemas.common import MessageResponse
 from app.services.mail_service import mail_service
 
@@ -19,6 +20,7 @@ class CandidateMailSendRequest(BaseModel):
 @router.post(
     "/mail-send/{candidate_id}",
     response_model=MessageResponse,
+    dependencies=[Depends(require_roles(("admin", "hr")))],
 )
 async def send_candidate_mail(
     candidate_id: int,
