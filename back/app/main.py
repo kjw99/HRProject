@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.routers.interview_booking_invitation_router import (
     router as interview_booking_invitation_router,
 )
@@ -32,6 +33,18 @@ from app.routers.interviewer_question_router import (
 # Base.metadata.create_all(bind=async_engine)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://[::1]:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 예외 핸들러 등록
 register_exception_handlers(app)
