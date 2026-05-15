@@ -22,7 +22,7 @@ export default function useLogout() {
       Cookies.remove('accessToken', { path: '/' });
       Cookies.remove('userRole', { path: '/' });
       Cookies.remove('userName', { path: '/' });
-      router.push('/login');
+      router.push('/');
     }, 1000);
   };
 

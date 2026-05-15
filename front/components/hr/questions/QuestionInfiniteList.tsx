@@ -12,6 +12,10 @@ export interface QuestionInfiniteListProps {
   selectedDepartmentName: string | null;
   items: HrSavedQuestion[];
   isLoading: boolean;
+  selectedQuestionIds: number[];
+  onToggleQuestion: (questionId: number) => void;
+  onToggleSelectAll: () => void;
+  hasSelectionBar: boolean;
 }
 
 export default function QuestionInfiniteList({
@@ -19,6 +23,10 @@ export default function QuestionInfiniteList({
   selectedDepartmentName,
   items,
   isLoading,
+  selectedQuestionIds,
+  onToggleQuestion,
+  onToggleSelectAll,
+  hasSelectionBar,
 }: QuestionInfiniteListProps) {
   const [visibleCount, setVisibleCount] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -29,6 +37,7 @@ export default function QuestionInfiniteList({
 
   const visible = items.slice(0, visibleCount);
   const hasMore = visibleCount < items.length;
+  const someSelected = selectedQuestionIds.length > 0;
 
   const loadMore = useCallback(() => {
     setVisibleCount((c) => Math.min(c + PAGE_SIZE, items.length));
@@ -91,7 +100,7 @@ export default function QuestionInfiniteList({
   }
 
   return (
-    <div className="min-h-0 space-y-4">
+    <div className={`min-h-0 space-y-4 ${hasSelectionBar ? "pb-24" : ""}`}>
       <div className="flex flex-wrap items-end justify-between gap-2 border-b border-slate-100 pb-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
@@ -99,14 +108,37 @@ export default function QuestionInfiniteList({
           </p>
           <p className="text-lg font-black text-slate-900">{selectedDepartmentName}</p>
         </div>
-        <p className="text-sm font-bold text-slate-500">
-          총 <span className="tabular-nums text-indigo-600">{items.length}</span>건
-        </p>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onToggleSelectAll}
+            className="text-xs font-bold text-indigo-600 transition hover:text-indigo-800"
+          >
+            {items.length > 0 &&
+            items.every((q) => selectedQuestionIds.includes(q.questionId))
+              ? "전체 해제"
+              : "전체 선택"}
+          </button>
+          <p className="text-sm font-bold text-slate-500">
+            총 <span className="tabular-nums text-indigo-600">{items.length}</span>건
+            {someSelected ? (
+              <span className="ml-2 text-indigo-600">
+                · {selectedQuestionIds.length}개 선택
+              </span>
+            ) : null}
+          </p>
+        </div>
       </div>
 
       <div className="space-y-4">
         {visible.map((q) => (
-          <QuestionCard key={q.questionId} question={q} />
+          <QuestionCard
+            key={q.questionId}
+            question={q}
+            selectable
+            selected={selectedQuestionIds.includes(q.questionId)}
+            onToggleSelect={onToggleQuestion}
+          />
         ))}
       </div>
 

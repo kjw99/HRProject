@@ -304,26 +304,53 @@ export default function ScheduleClient({
       )
       .map((interviewer) => interviewer.interviewerId);
 
+  const applyDetailToEditForm = (detail: InterviewSlotDetailItem) => {
+    setFormMode("edit");
+    setForm({
+      positionId: inferPositionId(detail),
+      interviewRound: detail.interviewRound as InterviewRoundWrite,
+      interviewerIds: inferInterviewerIds(detail),
+      interviewDate: toLocalDate(detail.interviewStartsAt),
+      interviewStartTime: toLocalTime(detail.interviewStartsAt),
+      interviewEndTime: toLocalTime(detail.interviewEndsAt),
+      interviewLocation: detail.interviewLocation ?? "",
+      capacity: String(
+        detail.remainingCapacity + detail.bookedCandidateNames.length,
+      ),
+    });
+  };
+
   const startCreate = () => {
     setFormMode("create");
     setForm(defaultForm(selectedDate));
   };
 
-  const startEdit = () => {
-    if (!primarySlotDetail) return;
-    setFormMode("edit");
-    setForm({
-      positionId: inferPositionId(primarySlotDetail),
-      interviewRound: primarySlotDetail.interviewRound as InterviewRoundWrite,
-      interviewerIds: inferInterviewerIds(primarySlotDetail),
-      interviewDate: toLocalDate(primarySlotDetail.interviewStartsAt),
-      interviewStartTime: toLocalTime(primarySlotDetail.interviewStartsAt),
-      interviewEndTime: toLocalTime(primarySlotDetail.interviewEndsAt),
-      interviewLocation: primarySlotDetail.interviewLocation ?? "",
-      capacity: String(
-        primarySlotDetail.remainingCapacity + primarySlotDetail.bookedCandidateNames.length,
-      ),
-    });
+  const startEditForSelectedSlot = async () => {
+    if (selectedSlotIds.length !== 1) return;
+    const slotId = selectedSlotIds[0];
+    if (primarySlotDetail?.slotId === slotId) {
+      applyDetailToEditForm(primarySlotDetail);
+      return;
+    }
+    setIsPrimaryDetailLoading(true);
+    try {
+      const detail = await interviewSlotsApi.fetchSlotDetail(slotId);
+      setPrimarySlotDetail(detail);
+      applyDetailToEditForm(detail);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "면접 일정 상세를 불러오지 못했습니다."));
+    } finally {
+      setIsPrimaryDetailLoading(false);
+    }
+  };
+
+  const openEditFromDetailModal = (detail: InterviewSlotDetailItem) => {
+    setDetailModalOpen(false);
+    setDetailModalSlot(null);
+    setSelectedSlotIds([detail.slotId]);
+    setPrimarySlotDetail(detail);
+    applyDetailToEditForm(detail);
+    setDayPanelMinimized(false);
   };
 
   const updateForm = <K extends keyof ScheduleSlotFormState>(
@@ -369,15 +396,28 @@ export default function ScheduleClient({
     setIsSaving(true);
     try {
       if (formMode === "edit" && primarySlotDetail) {
-        await interviewSlotsApi.updateSlot(primarySlotDetail.slotId, buildUpdatePayload());
+        const slotId = primarySlotDetail.slotId;
+        await interviewSlotsApi.updateSlot(slotId, buildUpdatePayload());
         toast.success("면접 일정이 수정되었습니다.");
+        const anchor = parseISO(`${form.interviewDate}T12:00:00`);
+        const monthStart = startOfMonth(anchor);
+        setMonthCursor(monthStart);
+        setWeekAnchor(anchor);
+        setSelectedDate(anchor);
+        await refreshSlots(monthStart);
+        const fresh = await interviewSlotsApi.fetchSlotDetail(slotId);
+        setPrimarySlotDetail(fresh);
+        setSelectedSlotIds([slotId]);
+        setFormMode("create");
+        setForm(defaultForm(anchor));
+        setDayPanelMinimized(false);
       } else {
         await interviewSlotsApi.createSlot(buildCreatePayload());
         toast.success("면접 일정이 생성되었습니다.");
+        await refreshSlots();
+        setSelectedSlotIds([]);
+        startCreate();
       }
-      await refreshSlots();
-      setSelectedSlotIds([]);
-      startCreate();
     } catch (error) {
       toast.error(getErrorMessage(error, "면접 일정 저장 중 오류가 발생했습니다."));
     } finally {
@@ -422,8 +462,12 @@ export default function ScheduleClient({
     else void moveWeek("next");
   };
 
+  const slotEditorOpen =
+    formMode === "edit" && Boolean(primarySlotDetail) && selectedSlotIds.length === 1;
+
   return (
-    <div className="min-h-screen bg-linear-to-b from-slate-50 to-white px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+    <>
+      <div className="min-h-screen bg-linear-to-b from-slate-50 to-white px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <div className="mx-auto flex max-w-[1600px] flex-col gap-6 lg:gap-8">
         <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-black/4 sm:flex-row sm:items-end sm:p-6">
           <div>
@@ -470,7 +514,7 @@ export default function ScheduleClient({
               isPrimaryDetailLoading={isPrimaryDetailLoading}
               getStatusMeta={getStatusMeta}
               toLocalTime={toLocalTime}
-              onStartEdit={startEdit}
+              onStartEdit={() => void startEditForSelectedSlot()}
               onDeleteSelected={deleteSelectedSlots}
               onOpenSlotDetail={openSlotDetail}
               onStartCreate={startCreate}
@@ -479,22 +523,10 @@ export default function ScheduleClient({
               isMinimized={dayPanelMinimized}
               onMinimize={() => setDayPanelMinimized(true)}
               onExpandFromFab={() => setDayPanelMinimized(false)}
-              enableEscapeToMinimize={!detailModalOpen && !bookingModalOpen}
+              enableEscapeToMinimize={
+                !detailModalOpen && !bookingModalOpen && !slotEditorOpen
+              }
             />
-
-            {formMode === "edit" && primarySlotDetail && selectedSlotIds.length === 1 ? (
-              <ScheduleSlotEditorPanel
-                form={form}
-                formMode={formMode}
-                positions={initialPositions}
-                filteredInterviewers={filteredInterviewers}
-                isSaving={isSaving}
-                onSubmit={submitSlot}
-                onStartCreate={startCreate}
-                onUpdateForm={updateForm}
-                onToggleInterviewer={toggleInterviewer}
-              />
-            ) : null}
           </div>
 
           <ScheduleActionsSidebar
@@ -505,6 +537,21 @@ export default function ScheduleClient({
           />
         </div>
       </div>
+      </div>
+
+      <ScheduleSlotEditorPanel
+        isOpen={slotEditorOpen}
+        onClose={() => startCreate()}
+        form={form}
+        formMode={formMode}
+        positions={initialPositions}
+        filteredInterviewers={filteredInterviewers}
+        isSaving={isSaving}
+        onSubmit={submitSlot}
+        onStartCreate={startCreate}
+        onUpdateForm={updateForm}
+        onToggleInterviewer={toggleInterviewer}
+      />
 
       <ScheduleBookingModal
         isOpen={bookingModalOpen}
@@ -529,7 +576,8 @@ export default function ScheduleClient({
         positions={initialPositions}
         applicants={initialApplicants}
         onSlotMutated={handleDetailSlotMutated}
+        onEditSlot={openEditFromDetailModal}
       />
-    </div>
+    </>
   );
 }

@@ -39,6 +39,8 @@ export interface ScheduleSlotDetailModalProps {
   positions: Position[];
   applicants: Applicant[];
   onSlotMutated: (slotId: number) => Promise<void>;
+  /** 일정 수정(슬롯 편집 폼)으로 전환 — `PATCH /api/interview-slots/{id}`와 동일 흐름 */
+  onEditSlot?: (slot: InterviewSlotDetailItem) => void;
 }
 
 export function ScheduleSlotDetailModal({
@@ -49,6 +51,7 @@ export function ScheduleSlotDetailModal({
   positions,
   applicants,
   onSlotMutated,
+  onEditSlot,
 }: ScheduleSlotDetailModalProps) {
   const [mounted, setMounted] = useState(false);
   const [interviewers, setInterviewers] = useState<HrInterviewer[]>([]);
@@ -194,14 +197,26 @@ export function ScheduleSlotDetailModal({
               {format(start, "HH:mm")} – {format(end, "HH:mm")}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-            aria-label="닫기"
-          >
-            <i className="bx bx-x text-xl" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {onEditSlot ? (
+              <button
+                type="button"
+                onClick={() => onEditSlot(slot)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-800 transition hover:bg-indigo-100"
+              >
+                <i className="bx bx-edit text-base" aria-hidden />
+                일정 수정
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+              aria-label="닫기"
+            >
+              <i className="bx bx-x text-xl" />
+            </button>
+          </div>
         </div>
 
         <div className="custom-scrollbar max-h-[min(58vh,520px)] space-y-5 overflow-y-auto p-5">

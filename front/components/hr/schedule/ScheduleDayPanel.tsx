@@ -22,7 +22,7 @@ export interface ScheduleDayPanelProps {
   isPrimaryDetailLoading: boolean;
   getStatusMeta: (status: string) => SlotStatusMeta;
   toLocalTime: (iso: string) => string;
-  onStartEdit: () => void;
+  onStartEdit: () => void | Promise<void>;
   onDeleteSelected: () => void;
   onOpenSlotDetail: (slot: InterviewSlotListItem) => void | Promise<void>;
   onStartCreate: () => void;
@@ -265,8 +265,8 @@ export function ScheduleDayPanel({
                     <>
                       <button
                         type="button"
-                        onClick={onStartEdit}
-                        disabled={isSaving || isPrimaryDetailLoading || !primarySlotDetail}
+                        onClick={() => void onStartEdit()}
+                        disabled={isSaving}
                         className="inline-flex items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-black text-slate-900 disabled:opacity-40 sm:px-3"
                       >
                         <i className="bx bx-edit" />

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useState } from 'react';
 import { Toaster } from 'sonner';
+import BackNavAuthGuard from '@/components/auth/BackNavAuthGuard';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     // useState를 사용하여 페이지 이동 시 클라이언트가 초기화되는 것을 방지합니다.
@@ -20,6 +21,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
     return (
         <QueryClientProvider client={queryClient}>
+            <BackNavAuthGuard />
             {children}
             <ReactQueryDevtools initialIsOpen={false} />
             <Toaster position="top-right" expand={true} richColors />
