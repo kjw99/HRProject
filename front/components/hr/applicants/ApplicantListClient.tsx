@@ -1,84 +1,86 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { Applicant, ApplicantListResponse } from "@/types/applicant";
-import CriteriaModal from "./CriteriaModal";
+import { useEffect, useMemo, useState } from "react";
 import {
-  useReactTable,
+  createColumnHelper,
+  flexRender,
   getCoreRowModel,
   getSortedRowModel,
-  SortingState,
-  flexRender,
-  createColumnHelper,
+  type SortingState,
+  useReactTable,
 } from "@tanstack/react-table";
-import { fetchApplicants } from "@/lib/hr/interview.client";
+import type { Applicant } from "@/types/applicant";
+import type { CriteriaFilter } from "@/types/hr-ui";
+import ApplicantDetailModal from "./ApplicantDetailModal";
+import CandidateMailComposerModal from "./CandidateMailComposerModal";
+import CriteriaModal from "./CriteriaModal";
 
-const DEPARTMENTS = [
-  "ALL",
-  "개발팀",
-  "디자인팀",
-  "마케팅팀",
-  "영업팀",
-  "인사팀",
-];
+interface ApplicantListClientProps {
+  initialData: Applicant[];
+}
 
 const columnHelper = createColumnHelper<Applicant>();
 
+const getApplicantStatusTone = (value: string) => {
+  if (value.includes("합격")) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (value.includes("불합격")) {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+
+  if (value.includes("진행")) {
+    return "border-blue-200 bg-blue-50 text-blue-700";
+  }
+
+  return "border-slate-200 bg-slate-100 text-slate-600";
+};
+
+const getExperienceTone = (value: string) => {
+  if (value.includes("신입")) return "bg-emerald-100 text-emerald-700";
+  if (value.includes("경력")) return "bg-indigo-100 text-indigo-700";
+  return "bg-slate-100 text-slate-600";
+};
+
+const getPositionLabel = (applicant: Applicant) => {
+  const addressParts = applicant.address.split(")");
+  return addressParts[1]?.trim() || `공고 #${applicant.position_id}`;
+};
+
 export default function ApplicantListClient({
   initialData,
-}: {
-  initialData: Applicant[];
-}) {
-  const [data, setData] = useState<Applicant[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // 필터링 및 테이블 상태
+}: ApplicantListClientProps) {
+  const [data, setData] = useState<Applicant[]>(initialData);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [selectedDept, setSelectedDept] = useState("ALL");
-  const [criteriaFilter, setCriteriaFilter] = useState<"ALL" | "HAS" | "NONE">(
-    "ALL",
-  );
+  const [criteriaFilter, setCriteriaFilter] = useState<CriteriaFilter>("ALL");
   const [sorting, setSorting] = useState<SortingState>([]);
-
-  // 모달 상태
-  const [isCriteriaModalOpen, setIsCriteriaModalOpen] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(
     null,
   );
+  const [mailTarget, setMailTarget] = useState<Applicant | null>(null);
+  const [detailTarget, setDetailTarget] = useState<Applicant | null>(null);
+  const [isCriteriaModalOpen, setIsCriteriaModalOpen] = useState(false);
+  const [isMailModalOpen, setIsMailModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // 1. 데이터 로드 (부서 선택 시 재호출)
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        console.log(initialData);
-        setData([...initialData] as Applicant[]);
-      } catch (error) {
-        console.error("데이터 로딩 실패:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadData();
-  }, [selectedDept]);
+    setData(initialData);
+  }, [initialData]);
 
-  // 2. 통합 필터 로직 (검색어 + 우대조건)
   const filteredData = useMemo(() => {
     let result = [...data];
 
-    // [A] 검색어 필터: 이름 혹은 연락처(하이픈 제거 비교)
     if (searchKeyword.trim()) {
       const keyword = searchKeyword.toLowerCase().replace(/-/g, "");
       result = result.filter((item) => {
         const nameMatch = item.name.toLowerCase().includes(keyword);
-        const phoneMatch = (item.phone || "")
-          .replace(/-/g, "")
-          .includes(keyword);
-        return nameMatch || phoneMatch;
+        const phoneMatch = (item.phone || "").replace(/-/g, "").includes(keyword);
+        const emailMatch = (item.email || "").toLowerCase().includes(keyword);
+        return nameMatch || phoneMatch || emailMatch;
       });
     }
 
-    // [B] 우대조건 필터
     if (criteriaFilter === "HAS") {
       result = result.filter(
         (item) => (item.meets_preferred_criteria?.length || 0) > 0,
@@ -90,130 +92,143 @@ export default function ApplicantListClient({
     }
 
     return result;
-  }, [data, searchKeyword, criteriaFilter]);
+  }, [criteriaFilter, data, searchKeyword]);
 
-  // 3. 우대조건 필터 변경 핸들러 (정렬 동시 제어)
-  const handleCriteriaFilterChange = (filter: "ALL" | "HAS" | "NONE") => {
-    setCriteriaFilter(filter);
-    if (filter === "HAS") {
-      setSorting([{ id: "meets_preferred_criteria", desc: true }]);
-    } else {
-      setSorting([]);
-    }
-  };
-
-  /* ==========================================
-        TanStack Table 컬럼 정의
-    ========================================== */
   const columns = useMemo(
     () => [
       columnHelper.accessor("experience_level", {
-        header: "경력/신입",
+        header: "구분",
         enableSorting: false,
-        cell: (info) => {
-          const val = info.getValue();
-          const colorMap: Record<string, string> = {
-            신입: "bg-emerald-100 text-emerald-700",
-            경력: "bg-indigo-100 text-indigo-700",
-            무관: "bg-slate-100 text-slate-600",
-          };
-          return (
-            <span
-              className={`px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest ${colorMap[val] || "bg-slate-100"}`}
-            >
-              {val}
-            </span>
-          );
-        },
+        cell: (info) => (
+          <span
+            className={`rounded-md px-2.5 py-1 text-[10px] font-black tracking-widest ${getExperienceTone(
+              String(info.getValue()),
+            )}`}
+          >
+            {String(info.getValue())}
+          </span>
+        ),
       }),
       columnHelper.accessor("name", {
-        header: "이름",
+        header: "지원자",
         enableSorting: false,
         cell: (info) => (
           <div className="flex flex-col">
             <span className="font-black text-slate-800">{info.getValue()}</span>
-            <span className="text-[10px] text-slate-400 font-medium">
+            <span className="text-[10px] font-medium text-slate-400">
               {info.row.original.date_of_birth}
             </span>
           </div>
         ),
       }),
-      columnHelper.accessor("phone", {
+      columnHelper.display({
+        id: "contact",
         header: "연락처",
-        enableSorting: false,
-        cell: (info) => (
-          <span className="text-sm font-medium text-slate-500">
-            {info.getValue() || "-"}
-          </span>
-        ),
-      }),
-      columnHelper.accessor("position_id", {
-        header: "지원 정보",
-        enableSorting: false,
         cell: ({ row }) => (
           <div className="flex flex-col">
-            <span className="text-xs text-slate-400 font-bold mb-0.5">
-              ID: {row.original.position_id}
+            <span className="text-sm font-medium text-slate-600">
+              {row.original.phone || "-"}
             </span>
-            <span className="text-sm font-bold text-slate-700 truncate max-w-[150px]">
-              {row.original.address.split(")")[1]?.trim() || "지역 정보 없음"}
+            <span className="text-xs font-medium text-slate-400">
+              {row.original.email || "이메일 미등록"}
             </span>
           </div>
         ),
       }),
-      columnHelper.accessor("application_status", {
-        header: "전형 단계",
-        enableSorting: false,
-        cell: (info) => {
-          const val = info.getValue();
-          const finalStatus = info.row.original.final_status;
-          let styles = "bg-slate-100 text-slate-600 border-slate-200";
-          if (finalStatus === "합격")
-            styles = "bg-emerald-50 text-emerald-600 border-emerald-200";
-          if (finalStatus === "불합격")
-            styles = "bg-rose-50 text-rose-600 border-rose-200";
-          if (finalStatus === "진행중")
-            styles = "bg-blue-50 text-blue-600 border-blue-200";
-
+      columnHelper.display({
+        id: "position",
+        header: "지원 정보",
+        cell: ({ row }) => (
+          <div className="flex flex-col">
+            <span className="mb-0.5 text-xs font-bold text-slate-400">
+              공고 ID: {row.original.position_id}
+            </span>
+            <span className="max-w-[200px] truncate text-sm font-bold text-slate-700">
+              {getPositionLabel(row.original)}
+            </span>
+          </div>
+        ),
+      }),
+      columnHelper.display({
+        id: "status",
+        header: "전형 상태",
+        cell: ({ row }) => {
+          const label = `${row.original.application_status} (${row.original.final_status})`;
           return (
             <span
-              className={`px-3 py-1.5 border rounded-lg text-xs font-black w-fit ${styles}`}
+              className={`w-fit rounded-lg border px-3 py-1.5 text-xs font-black ${getApplicantStatusTone(
+                String(row.original.final_status),
+              )}`}
             >
-              {val} ({finalStatus})
+              {label}
             </span>
           );
         },
       }),
       columnHelper.accessor("meets_preferred_criteria", {
         id: "meets_preferred_criteria",
-        header: "우대조건 충족",
+        header: "우대 조건",
         enableSorting: true,
         sortingFn: (rowA, rowB) =>
           (rowA.original.meets_preferred_criteria?.length || 0) -
           (rowB.original.meets_preferred_criteria?.length || 0),
         cell: ({ row }) => {
           const criteria = row.original.meets_preferred_criteria || [];
-          if (criteria.length === 0)
+          if (criteria.length === 0) {
             return (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50/80 text-slate-400 rounded-lg text-[11px] font-medium w-fit cursor-default">
-                <i className="bx bx-minus-circle text-base opacity-60"></i>
+              <div className="flex w-fit cursor-default items-center gap-1.5 rounded-lg bg-slate-50/80 px-3 py-1.5 text-[11px] font-medium text-slate-400">
+                <i className="bx bx-minus-circle text-base opacity-60" />
                 <span>해당 없음</span>
               </div>
             );
+          }
+
           return (
             <button
+              type="button"
               onClick={() => {
                 setSelectedApplicant(row.original);
                 setIsCriteriaModalOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg text-[11px] font-bold hover:bg-indigo-100 transition-colors group"
+              className="group flex items-center gap-1.5 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-[11px] font-bold text-indigo-600 transition-colors hover:bg-indigo-100"
             >
-              <i className="bx bx-certification text-base"></i>
-              <span>{criteria.length}건 충족</span>
-              <i className="bx bx-search-alt text-indigo-400 group-hover:text-indigo-600 ml-1"></i>
+              <i className="bx bx-certification text-base" />
+              <span>{criteria.length}개 충족</span>
+              <i className="bx bx-search-alt ml-1 text-indigo-400 group-hover:text-indigo-600" />
             </button>
           );
         },
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: "액션",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setDetailTarget(row.original);
+                setIsDetailModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-100"
+            >
+              <i className="bx bx-user-pin" />
+              상세
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMailTarget(row.original);
+                setIsMailModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-slate-800"
+            >
+              <i className="bx bx-envelope" />
+              메일 보내기
+            </button>
+          </div>
+        ),
       }),
     ],
     [],
@@ -228,84 +243,99 @@ export default function ApplicantListClient({
     onSortingChange: setSorting,
   });
 
+  const visibleCount = table.getRowModel().rows.length;
+
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-500">
-      {/* 상단 툴바 */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-5 bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
+      <div className="flex flex-col gap-5 rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-            <i className="bx bx-group text-2xl"></i>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+            <i className="bx bx-group text-2xl" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-800">지원자 리스트</h2>
-            <p className="text-sm text-slate-500 font-medium mt-0.5">
-              총 {filteredData.length}명이 필터링되었습니다.
+            <p className="text-sm font-bold text-slate-600">
+              <i className="bx bx-filter-alt mr-1 text-indigo-500" />
+              필터 · 검색
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 w-full xl:w-auto">
-          {/* 검색 필터 */}
-          <div className="relative w-full lg:w-64 shrink-0">
-            <i className="bx bx-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+        <div className="flex w-full flex-col items-stretch gap-3 lg:flex-row lg:items-center xl:w-auto">
+          <div className="relative w-full shrink-0 lg:w-72">
+            <i className="bx bx-search absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400" />
             <input
               type="text"
-              placeholder="이름 또는 연락처 검색..."
+              placeholder="이름, 전화번호, 이메일 검색"
               value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-slate-400 font-medium"
+              onChange={(event) => setSearchKeyword(event.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
 
-          {/* 우대조건 탭 필터 */}
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 h-11 relative">
+          <div className="flex h-11 rounded-xl border border-slate-200 bg-slate-100 p-1">
             {(["ALL", "HAS", "NONE"] as const).map((filter) => (
               <button
                 key={filter}
-                onClick={() => handleCriteriaFilterChange(filter)}
-                className={`flex-1 px-4 py-1.5 text-[11px] whitespace-nowrap font-black tracking-widest rounded-lg transition-all ${
+                type="button"
+                onClick={() => setCriteriaFilter(filter)}
+                className={`flex-1 whitespace-nowrap rounded-lg px-4 py-1.5 text-[11px] font-black tracking-widest transition-all ${
                   criteriaFilter === filter
-                    ? "bg-white shadow-sm text-indigo-600"
+                    ? "bg-white text-indigo-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
                 {filter === "ALL"
                   ? "전체"
                   : filter === "HAS"
-                    ? "우대조건 보유"
-                    : "미보유"}
+                    ? "우대 조건 보유"
+                    : "우대 조건 없음"}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* 테이블 영역 */}
-      <div className="bg-white border border-slate-200 rounded-[24px] shadow-sm overflow-hidden relative min-h-[400px]">
+      <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <p className="text-sm font-bold text-slate-500">
+            현재 {visibleCount}명 표시 중
+          </p>
+          <p className="text-xs font-black uppercase tracking-wider text-slate-400">
+            테이블 헤더 클릭으로 정렬
+          </p>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+          <table className="w-full min-w-[1180px] border-collapse text-left">
             <thead>
-              {table.getHeaderGroups().map((hg) => (
+              {table.getHeaderGroups().map((headerGroup) => (
                 <tr
-                  key={hg.id}
-                  className="bg-slate-50/80 border-b border-slate-200"
+                  key={headerGroup.id}
+                  className="border-b border-slate-200 bg-slate-50/80"
                 >
-                  {hg.headers.map((h) => (
+                  {headerGroup.headers.map((header) => (
                     <th
-                      key={h.id}
-                      onClick={h.column.getToggleSortingHandler()}
-                      className={`px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest ${
-                        h.column.getCanSort()
-                          ? "cursor-pointer hover:text-indigo-600 select-none"
+                      key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
+                      className={`px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400 ${
+                        header.column.getCanSort()
+                          ? "cursor-pointer select-none hover:text-indigo-600"
                           : ""
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                        {h.column.getIsSorted() && (
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                        {header.column.getIsSorted() && (
                           <i
-                            className={`bx bx-sort-${h.column.getIsSorted() === "asc" ? "up" : "down"} text-indigo-600`}
-                          ></i>
+                            className={`bx bx-sort-${
+                              header.column.getIsSorted() === "asc"
+                                ? "up"
+                                : "down"
+                            } text-indigo-600`}
+                          />
                         )}
                       </div>
                     </th>
@@ -314,33 +344,24 @@ export default function ApplicantListClient({
               ))}
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
+              {table.getRowModel().rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
-                    className="text-center py-20 text-slate-400 font-bold"
+                    colSpan={7}
+                    className="px-6 py-24 text-center text-slate-400"
                   >
-                    데이터를 불러오는 중입니다...
-                  </td>
-                </tr>
-              ) : table.getRowModel().rows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-32 text-center text-slate-400"
-                  >
-                    조건에 일치하는 지원자가 없습니다.
+                    조건에 맞는 지원자가 없습니다.
                   </td>
                 </tr>
               ) : (
                 table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.original.candidate_id}
-                    className="hover:bg-slate-50/50 transition-colors group"
+                    className="group transition-colors hover:bg-slate-50/60"
                   >
-                    {row.getVisibleCells().map((c) => (
-                      <td key={c.id} className="px-6 py-5 whitespace-nowrap">
-                        {flexRender(c.column.columnDef.cell, c.getContext())}
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="whitespace-nowrap px-6 py-5">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
                   </tr>
@@ -351,11 +372,28 @@ export default function ApplicantListClient({
         </div>
       </div>
 
-      {/* 상세 모달 */}
       <CriteriaModal
         isOpen={isCriteriaModalOpen}
         onClose={() => setIsCriteriaModalOpen(false)}
         applicant={selectedApplicant}
+      />
+
+      <CandidateMailComposerModal
+        isOpen={isMailModalOpen}
+        onClose={() => {
+          setIsMailModalOpen(false);
+          setMailTarget(null);
+        }}
+        applicant={mailTarget}
+      />
+
+      <ApplicantDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setDetailTarget(null);
+        }}
+        applicant={detailTarget}
       />
     </div>
   );

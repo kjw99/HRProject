@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.database import get_async_db
 from app.dependencies.dependencies import require_roles
+from app.schemas.user import ResetPasswordResponse, UserCreate, UserListResponse, UserResponse
 from app.services.user_service import user_service
-from app.schemas.user import UserCreate,UserResponse,UserListResponse
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -50,3 +50,15 @@ async def delete_user(
     db: AsyncSession = Depends(get_async_db),
 ):
     return await user_service.delete_user(db, user_id)
+
+
+@router.post(
+    "/users/{user_email}/reset-password",
+    response_model=ResetPasswordResponse,
+    dependencies=[Depends(require_roles(("admin",)))],
+)
+async def reset_user_password(
+    user_email: str,
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await user_service.reset_password(db, user_email)

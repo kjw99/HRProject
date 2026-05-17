@@ -27,6 +27,13 @@ class UserCreate(CaseModel):
     password: str
 
 
+class UserSignUp(CaseModel):
+    user_email: EmailStr
+    user_name: str
+    password: str
+    role: Literal["hr", "interviewer"]
+
+
 # 로그인 요청
 class UserLogin(CaseModel):
     user_email: EmailStr
@@ -59,6 +66,11 @@ class EmailCheckResponse(CaseModel):
 class PasswordChangeRequest(CaseModel):
     current_password: str
     new_password: str
+
+
+class ResetPasswordResponse(CaseModel):
+    message: str
+    temporary_password: str
 
 
 

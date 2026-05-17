@@ -41,6 +41,21 @@ class CandidateRepository:
         )
         return result.one_or_none()
 
+    async def find_by_id_with_details(
+        self,
+        db: AsyncSession,
+        candidate_id: int,
+    ) -> Candidate | None:
+        result = await db.scalars(
+            select(Candidate)
+            .where(Candidate.candidate_id == candidate_id)
+            .options(
+                selectinload(Candidate.position),
+                selectinload(Candidate.booking_invitations),
+            )
+        )
+        return result.one_or_none()
+
     # 기존
     async def find_by_identity(
         self,

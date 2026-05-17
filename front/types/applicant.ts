@@ -24,3 +24,37 @@ export interface Applicant {
 export interface ApplicantListResponse {
   content: Applicant[];
 }
+
+export interface ApplicantUpdatePayload {
+  position_id?: number;
+  name?: string;
+  date_of_birth?: string;
+  gender?: string | null;
+  address?: string;
+  phone?: string;
+  email?: string | null;
+  experience_level?: "신입" | "경력" | "무관";
+  application_status?: "서류" | "면접" | "최종합격" | "불합격";
+  final_status?: "진행중" | "합격" | "불합격";
+  meets_preferred_criteria?: string[];
+}
+
+export interface ApplicantMutationResponse {
+  message: string;
+}
+
+export interface ApplicantInvitationHistory {
+  invitation_id: number;
+  candidate_id: number;
+  slot_ids: number[];
+  expires_at: string | null;
+  created_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface ApplicantDetail extends Applicant {
+  position_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  booking_invitations: ApplicantInvitationHistory[];
+}

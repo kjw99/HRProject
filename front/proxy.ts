@@ -17,6 +17,13 @@ type PersistedAuthStorage = {
   };
 };
 
+function shouldBypassProxyInDev(request: NextRequest): boolean {
+  if (process.env.NODE_ENV !== "development") return false;
+
+  const hostname = request.nextUrl.hostname.toLowerCase();
+  return hostname === "localhost";
+}
+
 function redirectToLogin(request: NextRequest, pathname: string) {
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";
@@ -66,12 +73,11 @@ function isExpired(payload: JwtPayload): boolean {
 }
 
 async function fetchPageStatuses() {
-  // 예시 데이터
   return [
     {
       path: "/payment",
       isActive: false,
-      message: "결제 시스템 PG사 연동 점검 중입니다. (14:00~16:00)",
+      message: "결제 서비스 PG사 연동 작업 중입니다. (14:00~16:00)",
     },
     { path: "/event", isActive: true },
   ];
@@ -80,13 +86,15 @@ async function fetchPageStatuses() {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. 현재 접속하려는 경로가 Block 리스트에 있는지 확인합니다.
+  if (shouldBypassProxyInDev(request)) {
+    return NextResponse.next();
+  }
+
   const pageStatuses = await fetchPageStatuses();
   const blockedPage = pageStatuses.find(
     (page) => pathname.startsWith(page.path) && !page.isActive,
   );
 
-  // 2. 만약 Block된 페이지라면 'maintenance(공사중)' 페이지로 리다이렉트합니다.
   if (blockedPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/maintenance";
@@ -98,8 +106,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const rule = PROTECTED_ROUTE_RULES.find((r) =>
-    pathnameMatchesProtectedPrefix(pathname, r.prefix),
+  const rule = PROTECTED_ROUTE_RULES.find((entry) =>
+    pathnameMatchesProtectedPrefix(pathname, entry.prefix),
   );
   if (!rule) {
     return NextResponse.next();

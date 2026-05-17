@@ -12,6 +12,10 @@ export interface InterviewBookingPayload {
   slotId: number;
 }
 
+export interface InterviewBookingCancelPayload {
+  candidateId: number;
+}
+
 export interface InterviewBookingResponse {
   bookingId: number;
   candidateId: number;
@@ -20,4 +24,8 @@ export interface InterviewBookingResponse {
   interviewEndsAt: string;
   interviewLocation: string | null;
   createdAt: string;
+}
+
+export interface InterviewBookingMutationResponse {
+  message: string;
 }

@@ -4,41 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import type { AvailableInterviewSlot } from "@/types/interviewBooking";
 import { candidateMailApi } from "@/lib/hr/mail.client";
-
-interface InvitationRecipientDraft {
-  candidateId: number;
-  name: string;
-  email: string | null;
-  invitationUrl: string;
-  subject: string;
-  content: string;
-}
-
-interface InvitationFailureDraft {
-  candidateId: number;
-  name: string;
-  email?: string | null;
-  error?: string;
-}
-
-interface InvitationPreviewDraft {
-  createdAt: string;
-  slotIds: number[];
-  slots: AvailableInterviewSlot[];
-  recipients: InvitationRecipientDraft[];
-  failures: InvitationFailureDraft[];
-}
-
-type SendStatus = "idle" | "sending" | "sent" | "failed";
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  const maybe = error as {
-    response?: { data?: { message?: string; detail?: string } };
-  };
-  return maybe.response?.data?.message || maybe.response?.data?.detail || fallback;
-};
+import { emailTemplateApi } from "@/lib/hr/email-templates.client";
+import { getApiErrorMessage } from "@/lib/hr/api-error";
+import { parseTemplateVariablesJson } from "@/lib/hr/template-variables";
+import type { AvailableInterviewSlot } from "@/types/interviewBooking";
+import type { EmailTemplate } from "@/types/emailTemplate";
+import type {
+  InvitationPreviewDraft,
+  InvitationRecipientDraft,
+  InvitationSendStatus,
+  TemplateVariablesMap,
+} from "@/types/invitationPreview";
 
 const formatSlot = (slot: AvailableInterviewSlot) =>
   new Date(slot.interviewStartsAt).toLocaleString("ko-KR", {
@@ -89,15 +66,15 @@ const createMockDraft = (): InvitationPreviewDraft => {
         name: "목업 지원자",
         email: "mock.candidate@example.com",
         invitationUrl,
-        subject: "[면접 일정 선택 안내] 가능한 시간을 선택해 주세요",
+        subject: "[면접 일정 선택 안내] 가능한 시간을 선택해주세요.",
         content: [
           "목업 지원자님, 안녕하세요.",
           "",
-          "아래 링크에서 가능한 면접 일정 중 하나를 선택해 주세요.",
+          "아래 링크에서 가능한 면접 일정을 선택해주세요.",
           "",
           invitationUrl,
           "",
-          "[선택 가능한 면접 시간대]",
+          "[선택 가능한 면접 시간]",
           ...slots.map(
             (slot) =>
               `- ${formatSlot(slot)} · ${slot.interviewRound} · ${
@@ -123,14 +100,63 @@ function readInvitationPreviewDraft(draftId: string): string | null {
   }
 }
 
+const parseCustomVariables = parseTemplateVariablesJson;
+
+const buildRecipientTemplateVariables = (
+  recipient: InvitationRecipientDraft,
+  draft: InvitationPreviewDraft,
+  extraVariables: TemplateVariablesMap,
+): TemplateVariablesMap => {
+  const slotSummary = draft.slots
+    .map(
+      (slot) =>
+        `${formatSlot(slot)} · ${slot.interviewRound} · ${
+          slot.interviewLocation ?? "장소 미정"
+        }`,
+    )
+    .join("\n");
+
+  return {
+    candidate_id: recipient.candidateId,
+    candidateId: recipient.candidateId,
+    candidate_name: recipient.name,
+    candidateName: recipient.name,
+    recipient_name: recipient.name,
+    recipientName: recipient.name,
+    candidate_email: recipient.email,
+    candidateEmail: recipient.email,
+    invitation_url: recipient.invitationUrl,
+    access_link: recipient.invitationUrl,
+    slot_count: draft.slotIds.length,
+    slotCount: draft.slotIds.length,
+    slot_summary: slotSummary,
+    slotSummary,
+    ...extraVariables,
+  };
+};
+
+const normalizeTemplateTextForSend = (text: string, invitationUrl: string) =>
+  text
+    .replaceAll(invitationUrl, "{invitation_url}")
+    .replaceAll("{access_link}", "{invitation_url}");
+
 export default function InvitationPreviewClient() {
   const searchParams = useSearchParams();
   const draftId = searchParams.get("draft") ?? "";
   const [draft, setDraft] = useState<InvitationPreviewDraft | null>(null);
   const [isMockMode, setIsMockMode] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [statuses, setStatuses] = useState<Record<number, SendStatus>>({});
+  const [statuses, setStatuses] = useState<Record<number, InvitationSendStatus>>({});
   const [errors, setErrors] = useState<Record<number, string>>({});
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
+    null,
+  );
+  const [customVariablesText, setCustomVariablesText] = useState(
+    JSON.stringify({ company_name: "ILJIN", recruiter_name: "HR Team" }, null, 2),
+  );
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
 
   useEffect(() => {
     if (!draftId) {
@@ -182,10 +208,61 @@ export default function InvitationPreviewClient() {
     }
   }, [draftId]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTemplates = async () => {
+      setIsLoadingTemplates(true);
+      try {
+        const data = await emailTemplateApi.fetchEmailTemplates();
+        if (cancelled) return;
+        setTemplates(data);
+        if (data.length > 0) {
+          setSelectedTemplateId((prev) => prev ?? data[0].id);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        toast.error(
+          getApiErrorMessage(error, "이메일 템플릿을 불러오지 못했습니다."),
+        );
+      } finally {
+        if (!cancelled) {
+          setIsLoadingTemplates(false);
+        }
+      }
+    };
+
+    void loadTemplates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const sentCount = useMemo(
     () => Object.values(statuses).filter((status) => status === "sent").length,
     [statuses],
   );
+
+  const selectedTemplate = useMemo(
+    () => templates.find((template) => template.id === selectedTemplateId) ?? null,
+    [selectedTemplateId, templates],
+  );
+
+  const templateVariablesPreview = useMemo(() => {
+    if (!draft || draft.recipients.length === 0) return null;
+
+    try {
+      const extraVariables = parseCustomVariables(customVariablesText);
+      return buildRecipientTemplateVariables(
+        draft.recipients[0],
+        draft,
+        extraVariables,
+      );
+    } catch {
+      return null;
+    }
+  }, [customVariablesText, draft]);
 
   const updateRecipient = (
     candidateId: number,
@@ -227,9 +304,58 @@ export default function InvitationPreviewClient() {
     }
   };
 
+  const applySelectedTemplate = async () => {
+    if (!draft) return;
+    if (!selectedTemplateId) {
+      toast.error("적용할 템플릿을 선택해주세요.");
+      return;
+    }
+
+    setIsApplyingTemplate(true);
+    try {
+      const extraVariables = parseCustomVariables(customVariablesText);
+      const renderedRecipients = await Promise.all(
+        draft.recipients.map(async (recipient) => {
+          const variables = buildRecipientTemplateVariables(
+            recipient,
+            draft,
+            extraVariables,
+          );
+          const rendered = await emailTemplateApi.renderEmailTemplate(
+            selectedTemplateId,
+            { variables },
+          );
+
+          return {
+            ...recipient,
+            subject: rendered.subject,
+            content: rendered.body,
+          };
+        }),
+      );
+
+      setDraft((prev) =>
+        prev
+          ? {
+              ...prev,
+              recipients: renderedRecipients,
+            }
+          : prev,
+      );
+      toast.success("선택한 템플릿을 모든 수신자에게 적용했습니다.");
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(error, "템플릿 적용 중 오류가 발생했습니다."),
+      );
+    } finally {
+      setIsApplyingTemplate(false);
+    }
+  };
+
   const sendMail = async (recipient: InvitationRecipientDraft) => {
     setStatuses((prev) => ({ ...prev, [recipient.candidateId]: "sending" }));
     setErrors((prev) => ({ ...prev, [recipient.candidateId]: "" }));
+
     try {
       if (isMockMode) {
         setStatuses((prev) => ({ ...prev, [recipient.candidateId]: "sent" }));
@@ -238,21 +364,28 @@ export default function InvitationPreviewClient() {
       }
 
       await candidateMailApi.sendCandidateMail(recipient.candidateId, {
-        subject: recipient.subject,
-        content: recipient.content,
+        subject: normalizeTemplateTextForSend(
+          recipient.subject,
+          recipient.invitationUrl,
+        ),
+        content: normalizeTemplateTextForSend(
+          recipient.content,
+          recipient.invitationUrl,
+        ),
       });
       setStatuses((prev) => ({ ...prev, [recipient.candidateId]: "sent" }));
     } catch (error) {
       setStatuses((prev) => ({ ...prev, [recipient.candidateId]: "failed" }));
       setErrors((prev) => ({
         ...prev,
-        [recipient.candidateId]: getErrorMessage(error, "메일 발송 실패"),
+        [recipient.candidateId]: getApiErrorMessage(error, "메일 발송 실패"),
       }));
     }
   };
 
   const sendAllMails = async () => {
     if (!draft) return;
+
     for (const recipient of draft.recipients) {
       if (statuses[recipient.candidateId] === "sent") continue;
       await sendMail(recipient);
@@ -269,7 +402,7 @@ export default function InvitationPreviewClient() {
             미리보기 데이터를 찾을 수 없습니다.
           </h1>
           <p className="mt-2 text-sm font-semibold text-slate-500">
-            초대 링크 생성 화면에서 다시 열어 주세요.
+            초대 링크 생성 화면에서 다시 이동해주세요.
           </p>
         </div>
       </main>
@@ -278,7 +411,7 @@ export default function InvitationPreviewClient() {
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-5xl flex-col gap-5">
+      <div className="mx-auto flex max-w-6xl flex-col gap-5">
         <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -289,11 +422,11 @@ export default function InvitationPreviewClient() {
                 초대 링크 및 최종 메일 확인
               </h1>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                링크를 확인하고, 메일 내용을 수정한 뒤 최종 발송하세요.
+                링크를 확인하고, 템플릿을 적용하거나 직접 수정한 뒤 최종 발송하세요.
               </p>
               {isMockMode ? (
                 <p className="mt-3 inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
-                  개발/localhost mock 미리보기입니다.
+                  개발용 mock 미리보기입니다.
                 </p>
               ) : null}
             </div>
@@ -312,7 +445,7 @@ export default function InvitationPreviewClient() {
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-black text-indigo-700 transition hover:bg-indigo-100"
               >
                 <i className="bx bx-edit" />
-                {isEditing ? "수정 완료" : "메일 내용 수정하기"}
+                {isEditing ? "수정 완료" : "메일 내용 수정"}
               </button>
               <button
                 type="button"
@@ -336,7 +469,7 @@ export default function InvitationPreviewClient() {
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
               <p className="text-[10px] font-black uppercase text-slate-400">
-                선택 슬롯
+                선택 후보
               </p>
               <p className="mt-1 text-lg font-black text-slate-900">
                 {draft.slotIds.length}개
@@ -353,10 +486,108 @@ export default function InvitationPreviewClient() {
           </div>
         </header>
 
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">
+                  Template Assist
+                </p>
+                <h2 className="mt-1 text-lg font-black text-slate-900">
+                  템플릿 적용
+                </h2>
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  템플릿을 전체 수신자 초안에 한 번에 반영할 수 있습니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void applySelectedTemplate()}
+                disabled={
+                  isApplyingTemplate || isLoadingTemplates || selectedTemplateId === null
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-black text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <i
+                  className={`bx ${
+                    isApplyingTemplate ? "bx-loader-alt animate-spin" : "bx-brush"
+                  }`}
+                />
+                템플릿 전체 적용
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <label className="grid gap-2 text-sm font-black text-slate-600">
+                템플릿 선택
+                <select
+                  value={selectedTemplateId ?? ""}
+                  onChange={(event) =>
+                    setSelectedTemplateId(
+                      event.target.value ? Number(event.target.value) : null,
+                    )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20"
+                >
+                  <option value="">
+                    {isLoadingTemplates
+                      ? "템플릿 불러오는 중..."
+                      : "템플릿을 선택하세요"}
+                  </option>
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-black uppercase tracking-wider text-slate-400">
+                  선택된 템플릿 제목
+                </p>
+                <p className="mt-2 text-sm font-black text-slate-900">
+                  {selectedTemplate?.subject ?? "선택된 템플릿이 없습니다."}
+                </p>
+                <p className="mt-3 line-clamp-4 whitespace-pre-wrap text-sm font-medium leading-6 text-slate-500">
+                  {selectedTemplate?.body ?? "본문 미리보기가 여기에 표시됩니다."}
+                </p>
+              </div>
+            </div>
+
+            <label className="mt-4 grid gap-2 text-sm font-black text-slate-600">
+              추가 변수 JSON
+              <textarea
+                value={customVariablesText}
+                onChange={(event) => setCustomVariablesText(event.target.value)}
+                rows={8}
+                className="font-mono resize-y rounded-xl border border-slate-200 bg-slate-950 px-4 py-3 text-xs leading-6 text-slate-100 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20"
+              />
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-500">
+              Variable Preview
+            </p>
+            <h2 className="mt-1 text-lg font-black text-slate-900">
+              첫 번째 수신자 기준 렌더 변수
+            </h2>
+            <p className="mt-2 text-sm font-semibold text-slate-500">
+              템플릿에는 아래 키들을 사용할 수 있습니다.
+            </p>
+            <pre className="mt-4 max-h-[320px] overflow-auto rounded-xl bg-slate-950 p-4 text-xs font-semibold leading-6 text-slate-100">
+              {templateVariablesPreview
+                ? JSON.stringify(templateVariablesPreview, null, 2)
+                : "추가 변수 JSON을 확인해주세요."}
+            </pre>
+          </div>
+        </section>
+
         {draft.slots.length > 0 ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-sm font-black text-slate-900">
-              지원자에게 열릴 면접 슬롯
+              지원자에게 열릴 면접 후보
             </h2>
             <ul className="mt-3 grid gap-2 md:grid-cols-2">
               {draft.slots.map((slot) => (
@@ -374,9 +605,7 @@ export default function InvitationPreviewClient() {
 
         {draft.failures.length > 0 ? (
           <section className="rounded-2xl border border-rose-100 bg-rose-50 p-5">
-            <h2 className="text-sm font-black text-rose-700">
-              링크 생성 실패
-            </h2>
+            <h2 className="text-sm font-black text-rose-700">링크 생성 실패</h2>
             <ul className="mt-3 space-y-2 text-sm font-bold text-rose-700">
               {draft.failures.map((failure) => (
                 <li key={failure.candidateId}>
@@ -481,7 +710,7 @@ export default function InvitationPreviewClient() {
                   </p>
                 ) : status === "sent" ? (
                   <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
-                    최종 메일이 발송되었습니다.
+                    최종 메일을 발송했습니다.
                   </p>
                 ) : null}
               </motion.article>

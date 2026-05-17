@@ -1,20 +1,15 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.dependencies.database import get_async_db
 from app.dependencies.dependencies import require_roles
 from app.schemas.common import MessageResponse
-from app.services.mail_service import mail_service
+from app.schemas.candidate_mail import CandidateMailSendRequest
+from app.services.candidate_mail_service import candidate_mail_service
 
 
 router = APIRouter(prefix="/api", tags=["Email-Send"])
-
-
-class CandidateMailSendRequest(BaseModel):
-    subject: str = Field(..., min_length=1)
-    content: str = Field(..., min_length=1)
 
 
 @router.post(
@@ -27,11 +22,19 @@ async def send_candidate_mail(
     data: CandidateMailSendRequest,
     db: AsyncSession = Depends(get_async_db),
 ):
-    to_email = await mail_service.get_candidate_email(db, candidate_id)
+    candidate_mail = await candidate_mail_service.create_candidate_mail(
+        db,
+        candidate_id=candidate_id,
+        subject=data.subject,
+        content=data.content,
+        template_id=data.template_id,
+        template_variables=data.template_variables,
+        expires_at=data.expires_at,
+    )
     await run_in_threadpool(
-        mail_service.send_mail,
-        to_email,
-        data.subject,
-        data.content,
+        candidate_mail_service.send_candidate_mail,
+        candidate_mail.to_email,
+        candidate_mail.subject,
+        candidate_mail.content,
     )
     return {"message": "Mail sent successfully."}

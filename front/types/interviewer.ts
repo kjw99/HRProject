@@ -1,11 +1,9 @@
-// Position (직무/부서) — camelCase
 export interface BackendPosition {
   positionId: number;
   positionName: string;
   createdAt: string;
 }
 
-// Candidate (지원자) — snake_case
 export interface BackendCandidate {
   candidate_id: number;
   position_id: number | null;
@@ -16,20 +14,17 @@ export interface BackendCandidate {
   meets_preferred_criteria: string[];
 }
 
-// Generated question — camelCase
 export interface BackendGeneratedQuestion {
   questionText: string;
   questionType: string;
   evaluationIntent: string;
-  generationBasis: string; // 💡 새로 추가된 필드 (생성 근거)
+  generationBasis: string;
 }
 
-// 💡 프론트엔드 상태 관리를 위한 확장 타입 (React 배열 렌더링용 고유 키 추가)
 export interface UIGeneratedQuestion extends BackendGeneratedQuestion {
   id: string;
 }
 
-// API 요청 페이로드
 export interface QuestionGeneratePayload {
   candidateId: number;
   positionId?: number;
@@ -46,6 +41,23 @@ export interface QuestionSavePayload {
     evaluationIntent?: string;
     generationBasis?: string;
   }>;
+}
+
+export interface QuestionGenerationJobCreateResponse {
+  jobId: number;
+  status: string;
+}
+
+export interface QuestionGenerationJobResponse {
+  jobId: number;
+  status: string;
+  candidateId: number;
+  positionId: number | null;
+  resultQuestions: BackendGeneratedQuestion[] | null;
+  errorMessage: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
 }
 
 export type InterviewRound = "1차" | "2차" | "3차";
@@ -85,4 +97,43 @@ export interface InterviewerPayload {
 
 export interface InterviewerMutationResponse {
   message: string;
+}
+
+export interface InterviewerInvitePayload {
+  interviewerEmail: string;
+  interviewerName: string;
+}
+
+export interface InterviewerInviteResponse {
+  message?: string;
+  inviteUrl?: string;
+  inviteToken?: string;
+  expiresAt?: string | null;
+  [key: string]: unknown;
+}
+
+export interface InterviewerInviteAcceptPayload {
+  token: string;
+}
+
+export interface InterviewerInviteAcceptResponse {
+  accessToken?: string;
+  token?: string;
+  tokenType?: string;
+  [key: string]: unknown;
+}
+
+export interface InterviewerMailPayload {
+  subject?: string;
+  content?: string;
+  templateId?: number;
+  templateVariables?: Record<string, string | number | boolean | null>;
+  expiresInDays?: number;
+}
+
+export interface InterviewerMailResponse {
+  message: string;
+  inviteUrl?: string;
+  expiresAt?: string | null;
+  [key: string]: unknown;
 }

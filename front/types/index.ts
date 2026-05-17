@@ -4,10 +4,36 @@ export type {
   UserInfo,
   AuthResponse,
 } from "./auth";
+export type {
+  EmailTemplateVariableValue,
+  EmailTemplate,
+  EmailTemplateCreatePayload,
+  EmailTemplateUpdatePayload,
+  EmailTemplateRenderPayload,
+  EmailTemplateRenderResponse,
+  EmailTemplateMutationResponse,
+} from "./emailTemplate";
+export type {
+  BoxIconName,
+  HrPageHeroTheme,
+  HrQuickLink,
+  HrStatItem,
+  HrPageHeroProps,
+  HrModalSize,
+  HrModalTheme,
+  HrModalProps,
+  CriteriaFilter,
+} from "./hr-ui";
+export type {
+  InvitationRecipientDraft,
+  InvitationFailureDraft,
+  InvitationPreviewDraft,
+  InvitationSendStatus,
+  TemplateVariablesMap,
+} from "./invitationPreview";
 
-// 페이지 상태(Block/Active)
 export interface PageStatus {
-  path: string;           // 예: '/payment'
-  isActive: boolean;      // true(활성), false(차단)
-  message?: string;       // 차단 시 보여줄 메시지 (선택)
+  path: string;
+  isActive: boolean;
+  message?: string;
 }

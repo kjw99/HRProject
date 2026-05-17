@@ -1,104 +1,122 @@
-from app.core.exceptions import BadRequestException, DuplicateException,NotFoundException
-from app.models.user import User
-from app.repositories.user_repository import user_repository 
+import secrets
+
+from app.core.exceptions import (
+    BadRequestException,
+    DuplicateException,
+    ForbiddenException,
+    NotFoundException,
+)
 from app.core.security import get_password_hash, verify_password
+from app.models.user import User
+from app.repositories.user_repository import user_repository
 
 
 class UserService:
-
     async def check_email_availability(self, db, email: str):
         user = await user_repository.get_user_by_email(db, email)
 
         if user:
             return {
                 "available": False,
-                "message": "이미 사용 중인 이메일입니다."
+                "message": "Email is already in use.",
             }
 
         return {
             "available": True,
-            "message": "사용 가능한 이메일입니다."
+            "message": "Email is available.",
         }
-    
-
 
     async def create_user(self, db, request, role: str):
-    
-        # 1. email check
         existing = await user_repository.get_user_by_email(db, request.user_email)
         if existing:
-            raise DuplicateException("이미 존재하는 이메일입니다.")
-        
-        # 2. create user
+            raise DuplicateException("Email already exists.")
+
         user = User(
             user_email=request.user_email,
             pw_hash=get_password_hash(request.password),
             user_name=request.user_name,
-            role=role
+            role=role,
         )
 
         user = await user_repository.create_user(db, user)
         await db.commit()
-        
         return user
 
+    async def register_user(self, db, request):
+        if request.role == "admin":
+            raise ForbiddenException("Admin signup is not allowed.")
+
+        return await self.create_user(db, request, role=request.role)
+
     async def change_password(self, db, current_user, data):
-        
-        # 0. basic validation
         if data.current_password == data.new_password:
-            raise BadRequestException("새 비밀번호가 기존과 같습니다.")
+            raise BadRequestException(
+                "The new password must be different from the current password."
+            )
 
         if len(data.new_password) < 8:
-            raise BadRequestException("비밀번호는 최소 8자 이상입니다.")
+            raise BadRequestException("Password must be at least 8 characters long.")
 
-        # 1. check current password
         if not verify_password(data.current_password, current_user.pw_hash):
-            raise BadRequestException("현재 비밀번호가 틀립니다.")
+            raise BadRequestException("Current password is incorrect.")
 
-        # 2. hash new password
         new_hash = get_password_hash(data.new_password)
         await user_repository.update_password(db, current_user, new_hash)
         await db.commit()
 
         return {
-            "message": "비밀번호가 변경되었습니다."
+            "message": "Password changed successfully.",
         }
-    
 
     async def get_users(self, db, page, size, keyword):
         offset = page * size
-
         users, total = await user_repository.get_users(db, offset, size, keyword)
 
         return {
-        "content": users,
-        "page": page,
-        "size": size,
-        "totalElements": total,
-        "totalPages": (total + size - 1) // size
+            "content": users,
+            "page": page,
+            "size": size,
+            "totalElements": total,
+            "totalPages": (total + size - 1) // size,
         }
-
 
     async def get_user_by_id(self, db, user_id):
         user = await user_repository.find_by_id(db, user_id)
 
         if not user:
-            raise NotFoundException("사용자를 찾을 수 없습니다.")
+            raise NotFoundException("User not found.")
 
         return user
-    
 
     async def delete_user(self, db, user_id):
         user = await user_repository.find_by_id(db, user_id)
 
         if not user:
-            raise NotFoundException("사용자를 찾을 수 없습니다.")
+            raise NotFoundException("User not found.")
 
         await user_repository.delete_user(db, user)
         await db.commit()
 
         return {
-        "message": "계정이 삭제되었습니다."
+            "message": "User deleted successfully.",
         }
+
+    async def reset_password(self, db, user_email: str):
+        user = await user_repository.get_user_by_email(db, user_email)
+
+        if not user:
+            raise NotFoundException("User not found.")
+
+        temporary_password = f"Temp!{secrets.token_hex(4)}"
+        new_hash = get_password_hash(temporary_password)
+
+        await user_repository.update_password(db, user, new_hash)
+        await db.commit()
+
+        return {
+            "message": "Temporary password issued successfully.",
+            "temporary_password": temporary_password,
+        }
+
 
 user_service = UserService()

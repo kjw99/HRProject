@@ -2,6 +2,7 @@ import {
   InterviewBookingInvitationTokenBookingPayload,
   InterviewBookingInvitationCreatePayload,
   InterviewBookingInvitationCreateResponse,
+  InterviewBookingInvitationMutationResponse,
 } from "@/types/interviewBookingInvitation";
 import {
   AvailableInterviewSlot,
@@ -40,6 +41,15 @@ export const interviewBookingInvitationApi = {
     const response = await api.post<InterviewBookingResponse>(
       `/api/interview-booking-invitations/${token}/bookings`,
       payload,
+    );
+    return response.data;
+  },
+
+  revokeInvitation: async (
+    invitationId: number,
+  ): Promise<InterviewBookingInvitationMutationResponse> => {
+    const response = await api.patch<InterviewBookingInvitationMutationResponse>(
+      `/api/interview-booking-invitations/${invitationId}/revoke`,
     );
     return response.data;
   },

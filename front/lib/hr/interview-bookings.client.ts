@@ -1,5 +1,7 @@
 import {
   AvailableInterviewSlot,
+  InterviewBookingCancelPayload,
+  InterviewBookingMutationResponse,
   InterviewBookingPayload,
   InterviewBookingResponse,
 } from "@/types/interviewBooking";
@@ -24,6 +26,18 @@ export const interviewBookingApi = {
   ): Promise<InterviewBookingResponse> => {
     const response = await api.post<InterviewBookingResponse>(
       "/api/interview-bookings",
+      payload,
+    );
+
+    return response.data;
+  },
+
+  cancelBooking: async (
+    bookingId: number,
+    payload: InterviewBookingCancelPayload,
+  ): Promise<InterviewBookingMutationResponse> => {
+    const response = await api.patch<InterviewBookingMutationResponse>(
+      `/api/interview-bookings/${bookingId}/cancel`,
       payload,
     );
 

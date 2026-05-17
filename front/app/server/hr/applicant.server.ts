@@ -1,9 +1,17 @@
 import "server-only";
 
 import { InterviewSlot, InterviewSlotParams } from "@/types/schedule";
-import { Applicant, ApplicantListResponse } from "@/types/applicant";
+import {
+  Applicant,
+  ApplicantDetail,
+  ApplicantMutationResponse,
+  ApplicantUpdatePayload,
+} from "@/types/applicant";
 import { apiServer } from "../axios-server";
 import { DeptStatus, DeptStatusListResponse } from "@/types/hr";
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
 
 /**
  * [Server-side] 지원자 리스트 조회
@@ -18,10 +26,10 @@ export const fetchApplicantsServer = async (
     const response = await apiServer.get<Applicant[]>("/api/candidates");
 
     return response.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.warn(
       "🚨 [Server API] 지원자 리스트 로드 실패. 목업 데이터를 반환합니다.",
-      error.message,
+      getErrorMessage(error),
     );
 
     // 15명의 가상 지원자 생성 (서버 데이터 구조인 Snake Case 준수)
@@ -75,6 +83,44 @@ export const fetchApplicantsServer = async (
   }
 };
 
+export const fetchApplicantDetailServer = async (
+  candidateId: number,
+): Promise<ApplicantDetail | null> => {
+  try {
+    const response = await apiServer.get<ApplicantDetail>(
+      `/api/candidates/${candidateId}/detail`,
+    );
+    return response.data;
+  } catch (error: unknown) {
+    console.warn(
+      "[Server API] 지원자 상세 로드 실패.",
+      candidateId,
+      getErrorMessage(error),
+    );
+    return null;
+  }
+};
+
+export const updateApplicantServer = async (
+  candidateId: number,
+  payload: ApplicantUpdatePayload,
+): Promise<Applicant> => {
+  const response = await apiServer.patch<Applicant>(
+    `/api/candidates/${candidateId}`,
+    payload,
+  );
+  return response.data;
+};
+
+export const deleteApplicantServer = async (
+  candidateId: number,
+): Promise<ApplicantMutationResponse> => {
+  await apiServer.delete(`/api/candidates/${candidateId}`);
+  return {
+    message: "지원자가 삭제되었습니다.",
+  };
+};
+
 /**
  * [Server-side] 면접 슬롯 목록 조회
  * GET /api/interview-slots
@@ -93,10 +139,10 @@ export const fetchInterviewSlotsServer = async (
     );
 
     return response.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.warn(
       "🚨 [Server API] 면접 슬롯 로드 실패. 목업 데이터를 반환합니다.",
-      error.message,
+      getErrorMessage(error),
     );
 
     // 명세서 기반 목업 데이터 반환 (UI 개발용)
@@ -133,10 +179,10 @@ export const fetchDeptStatusServer = async (): Promise<DeptStatus[]> => {
     const body = response.data;
     const list = Array.isArray(body) ? body : (body?.content ?? []);
     return list;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.warn(
       "🚨 [Server API] 부서별 채용 현황 로드 실패. 목업 데이터를 반환합니다.",
-      error.message,
+      getErrorMessage(error),
     );
     return [
       {

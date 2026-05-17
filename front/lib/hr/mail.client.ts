@@ -1,23 +1,41 @@
 import { api } from "../api";
 
+export type CandidateMailVariableValue = string | number | boolean | null;
+
 export interface CandidateMailPayload {
-  subject: string;
-  content: string;
+  subject?: string;
+  content?: string;
+  templateId?: number;
+  templateVariables?: Record<string, CandidateMailVariableValue>;
+  expiresAt?: string;
 }
 
-export interface MessageResponse {
+export interface CandidateMailResponse {
   message: string;
+  invitationUrl: string;
+  expiresAt: string;
 }
 
 export const candidateMailApi = {
   sendCandidateMail: async (
     candidateId: number,
     payload: CandidateMailPayload,
-  ): Promise<MessageResponse> => {
-    const response = await api.post<MessageResponse>(
-      `/api/mail-send/${candidateId}`,
+  ): Promise<CandidateMailResponse> => {
+    const response = await api.post<
+      CandidateMailResponse & {
+        invitation_url?: string;
+        expires_at?: string;
+      }
+    >(
+      `/api/candidates/${candidateId}/email`,
       payload,
     );
-    return response.data;
+
+    return {
+      message: response.data.message,
+      invitationUrl:
+        response.data.invitationUrl ?? response.data.invitation_url ?? "",
+      expiresAt: response.data.expiresAt ?? response.data.expires_at ?? "",
+    };
   },
 };

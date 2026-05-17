@@ -19,3 +19,7 @@ export interface InterviewBookingInvitationCreateResponse {
 export interface InterviewBookingInvitationTokenBookingPayload {
   slotId: number;
 }
+
+export interface InterviewBookingInvitationMutationResponse {
+  message: string;
+}
