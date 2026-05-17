@@ -4,9 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { addMonths, format, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
 import { ko } from "date-fns/locale";
 import { toast } from "sonner";
-import ScheduleBookingModal, {
-  type ScheduleBookingModalTab,
-} from "@/components/hr/dashboard/ScheduleBookingModal";
+import ScheduleOperationsModal from "@/components/hr/dashboard/ScheduleBookingModal";
 import { ScheduleActionsSidebar } from "@/components/hr/schedule/ScheduleActionsSidebar";
 import { ScheduleCalendarPanel } from "@/components/hr/schedule/ScheduleCalendarPanel";
 import { ScheduleDayPanel } from "@/components/hr/schedule/ScheduleDayPanel";
@@ -107,10 +105,9 @@ export default function ScheduleClient({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [slotEditorOpen, setSlotEditorOpen] = useState(false);
 
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
-  const [bookingModalTab, setBookingModalTab] =
-    useState<ScheduleBookingModalTab>("slots");
   const [modalInterviewDateSeed, setModalInterviewDateSeed] = useState<
     string | undefined
   >(undefined);
@@ -144,19 +141,19 @@ export default function ScheduleClient({
     [selectedDayKey, slotsByDate],
   );
 
-  const selectedIdsKey = selectedSlotIds.join(",");
+  const selectedSlotId =
+    selectedSlotIds.length === 1 ? selectedSlotIds[0] : null;
 
   useEffect(() => {
-    if (selectedSlotIds.length !== 1) {
+    if (selectedSlotId == null) {
       setPrimarySlotDetail(null);
       setIsPrimaryDetailLoading(false);
       return;
     }
-    const id = selectedSlotIds[0];
     let ignore = false;
     setIsPrimaryDetailLoading(true);
     interviewSlotsApi
-      .fetchSlotDetail(id)
+      .fetchSlotDetail(selectedSlotId)
       .then((detail) => {
         if (!ignore) setPrimarySlotDetail(detail);
       })
@@ -172,7 +169,7 @@ export default function ScheduleClient({
     return () => {
       ignore = true;
     };
-  }, [selectedIdsKey]);
+  }, [selectedSlotId]);
 
   const filteredInterviewers = useMemo(() => {
     const positionId = Number(form.positionId);
@@ -323,6 +320,7 @@ export default function ScheduleClient({
   const startCreate = () => {
     setFormMode("create");
     setForm(defaultForm(selectedDate));
+    setSlotEditorOpen(true);
   };
 
   const startEditForSelectedSlot = async () => {
@@ -330,6 +328,7 @@ export default function ScheduleClient({
     const slotId = selectedSlotIds[0];
     if (primarySlotDetail?.slotId === slotId) {
       applyDetailToEditForm(primarySlotDetail);
+      setSlotEditorOpen(true);
       return;
     }
     setIsPrimaryDetailLoading(true);
@@ -337,6 +336,7 @@ export default function ScheduleClient({
       const detail = await interviewSlotsApi.fetchSlotDetail(slotId);
       setPrimarySlotDetail(detail);
       applyDetailToEditForm(detail);
+      setSlotEditorOpen(true);
     } catch (error) {
       toast.error(getErrorMessage(error, "면접 일정 상세를 불러오지 못했습니다."));
     } finally {
@@ -350,6 +350,7 @@ export default function ScheduleClient({
     setSelectedSlotIds([detail.slotId]);
     setPrimarySlotDetail(detail);
     applyDetailToEditForm(detail);
+    setSlotEditorOpen(true);
     setDayPanelMinimized(false);
   };
 
@@ -408,15 +409,15 @@ export default function ScheduleClient({
         const fresh = await interviewSlotsApi.fetchSlotDetail(slotId);
         setPrimarySlotDetail(fresh);
         setSelectedSlotIds([slotId]);
-        setFormMode("create");
-        setForm(defaultForm(anchor));
+        setSlotEditorOpen(false);
         setDayPanelMinimized(false);
       } else {
         await interviewSlotsApi.createSlot(buildCreatePayload());
         toast.success("면접 일정이 생성되었습니다.");
         await refreshSlots();
         setSelectedSlotIds([]);
-        startCreate();
+        setSlotEditorOpen(false);
+        setForm(defaultForm(selectedDate));
       }
     } catch (error) {
       toast.error(getErrorMessage(error, "면접 일정 저장 중 오류가 발생했습니다."));
@@ -438,7 +439,9 @@ export default function ScheduleClient({
           : "면접 일정이 삭제되었습니다.",
       );
       setSelectedSlotIds([]);
-      startCreate();
+      setSlotEditorOpen(false);
+      setFormMode("create");
+      setForm(defaultForm(selectedDate));
       await refreshSlots();
     } catch (error) {
       toast.error(getErrorMessage(error, "면접 일정 삭제 중 오류가 발생했습니다."));
@@ -447,8 +450,7 @@ export default function ScheduleClient({
     }
   };
 
-  const openScheduleModal = (tab: ScheduleBookingModalTab) => {
-    setBookingModalTab(tab);
+  const openInvitationModal = () => {
     setModalInterviewDateSeed(format(selectedDate, "yyyy-MM-dd"));
     setBookingModalOpen(true);
   };
@@ -461,9 +463,6 @@ export default function ScheduleClient({
     if (viewMode === "month") void moveMonth("next");
     else void moveWeek("next");
   };
-
-  const slotEditorOpen =
-    formMode === "edit" && Boolean(primarySlotDetail) && selectedSlotIds.length === 1;
 
   return (
     <>
@@ -529,19 +528,19 @@ export default function ScheduleClient({
             />
           </div>
 
-          <ScheduleActionsSidebar
-            isLoading={isLoading}
-            onRefresh={() => void refreshSlots()}
-            onOpenBulkScheduleModal={() => openScheduleModal("slots")}
-            onOpenInvitationModal={() => openScheduleModal("booking")}
-          />
+            <ScheduleActionsSidebar
+              isLoading={isLoading}
+              onRefresh={() => void refreshSlots()}
+              onStartCreateSchedule={startCreate}
+              onOpenInvitationModal={openInvitationModal}
+            />
         </div>
       </div>
       </div>
 
       <ScheduleSlotEditorPanel
         isOpen={slotEditorOpen}
-        onClose={() => startCreate()}
+        onClose={() => setSlotEditorOpen(false)}
         form={form}
         formMode={formMode}
         positions={initialPositions}
@@ -553,10 +552,10 @@ export default function ScheduleClient({
         onToggleInterviewer={toggleInterviewer}
       />
 
-      <ScheduleBookingModal
+      <ScheduleOperationsModal
         isOpen={bookingModalOpen}
         applicants={initialApplicants}
-        initialMainTab={bookingModalTab}
+        initialMainTab="booking"
         initialInterviewDate={modalInterviewDateSeed}
         onClose={() => {
           setBookingModalOpen(false);

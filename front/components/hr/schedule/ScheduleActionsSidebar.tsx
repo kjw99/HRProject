@@ -3,14 +3,14 @@
 export interface ScheduleActionsSidebarProps {
   isLoading: boolean;
   onRefresh: () => void;
-  onOpenBulkScheduleModal: () => void;
+  onStartCreateSchedule: () => void;
   onOpenInvitationModal: () => void;
 }
 
 export function ScheduleActionsSidebar({
   isLoading,
   onRefresh,
-  onOpenBulkScheduleModal,
+  onStartCreateSchedule,
   onOpenInvitationModal,
 }: ScheduleActionsSidebarProps) {
   return (
@@ -21,13 +21,13 @@ export function ScheduleActionsSidebar({
         </p>
         <h2 className="mt-1 text-lg font-black text-slate-900">일정 운영</h2>
         <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
-          달력에서 고른 날짜가 그대로 면접 일정 모달의 면접 날짜에 반영됩니다. 예약
-          초대는 아래에서 엽니다.
+          일정 생성은 우측 에디터 패널로 바로 연결하고, 예약 초대만 별도 모달로
+          엽니다.
         </p>
         <div className="mt-4 flex flex-col gap-3">
           <button
             type="button"
-            onClick={onOpenBulkScheduleModal}
+            onClick={onStartCreateSchedule}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3.5 text-sm font-black text-white shadow-lg transition hover:bg-slate-800 active:scale-[0.99]"
           >
             <i className="bx bx-calendar-plus text-lg" />

@@ -9,9 +9,14 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import { toast } from "sonner";
+import { deleteApplicant, updateApplicant } from "@/lib/hr/interview.client";
+import { getApiErrorMessage } from "@/lib/hr/api-error";
 import type { Applicant } from "@/types/applicant";
 import type { CriteriaFilter } from "@/types/hr-ui";
 import ApplicantDetailModal from "./ApplicantDetailModal";
+import ApplicantDeleteConfirmModal from "./ApplicantDeleteConfirmModal";
+import ApplicantEditModal from "./ApplicantEditModal";
 import CandidateMailComposerModal from "./CandidateMailComposerModal";
 import CriteriaModal from "./CriteriaModal";
 
@@ -63,6 +68,9 @@ export default function ApplicantListClient({
   const [isCriteriaModalOpen, setIsCriteriaModalOpen] = useState(false);
   const [isMailModalOpen, setIsMailModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setData(initialData);
@@ -219,6 +227,17 @@ export default function ApplicantListClient({
             <button
               type="button"
               onClick={() => {
+                setDetailTarget(row.original);
+                setIsEditModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-100"
+            >
+              <i className="bx bx-edit" />
+              수정
+            </button>
+            <button
+              type="button"
+              onClick={() => {
                 setMailTarget(row.original);
                 setIsMailModalOpen(true);
               }}
@@ -226,6 +245,17 @@ export default function ApplicantListClient({
             >
               <i className="bx bx-envelope" />
               메일 보내기
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDetailTarget(row.original);
+                setIsDeleteModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-100"
+            >
+              <i className="bx bx-trash" />
+              삭제
             </button>
           </div>
         ),
@@ -244,6 +274,46 @@ export default function ApplicantListClient({
   });
 
   const visibleCount = table.getRowModel().rows.length;
+
+  const handleSaveApplicant = async (candidateId: number, payload: Parameters<typeof updateApplicant>[1]) => {
+    try {
+      const updated = await updateApplicant(candidateId, payload);
+      setData((prev) =>
+        prev.map((item) =>
+          item.candidate_id === candidateId ? updated : item,
+        ),
+      );
+      toast.success("지원자 정보가 수정되었습니다.");
+      setIsEditModalOpen(false);
+      setDetailTarget(null);
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(error, "지원자 정보 수정 중 오류가 발생했습니다."),
+      );
+    }
+  };
+
+  const handleDeleteApplicant = async () => {
+    if (!detailTarget) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await deleteApplicant(detailTarget.candidate_id);
+      setData((prev) =>
+        prev.filter((item) => item.candidate_id !== detailTarget.candidate_id),
+      );
+      toast.success(response.message);
+      setIsDeleteModalOpen(false);
+      setIsDetailModalOpen(false);
+      setDetailTarget(null);
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(error, "지원자 삭제 중 오류가 발생했습니다."),
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-500">
@@ -394,6 +464,47 @@ export default function ApplicantListClient({
           setDetailTarget(null);
         }}
         applicant={detailTarget}
+        onApplicantUpdated={(updated) => {
+          setData((prev) =>
+            prev.map((item) =>
+              item.candidate_id === updated.candidate_id ? updated : item,
+            ),
+          );
+          setDetailTarget(updated);
+        }}
+        onApplicantDeleted={(candidateId) => {
+          setData((prev) =>
+            prev.filter((item) => item.candidate_id !== candidateId),
+          );
+          setIsDetailModalOpen(false);
+          setDetailTarget(null);
+        }}
+      />
+
+      <ApplicantEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setDetailTarget(null);
+        }}
+        applicant={detailTarget}
+        onSave={(payload) =>
+          detailTarget
+            ? handleSaveApplicant(detailTarget.candidate_id, payload)
+            : Promise.resolve()
+        }
+      />
+
+      <ApplicantDeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (isDeleting) return;
+          setIsDeleteModalOpen(false);
+          setDetailTarget(null);
+        }}
+        applicant={detailTarget}
+        onConfirm={handleDeleteApplicant}
+        isDeleting={isDeleting}
       />
     </div>
   );

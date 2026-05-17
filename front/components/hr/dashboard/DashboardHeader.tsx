@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Applicant } from "@/types/applicant";
-import ScheduleBookingModal from "./ScheduleBookingModal";
+import ScheduleOperationsModal from "./ScheduleBookingModal";
 
 interface DashboardHeaderProps {
   applicants: Applicant[];
@@ -35,11 +35,11 @@ export default function DashboardHeader({ applicants }: DashboardHeaderProps) {
           onClick={() => setIsScheduleModalOpen(true)}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-slate-800 sm:flex-none"
         >
-          <i className="bx bx-calendar-plus text-lg" /> 면접 일정 생성
+          <i className="bx bx-calendar-plus text-lg" /> 면접 운영 열기
         </button>
       </div>
 
-      <ScheduleBookingModal
+      <ScheduleOperationsModal
         isOpen={isScheduleModalOpen}
         applicants={applicants}
         onClose={() => setIsScheduleModalOpen(false)}

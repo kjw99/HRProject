@@ -2,13 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { fetchApplicantDetail } from "@/lib/hr/interview.client";
-import type { Applicant, ApplicantDetail } from "@/types/applicant";
+import {
+  deleteApplicant,
+  fetchApplicantDetail,
+  updateApplicant,
+} from "@/lib/hr/interview.client";
+import { interviewBookingInvitationApi } from "@/lib/hr/interview-booking-invitations.client";
+import { interviewBookingApi } from "@/lib/hr/interview-bookings.client";
+import type {
+  Applicant,
+  ApplicantDetail,
+  ApplicantUpdatePayload,
+} from "@/types/applicant";
+import ApplicantDeleteConfirmModal from "./ApplicantDeleteConfirmModal";
+import ApplicantDetailActionBar from "./ApplicantDetailActionBar";
+import ApplicantEditModal from "./ApplicantEditModal";
 
 interface ApplicantDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   applicant: Applicant | null;
+  onApplicantUpdated?: (applicant: Applicant) => void;
+  onApplicantDeleted?: (candidateId: number) => void;
 }
 
 const formatDateTime = (value?: string | null) => {
@@ -41,9 +56,18 @@ export default function ApplicantDetailModal({
   isOpen,
   onClose,
   applicant,
+  onApplicantUpdated,
+  onApplicantDeleted,
 }: ApplicantDetailModalProps) {
   const [detail, setDetail] = useState<ApplicantDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [revokingInvitationId, setRevokingInvitationId] = useState<number | null>(
+    null,
+  );
+  const [isCancellingBooking, setIsCancellingBooking] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !applicant) return;
@@ -98,6 +122,96 @@ export default function ApplicantDetailModal({
 
   const profile = detail ?? applicant;
 
+  const handleSaveApplicant = async (payload: ApplicantUpdatePayload) => {
+    try {
+      const updated = await updateApplicant(applicant.candidate_id, payload);
+      setDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...updated,
+            }
+          : null,
+      );
+      onApplicantUpdated?.(updated);
+      toast.success("지원자 정보가 수정되었습니다.");
+      setIsEditModalOpen(false);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "지원자 정보 수정 중 오류가 발생했습니다."));
+    }
+  };
+
+  const handleDeleteApplicant = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await deleteApplicant(applicant.candidate_id);
+      onApplicantDeleted?.(applicant.candidate_id);
+      toast.success(response.message);
+      setIsDeleteModalOpen(false);
+      onClose();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "지원자 삭제 중 오류가 발생했습니다."));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId: number) => {
+    setRevokingInvitationId(invitationId);
+    try {
+      const response = await interviewBookingInvitationApi.revokeInvitation(
+        invitationId,
+      );
+      setDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              booking_invitations: prev.booking_invitations.map((item) =>
+                item.invitation_id === invitationId
+                  ? {
+                      ...item,
+                      revoked_at: new Date().toISOString(),
+                    }
+                  : item,
+              ),
+            }
+          : prev,
+      );
+      toast.success(response.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "초대 링크 회수에 실패했습니다."));
+    } finally {
+      setRevokingInvitationId(null);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!detail?.current_booking) return;
+
+    setIsCancellingBooking(true);
+    try {
+      const response = await interviewBookingApi.cancelBooking(
+        detail.current_booking.booking_id,
+        {
+          candidateId: applicant.candidate_id,
+        },
+      );
+      setDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              current_booking: null,
+            }
+          : prev,
+      );
+      toast.success(response.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "면접 예약 취소에 실패했습니다."));
+    } finally {
+      setIsCancellingBooking(false);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-[115] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
@@ -131,6 +245,14 @@ export default function ApplicantDetailModal({
         <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <section className="border-b border-slate-100 p-6 lg:border-b-0 lg:border-r">
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <ApplicantDetailActionBar
+                  onEdit={() => setIsEditModalOpen(true)}
+                  onDelete={() => setIsDeleteModalOpen(true)}
+                  onClose={onClose}
+                />
+              </div>
+
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
                 <p className="text-xs font-black uppercase tracking-wider text-slate-400">
                   지원 포지션
@@ -224,6 +346,81 @@ export default function ApplicantDetailModal({
                   )}
                 </div>
               </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:col-span-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-400">
+                      현재 예약 상태
+                    </p>
+                    <p className="mt-2 text-base font-black text-slate-900">
+                      {detail?.current_booking
+                        ? detail.current_booking.cancelled_at
+                          ? "취소된 예약"
+                          : "예약 있음"
+                        : "예약 없음"}
+                    </p>
+                  </div>
+                  {detail?.current_booking && !detail.current_booking.cancelled_at ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleCancelBooking()}
+                      disabled={isCancellingBooking}
+                      className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 transition hover:bg-amber-100 disabled:opacity-50"
+                    >
+                      <i
+                        className={`bx ${
+                          isCancellingBooking
+                            ? "bx-loader-alt animate-spin"
+                            : "bx-calendar-x"
+                        } text-base`}
+                      />
+                      예약 취소
+                    </button>
+                  ) : null}
+                </div>
+
+                {detail?.current_booking ? (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                        예약 ID
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">
+                        #{detail.current_booking.booking_id}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                        면접 차수
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">
+                        {detail.current_booking.interview_round || "-"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                        시작 시각
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">
+                        {formatDateTime(detail.current_booking.interview_starts_at)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                        면접 장소
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">
+                        {detail.current_booking.interview_location || "미정"}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm font-semibold text-slate-400">
+                    아직 확정된 면접 예약이 없습니다.
+                  </p>
+                )}
+              </div>
             </div>
           </section>
 
@@ -290,6 +487,26 @@ export default function ApplicantDetailModal({
                           </p>
                         </div>
                       </div>
+
+                      {!item.revoked_at ? (
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => void handleRevokeInvitation(item.invitation_id)}
+                            disabled={revokingInvitationId === item.invitation_id}
+                            className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                          >
+                            <i
+                              className={`bx ${
+                                revokingInvitationId === item.invitation_id
+                                  ? "bx-loader-alt animate-spin"
+                                  : "bx-block"
+                              } text-base`}
+                            />
+                            초대 회수
+                          </button>
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -302,6 +519,24 @@ export default function ApplicantDetailModal({
           </section>
         </div>
       </div>
+
+      <ApplicantEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        applicant={profile}
+        onSave={handleSaveApplicant}
+      />
+
+      <ApplicantDeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (isDeleting) return;
+          setIsDeleteModalOpen(false);
+        }}
+        applicant={profile}
+        onConfirm={handleDeleteApplicant}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

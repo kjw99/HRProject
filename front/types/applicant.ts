@@ -52,9 +52,23 @@ export interface ApplicantInvitationHistory {
   revoked_at: string | null;
 }
 
+export interface ApplicantCurrentBooking {
+  booking_id: number;
+  candidate_id: number;
+  slot_id: number;
+  interview_round: string | null;
+  interview_starts_at: string | null;
+  interview_ends_at: string | null;
+  interview_location: string | null;
+  position_name: string | null;
+  created_at: string | null;
+  cancelled_at: string | null;
+}
+
 export interface ApplicantDetail extends Applicant {
   position_name?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  current_booking?: ApplicantCurrentBooking | null;
   booking_invitations: ApplicantInvitationHistory[];
 }

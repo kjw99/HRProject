@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -291,6 +292,14 @@ export default function InterviewerClient({
             <i className="bx bx-user-plus text-lg leading-none" />
             <span className="whitespace-nowrap">면접관 추가</span>
           </button>
+
+          <Link
+            href="/hr/interviewers/communication"
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-[13px] font-black text-slate-700 shadow-sm transition-all hover:bg-slate-50 xl:self-center"
+          >
+            <i className="bx bx-send text-lg leading-none text-indigo-500" />
+            <span className="whitespace-nowrap">초대 / 메일 운영</span>
+          </Link>
         </div>
       </div>
 

@@ -2,6 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.interview_booking import InterviewBooking
 from app.models.interview_slot import InterviewSlot
@@ -41,6 +42,26 @@ class InterviewBookingRepository:
             .where(
                 InterviewBooking.candidate_id == candidate_id,
                 InterviewBooking.cancelled_at.is_(None),
+            )
+            .order_by(InterviewBooking.booking_id.desc())
+            .limit(1)
+        )
+
+    async def find_active_by_candidate_id_with_slot(
+        self,
+        db: AsyncSession,
+        candidate_id: int,
+    ) -> InterviewBooking | None:
+        return await db.scalar(
+            select(InterviewBooking)
+            .where(
+                InterviewBooking.candidate_id == candidate_id,
+                InterviewBooking.cancelled_at.is_(None),
+            )
+            .options(
+                selectinload(InterviewBooking.slot).selectinload(
+                    InterviewSlot.position
+                )
             )
             .order_by(InterviewBooking.booking_id.desc())
             .limit(1)

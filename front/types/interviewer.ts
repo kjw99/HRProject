@@ -100,27 +100,33 @@ export interface InterviewerMutationResponse {
 }
 
 export interface InterviewerInvitePayload {
-  interviewerEmail: string;
-  interviewerName: string;
+  interviewerId: number;
+  expiresInDays?: number;
 }
 
 export interface InterviewerInviteResponse {
-  message?: string;
-  inviteUrl?: string;
-  inviteToken?: string;
-  expiresAt?: string | null;
-  [key: string]: unknown;
+  inviteId: number;
+  interviewerId: number;
+  inviteUrl: string;
+  expiresAt: string;
 }
 
 export interface InterviewerInviteAcceptPayload {
   token: string;
 }
 
+export interface InterviewerAuthInfo {
+  interviewerId: number;
+  interviewerEmail: string;
+  interviewerName: string;
+  positionId: number | null;
+  interviewRound: string | null;
+}
+
 export interface InterviewerInviteAcceptResponse {
-  accessToken?: string;
-  token?: string;
-  tokenType?: string;
-  [key: string]: unknown;
+  accessToken: string;
+  tokenType: string;
+  interviewer: InterviewerAuthInfo;
 }
 
 export interface InterviewerMailPayload {

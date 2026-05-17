@@ -11,8 +11,14 @@ interface HrSidebarProps {
 
 const MENU_ITEMS: HrMenuItem[] = [
   { name: "대시보드", path: "/hr", icon: "bx-grid-alt" },
+  { name: "지원자 관리", path: "/hr/applicants", icon: "bx-group" },
   { name: "부서 관리", path: "/hr/positions", icon: "bx-buildings" },
   { name: "면접관 관리", path: "/hr/interviewers", icon: "bx-user-voice" },
+  {
+    name: "면접관 메일 운영",
+    path: "/hr/interviewers/communication",
+    icon: "bx-send",
+  },
   { name: "이력서 파싱", path: "/hr/parsing", icon: "bx-file-find" },
   { name: "면접 일정", path: "/hr/schedule", icon: "bx-calendar" },
   { name: "이메일 템플릿", path: "/hr/email-templates", icon: "bx-envelope" },
@@ -47,7 +53,13 @@ export default function HrSidebar({ isOpen, onClose }: HrSidebarProps) {
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-6">
           {MENU_ITEMS.map((item) => {
-            const isActive = pathname === item.path;
+            const isActive =
+              item.path === "/hr"
+                ? pathname === item.path
+                : item.path === "/hr/interviewers"
+                  ? pathname === item.path
+                  : pathname === item.path ||
+                    pathname.startsWith(`${item.path}/`);
             return (
               <Link
                 key={item.path}

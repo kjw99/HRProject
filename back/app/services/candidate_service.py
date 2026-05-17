@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.candidate_repository import candidate_repository
-from app.schemas.candidate import CandidateDetailRead, CandidateUpdate
+from app.repositories.interview_booking_repository import interview_booking_repository
+from app.schemas.candidate import CandidateBookingRead, CandidateDetailRead, CandidateUpdate
 
 
 class CandidateService:
@@ -17,6 +18,13 @@ class CandidateService:
         candidate = await candidate_repository.find_by_id_with_details(db, candidate_id)
         if not candidate:
             return None
+
+        active_booking = (
+            await interview_booking_repository.find_active_by_candidate_id_with_slot(
+                db,
+                candidate_id,
+            )
+        )
 
         invitations = sorted(
             candidate.booking_invitations,
@@ -42,6 +50,35 @@ class CandidateService:
             else None,
             created_at=candidate.created_at,
             updated_at=candidate.updated_at,
+            current_booking=(
+                CandidateBookingRead(
+                    booking_id=active_booking.booking_id,
+                    candidate_id=active_booking.candidate_id,
+                    slot_id=active_booking.slot_id,
+                    interview_round=active_booking.slot.interview_round
+                    if active_booking.slot is not None
+                    else None,
+                    interview_starts_at=active_booking.slot.interview_starts_at
+                    if active_booking.slot is not None
+                    else None,
+                    interview_ends_at=active_booking.slot.interview_ends_at
+                    if active_booking.slot is not None
+                    else None,
+                    interview_location=active_booking.slot.interview_location
+                    if active_booking.slot is not None
+                    else None,
+                    position_name=(
+                        active_booking.slot.position.position_name
+                        if active_booking.slot is not None
+                        and active_booking.slot.position is not None
+                        else None
+                    ),
+                    created_at=active_booking.created_at,
+                    cancelled_at=active_booking.cancelled_at,
+                )
+                if active_booking is not None
+                else None
+            ),
             booking_invitations=[
                 {
                     "invitation_id": invitation.invitation_id,

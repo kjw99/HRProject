@@ -18,14 +18,15 @@ import { interviewerApi } from "@/lib/hr/interviewers.client";
 import { interviewSlotsApi } from "@/lib/hr/interview-slots.client";
 import { positionApi } from "@/lib/hr/positions.client";
 
-export type ScheduleBookingModalTab = "slots" | "booking";
+export type ScheduleOperationsModalSection = "slots" | "booking";
+export type ScheduleBookingModalTab = ScheduleOperationsModalSection;
 
-interface ScheduleBookingModalProps {
+export interface ScheduleOperationsModalProps {
   isOpen: boolean;
   applicants: Applicant[];
   onClose: () => void;
   /** 모달이 열릴 때 기본 탭 (시간대·슬롯 / 예약 초대) */
-  initialMainTab?: ScheduleBookingModalTab;
+  initialMainTab?: ScheduleOperationsModalSection;
   /** `yyyy-MM-dd`. 없으면 오늘 날짜로 면접 일(시간대 조회)을 초기화합니다. */
   initialInterviewDate?: string;
 }
@@ -115,13 +116,13 @@ const createMockInvitationSlots = (): AvailableInterviewSlot[] => {
   ];
 };
 
-export default function ScheduleBookingModal({
+export default function ScheduleOperationsModal({
   isOpen,
   applicants,
   onClose,
   initialMainTab = "slots",
   initialInterviewDate,
-}: ScheduleBookingModalProps) {
+}: ScheduleOperationsModalProps) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [positionsLoaded, setPositionsLoaded] = useState(false);
   const [selectedPositionId, setSelectedPositionId] = useState<number | null>(
@@ -131,7 +132,7 @@ export default function ScheduleBookingModal({
   const [positionFilterQuery, setPositionFilterQuery] = useState("");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [mainTab, setMainTab] = useState<ScheduleBookingModalTab>("slots");
+  const [mainTab, setMainTab] = useState<ScheduleOperationsModalSection>("slots");
 
   const [interviewDate, setInterviewDate] = useState(todayISODate);
   const [interviewStart, setInterviewStart] = useState("09:00");

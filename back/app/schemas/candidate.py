@@ -38,10 +38,24 @@ class CandidateInvitationHistoryRead(BaseModel):
     revoked_at: datetime | None = None
 
 
+class CandidateBookingRead(BaseModel):
+    booking_id: int
+    candidate_id: int
+    slot_id: int
+    interview_round: str | None = None
+    interview_starts_at: datetime | None = None
+    interview_ends_at: datetime | None = None
+    interview_location: str | None = None
+    position_name: str | None = None
+    created_at: datetime | None = None
+    cancelled_at: datetime | None = None
+
+
 class CandidateDetailRead(CandidateRead):
     position_name: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    current_booking: CandidateBookingRead | None = None
     booking_invitations: list[CandidateInvitationHistoryRead] = Field(
         default_factory=list
     )
