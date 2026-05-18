@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -21,6 +23,27 @@ class InterviewerInviteRepository:
             .options(selectinload(InterviewerInvite.interviewer))
         )
         return result.one_or_none()
+
+    async def find_active_by_interviewer_id(
+        self,
+        db: AsyncSession,
+        interviewer_id: int,
+        *,
+        now: datetime | None = None,
+    ) -> InterviewerInvite | None:
+        current = now or datetime.now(timezone.utc)
+        result = await db.scalars(
+            select(InterviewerInvite)
+            .where(
+                InterviewerInvite.interviewer_id == interviewer_id,
+                InterviewerInvite.revoked_at.is_(None),
+                InterviewerInvite.expires_at > current,
+                InterviewerInvite.raw_token.is_not(None),
+            )
+            .order_by(InterviewerInvite.created_at.desc())
+            .limit(1)
+        )
+        return result.first()
 
 
 interviewer_invite_repository = InterviewerInviteRepository()

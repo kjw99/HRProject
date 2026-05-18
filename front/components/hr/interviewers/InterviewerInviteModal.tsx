@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import HrModal from "@/components/hr/shared/HrModal";
+import HrModalFooter from "@/components/hr/shared/HrModalFooter";
+import HrSuccessBanner from "@/components/hr/shared/HrSuccessBanner";
 import { getApiErrorMessage } from "@/lib/hr/api-error";
 import { interviewerInviteApi } from "@/lib/hr/interviewer-invites.client";
 import type { HrInterviewer, InterviewerInviteResponse } from "@/types/interviewer";
@@ -21,6 +23,12 @@ export default function InterviewerInviteModal({
   const [expiresInDays, setExpiresInDays] = useState(7);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<InterviewerInviteResponse | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setResult(null);
+    }
+  }, [isOpen, interviewer?.interviewerId]);
 
   if (!interviewer) return null;
 
@@ -59,34 +67,49 @@ export default function InterviewerInviteModal({
       theme="indigo"
       size="md"
       footer={
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          {result?.inviteUrl ? (
-            <button
-              type="button"
-              onClick={() => void handleCopy()}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-100"
-            >
-              <i className="bx bx-copy text-lg" />
-              링크 복사
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => void handleCreateInvite()}
-            disabled={isSubmitting}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-indigo-700 disabled:opacity-50"
-          >
-            <i
-              className={`bx ${
-                isSubmitting ? "bx-loader-alt animate-spin" : "bx-link"
-              } text-lg`}
-            />
-            링크 생성
-          </button>
-        </div>
+        <HrModalFooter
+          actions={[
+            ...(result?.inviteUrl
+              ? [
+                  {
+                    label: "링크 복사",
+                    onClick: () => void handleCopy(),
+                    icon: "copy",
+                    variant: "secondary" as const,
+                  },
+                ]
+              : []),
+            {
+              label: "링크 생성",
+              onClick: () => void handleCreateInvite(),
+              icon: "link",
+              variant: "primary",
+              disabled: isSubmitting,
+              loading: isSubmitting,
+            },
+          ]}
+        />
       }
     >
       <div className="space-y-5 p-5 sm:p-6">
+        {result?.inviteUrl ? (
+          <HrSuccessBanner
+            title="초대 링크가 준비되었습니다"
+            description={
+              <>
+                <span className="block break-all font-mono text-xs">
+                  {result.inviteUrl}
+                </span>
+                <span className="mt-2 block text-xs">
+                  만료: {new Date(result.expiresAt).toLocaleString("ko-KR")}
+                </span>
+              </>
+            }
+            icon="link"
+            tone="indigo"
+          />
+        ) : null}
+
         <label className="grid gap-2 text-sm font-black text-slate-600">
           링크 유효 기간
           <select
@@ -111,20 +134,6 @@ export default function InterviewerInviteModal({
             수락 후 인터뷰어 전용 화면으로 이동할 수 있습니다.
           </p>
         </div>
-
-        {result ? (
-          <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
-            <p className="text-xs font-black uppercase tracking-wider text-indigo-500">
-              Invite Ready
-            </p>
-            <p className="mt-2 break-all font-mono text-sm font-bold text-indigo-700">
-              {result.inviteUrl}
-            </p>
-            <p className="mt-2 text-xs font-semibold text-indigo-600">
-              만료 시각: {new Date(result.expiresAt).toLocaleString("ko-KR")}
-            </p>
-          </div>
-        ) : null}
       </div>
     </HrModal>
   );

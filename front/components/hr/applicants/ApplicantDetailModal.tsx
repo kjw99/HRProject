@@ -14,6 +14,9 @@ import type {
   ApplicantDetail,
   ApplicantUpdatePayload,
 } from "@/types/applicant";
+import HrInfoSection from "@/components/hr/shared/HrInfoSection";
+import { BookingInviteStatusBadge } from "@/components/hr/shared/HrStatusBadge";
+import { resolveBookingInviteStatus } from "@/lib/hr/invitation-status";
 import ApplicantDeleteConfirmModal from "./ApplicantDeleteConfirmModal";
 import ApplicantDetailActionBar from "./ApplicantDetailActionBar";
 import ApplicantEditModal from "./ApplicantEditModal";
@@ -243,17 +246,19 @@ export default function ApplicantDetailModal({
         </div>
 
         <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <section className="border-b border-slate-100 p-6 lg:border-b-0 lg:border-r">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <ApplicantDetailActionBar
-                  onEdit={() => setIsEditModalOpen(true)}
-                  onDelete={() => setIsDeleteModalOpen(true)}
-                  onClose={onClose}
-                />
-              </div>
+          <section className="space-y-4 overflow-y-auto border-b border-slate-100 bg-slate-50/30 p-4 sm:p-6 lg:max-h-[min(70vh,640px)] lg:border-b-0 lg:border-r">
+            <ApplicantDetailActionBar
+              onEdit={() => setIsEditModalOpen(true)}
+              onDelete={() => setIsDeleteModalOpen(true)}
+              onClose={onClose}
+            />
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+            <HrInfoSection
+              title="기본 정보"
+              eyebrow="Profile"
+              eyebrowIcon="user"
+            >
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-black uppercase tracking-wider text-slate-400">
                   지원 포지션
                 </p>
@@ -262,6 +267,7 @@ export default function ApplicantDetailModal({
                 </p>
               </div>
 
+              <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-black uppercase tracking-wider text-slate-400">
                   이메일
@@ -325,11 +331,15 @@ export default function ApplicantDetailModal({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:col-span-2">
-                <p className="text-xs font-black uppercase tracking-wider text-slate-400">
-                  우대 조건 충족
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
+              </div>
+            </HrInfoSection>
+
+            <HrInfoSection
+              title="우대 조건"
+              eyebrow="Criteria"
+              eyebrowIcon="certification"
+            >
+              <div className="flex flex-wrap gap-2">
                   {profile.meets_preferred_criteria?.length ? (
                     profile.meets_preferred_criteria.map((criteria) => (
                       <span
@@ -344,10 +354,14 @@ export default function ApplicantDetailModal({
                       충족한 우대 조건이 없습니다.
                     </span>
                   )}
-                </div>
               </div>
+            </HrInfoSection>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:col-span-2">
+            <HrInfoSection
+              title="예약 상태"
+              eyebrow="Booking"
+              eyebrowIcon="calendar-check"
+            >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-black uppercase tracking-wider text-slate-400">
@@ -420,8 +434,7 @@ export default function ApplicantDetailModal({
                     아직 확정된 면접 예약이 없습니다.
                   </p>
                 )}
-              </div>
-            </div>
+            </HrInfoSection>
           </section>
 
           <section className="flex min-h-0 flex-col bg-slate-50/50">
@@ -458,15 +471,9 @@ export default function ApplicantDetailModal({
                             발송 시각 {formatDateTime(item.created_at)}
                           </p>
                         </div>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-black ${
-                            item.revoked_at
-                              ? "bg-rose-50 text-rose-700"
-                              : "bg-emerald-50 text-emerald-700"
-                          }`}
-                        >
-                          {item.revoked_at ? "만료/회수" : "유효"}
-                        </span>
+                        <BookingInviteStatusBadge
+                          status={resolveBookingInviteStatus(item)}
+                        />
                       </div>
 
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -488,7 +495,7 @@ export default function ApplicantDetailModal({
                         </div>
                       </div>
 
-                      {!item.revoked_at ? (
+                      {resolveBookingInviteStatus(item) === "active" ? (
                         <div className="mt-3 flex justify-end">
                           <button
                             type="button"

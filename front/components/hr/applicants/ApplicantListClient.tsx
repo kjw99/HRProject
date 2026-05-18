@@ -212,52 +212,18 @@ export default function ApplicantListClient({
         header: "액션",
         enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setDetailTarget(row.original);
-                setIsDetailModalOpen(true);
-              }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-100"
-            >
-              <i className="bx bx-user-pin" />
-              상세
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDetailTarget(row.original);
-                setIsEditModalOpen(true);
-              }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-100"
-            >
-              <i className="bx bx-edit" />
-              수정
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMailTarget(row.original);
-                setIsMailModalOpen(true);
-              }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-slate-800"
-            >
-              <i className="bx bx-envelope" />
-              메일 보내기
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDetailTarget(row.original);
-                setIsDeleteModalOpen(true);
-              }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-100"
-            >
-              <i className="bx bx-trash" />
-              삭제
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDetailTarget(row.original);
+              setIsDetailModalOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+            title="상세에서 수정·메일·삭제를 진행할 수 있습니다"
+          >
+            <i className="bx bx-user-pin" />
+            상세
+          </button>
         ),
       }),
     ],

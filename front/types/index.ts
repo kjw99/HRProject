@@ -14,6 +14,15 @@ export type {
   EmailTemplateMutationResponse,
 } from "./emailTemplate";
 export type {
+  EmailTemplateFormState,
+  EmailTemplateManagerClientProps,
+  EmailTemplatePageHeroProps,
+  EmailTemplateListPanelProps,
+  EmailTemplateEditorPanelProps,
+  EmailTemplateVariablesPanelProps,
+  EmailTemplatePreviewPanelProps,
+} from "./email-template-ui";
+export type {
   BoxIconName,
   HrPageHeroTheme,
   HrQuickLink,
@@ -22,8 +31,24 @@ export type {
   HrModalSize,
   HrModalTheme,
   HrModalProps,
+  HrModalActionVariant,
+  HrModalAction,
+  HrModalFooterProps,
+  HrSidebarMenuItem,
+  HrSidebarMenuGroup,
+  BookingInviteStatus,
+  HrStatusBadgeTone,
+  HrStatusBadgeProps,
+  HrInfoSectionProps,
+  HrSuccessBannerProps,
   CriteriaFilter,
 } from "./hr-ui";
+export type {
+  AdminOperationalMetric,
+  AdminQuickActionCard,
+  AdminHomeOverviewProps,
+  AdminHomeMetricsProps,
+} from "./admin-ui";
 export type {
   InvitationRecipientDraft,
   InvitationFailureDraft,

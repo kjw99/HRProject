@@ -62,6 +62,8 @@ export interface QuestionGenerationJobResponse {
 
 export type InterviewRound = "1차" | "2차" | "3차";
 
+import type { Applicant } from "./applicant";
+
 export interface HrInterviewer {
   interviewerId: number;
   interviewerEmail: string;
@@ -109,6 +111,8 @@ export interface InterviewerInviteResponse {
   interviewerId: number;
   inviteUrl: string;
   expiresAt: string;
+  /** 기존 활성 링크를 재사용한 경우 true */
+  reused?: boolean;
 }
 
 export interface InterviewerInviteAcceptPayload {
@@ -142,4 +146,17 @@ export interface InterviewerMailResponse {
   inviteUrl?: string;
   expiresAt?: string | null;
   [key: string]: unknown;
+}
+
+export interface InterviewerMailComposerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  interviewer: HrInterviewer | null;
+  /** 메일 작성 시 미리 채울 초대 링크 */
+  initialInviteUrl?: string | null;
+  initialExpiresInDays?: number;
+  /** 기존 활성 링크를 불러온 경우 */
+  inviteReused?: boolean;
+  /** candidate_name 등 변수 선택용 면접관 목록 */
+  allInterviewers?: readonly HrInterviewer[];
 }

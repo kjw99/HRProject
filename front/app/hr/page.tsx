@@ -27,7 +27,6 @@ async function getDashboardData() {
   const q2 = results[0];
   const q1 = results[1];
   const q4 = results[2];
-
   const totalApplicants: number = q2.length;
   const activeJobs: number = new Set(
     q2.map((applicant) => applicant.position_id),

@@ -144,9 +144,11 @@ export default function HrPageHero({
         {stats && stats.length > 0 ? (
           <dl
             className={`grid shrink-0 gap-2 sm:gap-3 ${
-              stats.length > 1
-                ? "grid-cols-2 lg:w-[min(100%,280px)] lg:grid-cols-1"
-                : "grid-cols-1 lg:w-[min(100%,240px)]"
+              stats.length >= 3
+                ? "grid-cols-1 sm:grid-cols-2 lg:w-[min(100%,280px)] lg:grid-cols-1"
+                : stats.length > 1
+                  ? "grid-cols-2 lg:w-[min(100%,280px)] lg:grid-cols-1"
+                  : "grid-cols-1 lg:w-[min(100%,240px)]"
             }`}
           >
             {stats.map((stat) => (

@@ -1,4 +1,4 @@
-"use client";
+ï»¿"use client";
 
 import { useEffect } from "react";
 import type { HrModalProps, HrModalTheme } from "@/types/hr-ui";
@@ -104,7 +104,7 @@ export default function HrModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="´Ý±â"
+            aria-label="Close"
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-slate-400 transition hover:bg-white hover:text-slate-600"
           >
             <i className="bx bx-x text-2xl" />
@@ -114,7 +114,7 @@ export default function HrModal({
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
 
         {footer ? (
-          <footer className="border-t border-slate-100 bg-slate-50 px-5 py-4 sm:px-6">
+          <footer className="border-t border-slate-100 bg-slate-50 px-5 py-4 sm:px-6 sm:py-[18px]">
             {footer}
           </footer>
         ) : null}
@@ -122,3 +122,4 @@ export default function HrModal({
     </div>
   );
 }
+

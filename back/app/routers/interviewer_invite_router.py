@@ -27,7 +27,7 @@ async def create_interviewer_invite(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await interviewer_invite_service.create_invite(
+    return await interviewer_invite_service.get_or_create_invite(
         db=db,
         data=data,
         created_by_user_id=current_user.user_id,

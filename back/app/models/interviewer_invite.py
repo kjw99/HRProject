@@ -29,6 +29,10 @@ class InterviewerInvite(Base):
         unique=True,
         index=True,
     )
+    raw_token: Mapped[str | None] = mapped_column(
+        String(256),
+        nullable=True,
+    )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

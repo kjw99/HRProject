@@ -2,14 +2,24 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/hr/api-error";
+import { interviewerInviteApi } from "@/lib/hr/interviewer-invites.client";
 import type { HrInterviewer } from "@/types/interviewer";
 import type { Position } from "@/types/position";
-import InterviewerInviteModal from "./InterviewerInviteModal";
 import InterviewerMailComposerModal from "./InterviewerMailComposerModal";
 
 interface InterviewerCommunicationClientProps {
   interviewers: HrInterviewer[];
   positions: Position[];
+}
+
+const DEFAULT_INVITE_EXPIRES_DAYS = 7;
+
+function expiresInDaysFromIso(expiresAt: string, fallback = DEFAULT_INVITE_EXPIRES_DAYS) {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (Number.isNaN(ms)) return fallback;
+  return Math.min(30, Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24))));
 }
 
 export default function InterviewerCommunicationClient({
@@ -20,7 +30,13 @@ export default function InterviewerCommunicationClient({
   const [positionId, setPositionId] = useState<number | "ALL">("ALL");
   const [selectedInterviewer, setSelectedInterviewer] =
     useState<HrInterviewer | null>(null);
-  const [modal, setModal] = useState<"invite" | "mail" | null>(null);
+  const [isMailOpen, setIsMailOpen] = useState(false);
+  const [pendingInviteUrl, setPendingInviteUrl] = useState<string | null>(null);
+  const [pendingExpiresInDays, setPendingExpiresInDays] = useState(
+    DEFAULT_INVITE_EXPIRES_DAYS,
+  );
+  const [inviteReused, setInviteReused] = useState(false);
+  const [openingMailForId, setOpeningMailForId] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -44,14 +60,40 @@ export default function InterviewerCommunicationClient({
     });
   }, [interviewers, positionId, search]);
 
-  const openModal = (type: "invite" | "mail", interviewer: HrInterviewer) => {
-    setSelectedInterviewer(interviewer);
-    setModal(type);
+  const closeMailModal = () => {
+    setIsMailOpen(false);
+    setSelectedInterviewer(null);
+    setPendingInviteUrl(null);
+    setInviteReused(false);
+    setPendingExpiresInDays(DEFAULT_INVITE_EXPIRES_DAYS);
   };
 
-  const closeModal = () => {
-    setSelectedInterviewer(null);
-    setModal(null);
+  const handleOpenMail = async (interviewer: HrInterviewer) => {
+    setOpeningMailForId(interviewer.interviewerId);
+    try {
+      const invite = await interviewerInviteApi.ensureInvite({
+        interviewerId: interviewer.interviewerId,
+        expiresInDays: DEFAULT_INVITE_EXPIRES_DAYS,
+      });
+
+      setSelectedInterviewer(interviewer);
+      setPendingInviteUrl(invite.inviteUrl);
+      setPendingExpiresInDays(expiresInDaysFromIso(invite.expiresAt));
+      setInviteReused(Boolean(invite.reused));
+      setIsMailOpen(true);
+
+      if (invite.reused) {
+        toast.info("유효한 기존 초대 링크를 불러왔습니다.");
+      } else {
+        toast.success("새 초대 링크를 생성했습니다.");
+      }
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(error, "초대 링크를 준비하지 못했습니다."),
+      );
+    } finally {
+      setOpeningMailForId(null);
+    }
   };
 
   return (
@@ -110,8 +152,8 @@ export default function InterviewerCommunicationClient({
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="rounded-[28px] border-2 border-slate-300/80 bg-white shadow-md ring-1 ring-slate-900/[0.03]">
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
             <div>
               <p className="text-sm font-black text-slate-900">
@@ -137,58 +179,57 @@ export default function InterviewerCommunicationClient({
             </div>
           ) : (
             <ul className="grid gap-3 p-4 sm:p-5">
-              {filtered.map((interviewer) => (
-                <li
-                  key={interviewer.interviewerId}
-                  className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-base font-black text-slate-900">
-                          {interviewer.interviewerName}
-                        </p>
-                        {interviewer.interviewRound ? (
-                          <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-black text-indigo-600">
-                            {interviewer.interviewRound}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="text-sm font-semibold text-slate-500">
-                        {interviewer.interviewerEmail}
-                      </p>
-                      <p className="text-sm font-bold text-slate-700">
-                        {interviewer.positionName || "직무 미지정"}
-                      </p>
-                    </div>
+              {filtered.map((interviewer) => {
+                const isOpening = openingMailForId === interviewer.interviewerId;
 
-                    <div className="flex flex-wrap gap-2">
+                return (
+                  <li
+                    key={interviewer.interviewerId}
+                    className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4"
+                  >
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-base font-black text-slate-900">
+                            {interviewer.interviewerName}
+                          </p>
+                          {interviewer.interviewRound ? (
+                            <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-black text-indigo-600">
+                              {interviewer.interviewRound}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-sm font-semibold text-slate-500">
+                          {interviewer.interviewerEmail}
+                        </p>
+                        <p className="text-sm font-bold text-slate-700">
+                          {interviewer.positionName || "직무 미지정"}
+                        </p>
+                      </div>
+
                       <button
                         type="button"
-                        onClick={() => openModal("invite", interviewer)}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-black text-indigo-700 transition hover:bg-indigo-100"
+                        onClick={() => void handleOpenMail(interviewer)}
+                        disabled={isOpening}
+                        className="inline-flex items-center justify-center gap-2 self-start rounded-2xl bg-slate-900 px-5 py-2.5 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60 lg:self-auto"
                       >
-                        <i className="bx bx-link text-lg" />
-                        초대 링크
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openModal("mail", interviewer)}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800"
-                      >
-                        <i className="bx bx-send text-lg" />
-                        메일 보내기
+                        <i
+                          className={`bx ${
+                            isOpening ? "bx-loader-alt animate-spin" : "bx-send"
+                          } text-lg`}
+                        />
+                        면접관 메일 보내기
                       </button>
                     </div>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
 
-        <aside className="space-y-4">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+          <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/90 p-5 shadow-none sm:p-6">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">
               Workflow
             </p>
@@ -196,14 +237,17 @@ export default function InterviewerCommunicationClient({
               권장 운영 흐름
             </h2>
             <ol className="mt-4 space-y-3 text-sm font-semibold leading-6 text-slate-600">
-              <li>1. 면접관 목록에서 대상자를 찾습니다.</li>
-              <li>2. 필요하면 먼저 초대 링크를 생성합니다.</li>
-              <li>3. 메일 템플릿을 적용해 초대 메일을 보냅니다.</li>
-              <li>4. 링크 만료일과 직무/차수 정보를 다시 확인합니다.</li>
+              <li>1. 면접관을 선택하고 「면접관 메일 보내기」를 누릅니다.</li>
+              <li>
+                2. 유효한 초대 링크가 있으면 자동으로 불러오고, 없으면 새로
+                생성합니다.
+              </li>
+              <li>3. 템플릿을 적용해 제목·본문을 확인합니다.</li>
+              <li>4. 메일을 발송합니다.</li>
             </ol>
           </div>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/90 p-5 shadow-none sm:p-6">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-500">
               Coverage
             </p>
@@ -211,7 +255,7 @@ export default function InterviewerCommunicationClient({
               현재 연결된 기능
             </h2>
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600">
-              <li>초대 링크 생성 API 연결</li>
+              <li>활성 초대 링크 자동 재사용</li>
               <li>면접관 메일 발송 API 연결</li>
               <li>이메일 템플릿 재사용 연결</li>
               <li>Interviewer 초대 수락 페이지 연결</li>
@@ -220,15 +264,14 @@ export default function InterviewerCommunicationClient({
         </aside>
       </section>
 
-      <InterviewerInviteModal
-        isOpen={modal === "invite"}
-        onClose={closeModal}
-        interviewer={selectedInterviewer}
-      />
       <InterviewerMailComposerModal
-        isOpen={modal === "mail"}
-        onClose={closeModal}
+        isOpen={isMailOpen}
+        onClose={closeMailModal}
         interviewer={selectedInterviewer}
+        allInterviewers={interviewers}
+        initialInviteUrl={pendingInviteUrl}
+        initialExpiresInDays={pendingExpiresInDays}
+        inviteReused={inviteReused}
       />
     </>
   );

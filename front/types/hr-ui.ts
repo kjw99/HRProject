@@ -48,3 +48,63 @@ export interface HrModalProps {
 }
 
 export type CriteriaFilter = "ALL" | "HAS" | "NONE";
+
+export type HrModalActionVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "danger";
+
+export interface HrModalAction {
+  label: string;
+  onClick: () => void;
+  icon?: BoxIconName;
+  variant?: HrModalActionVariant;
+  disabled?: boolean;
+  loading?: boolean;
+  type?: "button" | "submit";
+}
+
+export interface HrModalFooterProps {
+  actions: readonly HrModalAction[];
+  align?: "end" | "stretch";
+}
+
+export interface HrSidebarMenuItem {
+  name: string;
+  path: string;
+  icon: string;
+}
+
+export interface HrSidebarMenuGroup {
+  id: string;
+  title: string;
+  items: readonly HrSidebarMenuItem[];
+}
+
+export type BookingInviteStatus = "active" | "revoked" | "expired";
+
+export type HrStatusBadgeTone = "emerald" | "rose" | "amber" | "slate" | "indigo";
+
+export interface HrStatusBadgeProps {
+  label: string;
+  icon?: BoxIconName;
+  tone?: HrStatusBadgeTone;
+  className?: string;
+}
+
+export interface HrInfoSectionProps {
+  title: string;
+  eyebrow?: string;
+  eyebrowIcon?: BoxIconName;
+  children: ReactNode;
+  className?: string;
+}
+
+export interface HrSuccessBannerProps {
+  title: string;
+  description?: ReactNode;
+  icon?: BoxIconName;
+  tone?: "indigo" | "emerald";
+  className?: string;
+}

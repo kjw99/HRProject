@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDateTimeKST } from "@/lib/common/format-datetime";
 import { DeptStatus } from "@/types/hr";
 import type { UpcomingInterview } from "./types";
 
@@ -14,19 +15,7 @@ export default function DeptStatusCard({
   onOpenDetail,
   onOpenAssign,
 }: DeptStatusCardProps) {
-  const updatedLabel = item.lastUpdated
-    ? new Date(item.lastUpdated).toLocaleDateString("ko-KR", {
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : new Date().toLocaleDateString("ko-KR", {
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+  const updatedLabel = formatDateTimeKST(item.lastUpdated);
 
   return (
     <div
