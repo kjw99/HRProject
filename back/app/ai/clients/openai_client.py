@@ -15,7 +15,7 @@ DEFAULT_TEMPERATURE = 0.2
 def get_chat_model() -> ChatOpenAI:
     load_dotenv()
 
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("CORS_ORIGINS")
     if not api_key:
         raise ExternalServiceException("OPENAI_API_KEY가 설정되어 있지 않습니다.")
 

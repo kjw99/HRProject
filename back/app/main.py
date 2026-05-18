@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers.interview_booking_invitation_router import (
@@ -29,6 +30,8 @@ from app.routers.interviewer_question_router import (
     router as interviewer_question_router,
 )
 
+from dotenv import load_dotenv
+
 # alembic 사용중.
 # Base.metadata.create_all(bind=async_engine)
 
@@ -58,14 +61,12 @@ app.include_router(email_template_router)
 app.include_router(candidate_mail_router)
 app.include_router(interviewer_mail_router)
 
+load_dotenv()
+
 # CORS: 라우터 등록 이후 마지막에 두면(Starlette 권장) 에러 응답에도 헤더가 붙기 쉽습니다.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://[::1]:3000",
-    ],
+    allow_origins=os.getenv("OPENAI_API_KEY", "http://localhost:3000"),    
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
