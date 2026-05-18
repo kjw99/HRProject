@@ -9,6 +9,8 @@ interface ApplicantEditModalProps {
   onClose: () => void;
   applicant: Applicant | null;
   onSave: (payload: ApplicantUpdatePayload) => Promise<void>;
+  /** 상세 모달 위에 열 때 더 높은 값 사용 (기본 115) */
+  zIndex?: number;
 }
 
 type ApplicantFormState = {
@@ -43,6 +45,7 @@ export default function ApplicantEditModal({
   onClose,
   applicant,
   onSave,
+  zIndex = 115,
 }: ApplicantEditModalProps) {
   const [form, setForm] = useState<ApplicantFormState>(createInitialState(applicant));
   const [isSaving, setIsSaving] = useState(false);
@@ -102,6 +105,7 @@ export default function ApplicantEditModal({
       eyebrowIcon="edit"
       theme="emerald"
       size="lg"
+      zIndex={zIndex}
       footer={
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <button

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { UIGeneratedQuestion } from "@/types/interviewer";
 
 interface ResultsPanelProps {
@@ -37,6 +37,8 @@ export default function ResultsPanel({
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editedTexts, setEditedTexts] = useState<Record<number, string>>({});
   const [chatInput, setChatInput] = useState("");
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const prevQuestionCountRef = useRef(0);
 
   const handleChatSubmit = () => {
     if (!chatInput.trim()) return;
@@ -45,155 +47,189 @@ export default function ResultsPanel({
   };
 
   const isEmpty = questions.length === 0 && !isGenerating;
+  const showFullScreenLoading = isGenerating && questions.length === 0;
+  const showFooter = questions.length > 0 || isGenerating;
+
+  useEffect(() => {
+    const prev = prevQuestionCountRef.current;
+    const next = questions.length;
+    prevQuestionCountRef.current = next;
+
+    if (next <= prev || !listScrollRef.current) return;
+
+    const el = listScrollRef.current;
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    });
+  }, [questions.length]);
 
   return (
-    <div className="flex-1 bg-white rounded-[20px] border border-slate-200 shadow-sm flex flex-col min-h-[700px] overflow-hidden">
-      {/* 헤더 */}
-      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
-        <h3 className="text-sm font-black text-slate-800">
-          생성된 질문 리스트
-        </h3>
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-white px-2.5 py-1 rounded-md border border-slate-200">
+    <div className="flex h-full min-h-[480px] max-h-[min(calc(100vh-11rem),720px)] flex-1 flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm">
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+        <h3 className="text-sm font-black text-slate-800">생성된 질문 리스트</h3>
+        <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
           Total: {questions.length}
         </span>
       </div>
 
-      {/* 스크롤 영역 */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-thin scrollbar-thumb-slate-200 bg-slate-50/30">
-        {/* 💡 1. 빈 상태 (디자인 디테일 및 애니메이션 복구) */}
-        {isEmpty && (
-          <div className="h-full min-h-[400px] flex flex-col items-center justify-center animate-in fade-in duration-500">
-            <div className="w-20 h-20 rounded-3xl bg-white border border-slate-200 flex items-center justify-center mb-5 shadow-sm">
+      <div
+        ref={listScrollRef}
+        className="hide-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain bg-slate-50/30 p-6"
+      >
+        {isEmpty ? (
+          <div className="flex h-full min-h-[320px] flex-col items-center justify-center animate-in fade-in duration-500">
+            <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm">
               <i className="bx bx-ghost text-5xl text-slate-300" />
             </div>
             <p className="text-[15px] font-black text-slate-700">
               질문이 아직 없습니다
             </p>
-            <p className="text-[13px] font-medium text-slate-500 mt-1.5 text-center">
+            <p className="mt-1.5 text-center text-[13px] font-medium text-slate-500">
               좌측 패널에서 조건을 선택하고 생성 버튼을 눌러주세요.
             </p>
           </div>
-        )}
+        ) : null}
 
-        {/* 💡 2. 로딩 상태 (커스텀 스피너 및 텍스트 계층 복구) */}
-        {isGenerating && (
-          <div className="h-full min-h-[400px] flex flex-col items-center justify-center animate-in fade-in duration-300">
-            {/* 커스텀 AI 브레인 스피너 */}
-            <div className="relative w-16 h-16 mb-5">
-              <div className="absolute inset-0 border-4 border-indigo-100 rounded-full" />
-              <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              <i className="bx bx-brain absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-500 text-xl" />
+        {showFullScreenLoading ? (
+          <div className="flex h-full min-h-[320px] flex-col items-center justify-center">
+            <div className="relative mb-5 h-16 w-16">
+              <div className="absolute inset-0 rounded-full border-4 border-indigo-100" />
+              <div className="absolute inset-0 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+              <i className="bx bx-brain absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xl text-indigo-500" />
             </div>
-            <p className="text-[15px] font-black text-slate-800 animate-pulse">
+            <p className="animate-pulse text-[15px] font-black text-slate-800">
               AI가 심층 질문을 분석 중입니다...
             </p>
-            <p className="text-[13px] font-medium text-slate-500 mt-1.5 text-center">
+            <p className="mt-1.5 text-center text-[13px] font-medium text-slate-500">
               이력서와 직무 기술서를 교차 검증하고 있습니다.
             </p>
           </div>
-        )}
+        ) : null}
 
-        {/* 질문 카드 */}
-        {!isGenerating &&
-          questions.map((q, idx) => {
-            const typeInfo = TYPE_MAP[q.questionType] ?? {
-              label: q.questionType,
-              className: "bg-slate-100 text-slate-600 border-slate-200",
-              icon: "bx-message",
-            };
-            const isEditing = editingIdx === idx;
-            const displayText = editedTexts[idx] ?? q.questionText;
-
-            return (
-              <div
-                key={q.id}
-                className="bg-white rounded-[16px] border border-slate-200 shadow-sm p-5 hover:shadow-md transition-all"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <span
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-black tracking-wider flex items-center gap-1.5 border ${typeInfo.className}`}
-                  >
-                    <i className={`bx ${typeInfo.icon} text-sm`}></i>{" "}
-                    {typeInfo.label}
-                  </span>
-                  <button
-                    onClick={() => setEditingIdx(isEditing ? null : idx)}
-                    className="text-slate-400 hover:text-indigo-600"
-                  >
-                    <i
-                      className={`bx ${isEditing ? "bx-check" : "bx-edit"} text-lg`}
-                    />
-                  </button>
-                </div>
-
-                {isEditing ? (
-                  <textarea
-                    value={displayText}
-                    onChange={(e) =>
-                      setEditedTexts((prev) => ({
-                        ...prev,
-                        [idx]: e.target.value,
-                      }))
-                    }
-                    className="w-full text-[13px] font-bold text-slate-800 bg-indigo-50/30 rounded-xl px-4 py-3 outline-none focus:border-indigo-400 border border-slate-200 mb-4"
-                    rows={3}
-                  />
-                ) : (
-                  <p className="text-[14px] font-bold text-slate-800 leading-relaxed mb-5">
-                    Q. {displayText}
-                  </p>
-                )}
-
-                {/* 💡 평가 의도 및 생성 근거 (generationBasis) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1">
-                      <i className="bx bx-target-lock text-indigo-400"></i> 평가
-                      의도
-                    </p>
-                    <p className="text-[11px] font-medium text-slate-600">
-                      {q.evaluationIntent}
-                    </p>
-                  </div>
-
-                  <div className="bg-emerald-50/30 border border-emerald-100/50 rounded-xl p-3">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1">
-                      <i className="bx bx-file-find text-emerald-400"></i> 생성
-                      근거
-                    </p>
-                    <p className="text-[11px] font-medium text-slate-600">
-                      {q.generationBasis}
-                    </p>
-                  </div>
-                </div>
+        {!isEmpty && !showFullScreenLoading ? (
+          <div className="space-y-5">
+            {isGenerating && questions.length > 0 ? (
+              <div className="rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3">
+                <p className="flex items-center gap-2 text-sm font-bold text-violet-800">
+                  <i className="bx bx-loader-alt animate-spin text-lg" />
+                  추가 질문을 생성하고 있습니다…
+                </p>
+                <p className="mt-1 text-xs font-semibold text-violet-600">
+                  우하단 토스트에서 진행 상황을 확인할 수 있습니다.
+                </p>
               </div>
-            );
-          })}
+            ) : null}
+
+            {questions.map((q, idx) => {
+              const typeInfo = TYPE_MAP[q.questionType] ?? {
+                label: q.questionType,
+                className: "bg-slate-100 text-slate-600 border-slate-200",
+                icon: "bx-message",
+              };
+              const isEditing = editingIdx === idx;
+              const displayText = editedTexts[idx] ?? q.questionText;
+
+              return (
+                <div
+                  key={q.id}
+                  className="rounded-[16px] border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md"
+                >
+                  <div className="mb-4 flex items-center justify-between">
+                    <span
+                      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-black tracking-wider ${typeInfo.className}`}
+                    >
+                      <i className={`bx ${typeInfo.icon} text-sm`} />
+                      {typeInfo.label}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditingIdx(isEditing ? null : idx)}
+                      className="text-slate-400 hover:text-indigo-600"
+                      aria-label={isEditing ? "편집 완료" : "질문 편집"}
+                    >
+                      <i
+                        className={`bx text-lg ${isEditing ? "bx-check" : "bx-edit"}`}
+                      />
+                    </button>
+                  </div>
+
+                  {isEditing ? (
+                    <textarea
+                      value={displayText}
+                      onChange={(e) =>
+                        setEditedTexts((prev) => ({
+                          ...prev,
+                          [idx]: e.target.value,
+                        }))
+                      }
+                      className="mb-4 w-full rounded-xl border border-slate-200 bg-indigo-50/30 px-4 py-3 text-[13px] font-bold text-slate-800 outline-none focus:border-indigo-400"
+                      rows={3}
+                    />
+                  ) : (
+                    <p className="mb-5 text-[14px] font-bold leading-relaxed text-slate-800">
+                      Q. {displayText}
+                    </p>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                      <p className="mb-1 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <i className="bx bx-target-lock text-indigo-400" />
+                        평가 의도
+                      </p>
+                      <p className="text-[11px] font-medium text-slate-600">
+                        {q.evaluationIntent}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-100/50 bg-emerald-50/30 p-3">
+                      <p className="mb-1 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <i className="bx bx-file-find text-emerald-400" />
+                        생성 근거
+                      </p>
+                      <p className="text-[11px] font-medium text-slate-600">
+                        {q.generationBasis}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
-      {/* 하단 툴바 */}
-      {(questions.length > 0 || isGenerating) && (
-        <div className="p-5 border-t border-slate-100 bg-white flex flex-col gap-3">
+      {showFooter ? (
+        <div className="flex shrink-0 flex-col gap-3 border-t border-slate-100 bg-white p-5">
           <div className="flex items-center gap-2">
             <input
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleChatSubmit();
+                }
+              }}
               placeholder="질문 난이도를 높여줘, 꼬리 질문 추가해줘 등..."
-              className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] outline-none focus:border-indigo-400"
+              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] outline-none focus:border-indigo-400"
             />
             <button
+              type="button"
               onClick={handleChatSubmit}
-              className="px-4 py-2.5 bg-slate-800 text-white rounded-xl text-[13px] font-bold shrink-0"
+              disabled={isGenerating}
+              className="shrink-0 rounded-xl bg-slate-800 px-4 py-2.5 text-[13px] font-bold text-white disabled:opacity-50"
             >
               전송
             </button>
           </div>
 
           <button
+            type="button"
             onClick={onSave}
             disabled={isSaving || questions.length === 0}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[13px] font-black disabled:opacity-50 flex justify-center gap-2"
+            className="flex w-full justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-[13px] font-black text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {isSaving ? (
               <>
@@ -206,7 +242,7 @@ export default function ResultsPanel({
             )}
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

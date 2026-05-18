@@ -1,13 +1,25 @@
 ﻿import axios, { InternalAxiosRequestConfig } from "axios";
 import Cookies from "js-cookie";
 
-const RAW_API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");
+const isDev = process.env.NODE_ENV === "development";
+const rawApiBaseUrl = (
+  isDev
+    ? process.env.NEXT_PUBLIC_API_URL_DEV || "http://localhost:8000"
+    : process.env.NEXT_PUBLIC_API_URL
+)?.trim();
+
+if (!rawApiBaseUrl) {
+  throw new Error("NEXT_PUBLIC_API_URL is required in production.");
+}
+
+if (!/^https?:\/\//i.test(rawApiBaseUrl)) {
+  throw new Error("NEXT_PUBLIC_API_URL must start with http:// or https://.");
+}
+
+const API_BASE_URL = rawApiBaseUrl.replace(/\/+$/, "");
 
 export const API_URL = `${API_BASE_URL}/api/knowledge/upload`;
 
-// 1. 공통 Axios 인스턴스 설정
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,

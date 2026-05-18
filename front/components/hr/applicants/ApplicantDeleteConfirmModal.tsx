@@ -9,6 +9,7 @@ interface ApplicantDeleteConfirmModalProps {
   applicant: Applicant | null;
   onConfirm: () => Promise<void>;
   isDeleting: boolean;
+  zIndex?: number;
 }
 
 export default function ApplicantDeleteConfirmModal({
@@ -17,6 +18,7 @@ export default function ApplicantDeleteConfirmModal({
   applicant,
   onConfirm,
   isDeleting,
+  zIndex = 115,
 }: ApplicantDeleteConfirmModalProps) {
   return (
     <HrModal
@@ -32,6 +34,7 @@ export default function ApplicantDeleteConfirmModal({
       eyebrowIcon="trash"
       theme="amber"
       size="md"
+      zIndex={zIndex}
       footer={
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <button

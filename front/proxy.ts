@@ -18,10 +18,9 @@ type PersistedAuthStorage = {
 };
 
 function shouldBypassProxyInDev(request: NextRequest): boolean {
-  if (process.env.NODE_ENV !== "development") return false;
-
-  const hostname = request.nextUrl.hostname.toLowerCase();
-  return hostname === "localhost";
+  // Disabled on purpose:
+  // do not bypass auth/route guard in development.
+  return false;
 }
 
 function redirectToLogin(request: NextRequest, pathname: string) {

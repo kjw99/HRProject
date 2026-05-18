@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  deleteHrQuestions,
-  fetchHrQuestionsAll,
-  fetchHrQuestionsByPosition,
-} from "@/lib/hr/questions.client";
-import type { HrDepartmentOption, HrSavedQuestion } from "@/types/hr-questions";
+import { useHrQuestionsBrowse } from "@/components/hr/questions/HrQuestionsBrowseProvider";
+import { getApiErrorMessage } from "@/lib/hr/api-error";
+import { deleteHrQuestions, fetchHrQuestionsByPosition } from "@/lib/hr/questions.client";
+import type { HrDepartmentOption } from "@/types/hr-questions";
 import DepartmentFilterColumn from "./DepartmentFilterColumn";
 import QuestionDeleteConfirmModal from "./QuestionDeleteConfirmModal";
 import QuestionInfiniteList from "./QuestionInfiniteList";
@@ -17,42 +15,34 @@ export interface HrQuestionsBrowseClientProps {
   initialDepartments: HrDepartmentOption[];
 }
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-  const maybe = error as {
-    response?: { data?: { message?: string; detail?: string } };
-  };
-  return (
-    maybe.response?.data?.message ||
-    maybe.response?.data?.detail ||
-    fallback
-  );
-};
-
-async function buildQuestionCountMap(): Promise<Record<number, number>> {
-  const all = await fetchHrQuestionsAll();
-  const next: Record<number, number> = {};
-  for (const q of all) {
-    if (q.positionId == null) continue;
-    next[q.positionId] = (next[q.positionId] ?? 0) + 1;
-  }
-  return next;
-}
-
 export default function HrQuestionsBrowseClient({
   initialDepartments,
 }: HrQuestionsBrowseClientProps) {
+  const {
+    questionCountByDepartmentId,
+    isSyncingCounts,
+    selectedDepartmentId,
+    setSelectedDepartmentId,
+    getQuestionsForDepartment,
+    loadingDepartmentId,
+    refreshCounts,
+    invalidateDepartment,
+    updateDepartmentQuestions,
+  } = useHrQuestionsBrowse();
+
   const [filterText, setFilterText] = useState("");
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(
-    null,
-  );
-  const [questions, setQuestions] = useState<HrSavedQuestion[]>([]);
-  const [isLoadingList, setIsLoadingList] = useState(false);
-  const [questionCountByDepartmentId, setQuestionCountByDepartmentId] =
-    useState<Record<number, number>>({});
-  const [isLoadingQuestionCounts, setIsLoadingQuestionCounts] = useState(true);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const questions =
+    selectedDepartmentId != null
+      ? getQuestionsForDepartment(selectedDepartmentId)
+      : [];
+
+  const isLoadingList =
+    selectedDepartmentId != null &&
+    loadingDepartmentId === selectedDepartmentId;
 
   const selectedDepartmentName = useMemo(() => {
     if (selectedDepartmentId == null) return null;
@@ -62,77 +52,13 @@ export default function HrQuestionsBrowseClient({
     );
   }, [initialDepartments, selectedDepartmentId]);
 
-  const refreshQuestionCounts = useCallback(async () => {
-    try {
-      setQuestionCountByDepartmentId(await buildQuestionCountMap());
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        getErrorMessage(error, "부서별 질문 개수를 불러오지 못했습니다."),
-      );
-    }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setIsLoadingQuestionCounts(true);
-      try {
-        const next = await buildQuestionCountMap();
-        if (!cancelled) setQuestionCountByDepartmentId(next);
-      } catch (error) {
-        console.error(error);
-        if (!cancelled) {
-          setQuestionCountByDepartmentId({});
-          toast.error(
-            getErrorMessage(error, "부서별 질문 개수를 불러오지 못했습니다."),
-          );
-        }
-      } finally {
-        if (!cancelled) setIsLoadingQuestionCounts(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    setSelectedQuestionIds([]);
-    if (selectedDepartmentId == null) {
-      setQuestions([]);
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      setIsLoadingList(true);
-      try {
-        const data = await fetchHrQuestionsByPosition(selectedDepartmentId);
-        if (!cancelled) {
-          setQuestions(data);
-          setQuestionCountByDepartmentId((prev) => ({
-            ...prev,
-            [selectedDepartmentId]: data.length,
-          }));
-        }
-      } catch (error) {
-        console.error(error);
-        if (!cancelled) {
-          setQuestions([]);
-          toast.error(
-            getErrorMessage(error, "질문 목록을 불러오지 못했습니다."),
-          );
-        }
-      } finally {
-        if (!cancelled) setIsLoadingList(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedDepartmentId]);
+  const handleSelectDepartment = useCallback(
+    (id: number | null) => {
+      setSelectedDepartmentId(id);
+      setSelectedQuestionIds([]);
+    },
+    [setSelectedDepartmentId],
+  );
 
   const toggleQuestion = (questionId: number) => {
     setSelectedQuestionIds((prev) =>
@@ -156,7 +82,7 @@ export default function HrQuestionsBrowseClient({
   };
 
   const handleConfirmDelete = async () => {
-    if (selectedQuestionIds.length === 0) return;
+    if (selectedQuestionIds.length === 0 || selectedDepartmentId == null) return;
     setIsDeleting(true);
     try {
       await deleteHrQuestions(selectedQuestionIds);
@@ -165,15 +91,10 @@ export default function HrQuestionsBrowseClient({
       setSelectedQuestionIds([]);
       setDeleteConfirmOpen(false);
 
-      if (deptId != null) {
-        const data = await fetchHrQuestionsByPosition(deptId);
-        setQuestions(data);
-        setQuestionCountByDepartmentId((prev) => ({
-          ...prev,
-          [deptId]: data.length,
-        }));
-      }
-      await refreshQuestionCounts();
+      invalidateDepartment(deptId);
+      const data = await fetchHrQuestionsByPosition(deptId);
+      updateDepartmentQuestions(deptId, data);
+      await refreshCounts();
 
       toast.success(
         deletedCount === 1
@@ -182,7 +103,7 @@ export default function HrQuestionsBrowseClient({
       );
     } catch (error) {
       console.error(error);
-      toast.error(getErrorMessage(error, "질문 삭제에 실패했습니다."));
+      toast.error(getApiErrorMessage(error, "질문 삭제에 실패했습니다."));
     } finally {
       setIsDeleting(false);
     }
@@ -197,9 +118,12 @@ export default function HrQuestionsBrowseClient({
             filterText={filterText}
             onFilterTextChange={setFilterText}
             selectedDepartmentId={selectedDepartmentId}
-            onSelectDepartment={setSelectedDepartmentId}
+            onSelectDepartment={handleSelectDepartment}
             questionCountByDepartmentId={questionCountByDepartmentId}
-            isQuestionCountLoading={isLoadingQuestionCounts}
+            isQuestionCountLoading={
+              isSyncingCounts &&
+              Object.keys(questionCountByDepartmentId).length === 0
+            }
           />
 
           <section

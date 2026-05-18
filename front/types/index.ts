@@ -57,6 +57,25 @@ export type {
   TemplateVariablesMap,
 } from "./invitationPreview";
 
+export type {
+  ResumeParseJobStatusUi,
+  ResumeParseJobSnapshot,
+  ResumeParseProgress,
+  ResumeParsingUploadZoneProps,
+  ResumeParsingJobProgressProps,
+  ResumeParsingResultsSectionProps,
+  ResumeParsingClientProps,
+} from "./parsing-ui";
+export type {
+  ResumeParseJobStatus,
+  ParsingFileError,
+  ParseJobCreateResponse,
+  ParseJobResponse,
+  ParsingResponse,
+  ParsingItem,
+  TableRowData,
+} from "./parsing";
+
 export interface PageStatus {
   path: string;
   isActive: boolean;

@@ -1,5 +1,6 @@
 from typing import Any
 
+from app.ai.clients.llm_errors import map_llm_exception
 from app.ai.clients.openai_client import get_chat_model
 from app.ai.graphs.interview_question.validators import normalize_questions
 from app.ai.schemas.question_generation import InterviewQuestionGenerationOutput
@@ -18,7 +19,9 @@ async def invoke_structured(
     except ExternalServiceException:
         raise
     except Exception as exc:
-        raise ExternalServiceException(error_message) from exc
+        raise ExternalServiceException(
+            map_llm_exception(exc, error_message),
+        ) from exc
 
 
 async def invoke_question_output(

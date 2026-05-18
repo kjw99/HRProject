@@ -1,19 +1,71 @@
 import axios from "axios";
 
-function formatDetail(detail: unknown): string | null {
+type ValidationErrorItem = {
+  type?: string;
+  loc?: unknown;
+  msg?: string;
+  message?: string;
+  input?: unknown;
+  ctx?: unknown;
+};
+
+function formatValidationItem(item: unknown): string {
+  if (item == null) return "";
+  if (typeof item === "string") return item;
+  if (typeof item === "number" || typeof item === "boolean") return String(item);
+  if (typeof item === "object") {
+    const obj = item as ValidationErrorItem;
+    if (typeof obj.msg === "string") return obj.msg;
+    if (typeof obj.message === "string") return obj.message;
+  }
+  return "";
+}
+
+/** FastAPI `detail` (문자열 · 객체 · 배열) → 사용자용 문자열 */
+export function formatApiDetail(detail: unknown): string | null {
   if (detail == null) return null;
-  if (typeof detail === "string") return detail;
+  if (typeof detail === "string") return detail.trim() ? detail : null;
   if (Array.isArray(detail)) {
-    const messages = detail
-      .map((item) =>
-        item && typeof item === "object" && "msg" in item
-          ? String((item as { msg?: string }).msg ?? "")
-          : "",
-      )
-      .filter(Boolean);
+    const messages = detail.map(formatValidationItem).filter(Boolean);
     return messages.length > 0 ? messages.join(", ") : null;
   }
+  if (typeof detail === "object") {
+    const single = formatValidationItem(detail);
+    return single || null;
+  }
   return null;
+}
+
+/** toast 등에 넣기 전 unknown → 항상 문자열 */
+export function coerceToErrorString(
+  value: unknown,
+  fallback = "오류가 발생했습니다.",
+): string {
+  if (typeof value === "string" && value.trim()) return value;
+  const fromDetail = formatApiDetail(value);
+  if (fromDetail) return fromDetail;
+  if (value instanceof Error && value.message) return value.message;
+  return fallback;
+}
+
+function extractMessageFromResponseData(data: unknown): string | null {
+  if (data == null) return null;
+  if (typeof data === "string") return data.trim() ? data : null;
+  if (typeof data !== "object") return null;
+
+  const obj = data as Record<string, unknown>;
+
+  if (obj.message != null) {
+    const fromMessage = coerceToErrorString(obj.message, "");
+    if (fromMessage) return fromMessage;
+  }
+
+  if (obj.detail != null) {
+    const fromDetail = formatApiDetail(obj.detail);
+    if (fromDetail) return fromDetail;
+  }
+
+  return formatApiDetail(data);
 }
 
 export const getApiErrorMessage = (error: unknown, fallback: string): string => {
@@ -25,16 +77,7 @@ export const getApiErrorMessage = (error: unknown, fallback: string): string => 
       return "서버에 연결할 수 없습니다. 백엔드(포트 8000)가 실행 중인지 확인해 주세요.";
     }
 
-    const data = error.response.data as
-      | { message?: string; detail?: unknown }
-      | string
-      | undefined;
-
-    const message =
-      typeof data === "string"
-        ? data
-        : data?.message || formatDetail(data?.detail);
-
+    const message = extractMessageFromResponseData(error.response.data);
     if (message) return message;
 
     if (error.response.status === 401) {

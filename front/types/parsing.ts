@@ -1,11 +1,34 @@
+export type ResumeParseJobStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed";
+
+export interface ParsingFileError {
+  filename: string;
+  detail: string;
+}
+
+export interface ParseJobCreateResponse {
+  jobId: string;
+  status: ResumeParseJobStatus;
+  totalFiles: number;
+  processedFiles: number;
+}
+
+export interface ParseJobResponse extends ParseJobCreateResponse {
+  result: ParsingResponse | null;
+  error: string | null;
+}
+
 /**
- * 💡 이력서 파싱 결과 전체 응답 인터페이스
+ * 이력서 파싱 결과 전체 응답
  */
 export interface ParsingResponse {
-    items: ParsingItem[];
-    errors: string[];
-    excelBase64: string | null;
-    excelFileName: string | null;
+  items: ParsingItem[];
+  errors: ParsingFileError[];
+  excelBase64: string | null;
+  excelFileName: string | null;
 }
 
 /**

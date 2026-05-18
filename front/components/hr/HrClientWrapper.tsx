@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { QuestionGenerationJobProvider } from "@/components/hr/question-generation/QuestionGenerationJobProvider";
+import { HrQuestionsBrowseProvider } from "@/components/hr/questions/HrQuestionsBrowseProvider";
+import { ResumeParseJobProvider } from "@/components/hr/parsing/ResumeParseJobProvider";
 import HrSidebar from "./wrapper/HrSidebar";
 import HrHeader from "./wrapper/HrHeader";
 
@@ -12,20 +15,26 @@ export default function HrClientWrapper({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
-      <HrSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
+    <ResumeParseJobProvider>
+      <QuestionGenerationJobProvider>
+        <HrQuestionsBrowseProvider>
+          <div className="flex min-h-screen bg-[#F8FAFC]">
+            <HrSidebar
+              isOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+            />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <HrHeader onMenuClick={() => setIsSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div className="mx-auto max-w-7xl animate-in fade-in duration-500">
-            {children}
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <HrHeader onMenuClick={() => setIsSidebarOpen(true)} />
+              <main className="flex-1 overflow-y-auto p-6 md:p-8">
+                <div className="mx-auto max-w-7xl animate-in fade-in duration-500">
+                  {children}
+                </div>
+              </main>
+            </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </HrQuestionsBrowseProvider>
+      </QuestionGenerationJobProvider>
+    </ResumeParseJobProvider>
   );
 }

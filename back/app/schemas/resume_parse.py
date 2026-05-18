@@ -30,3 +30,19 @@ class ResumeParseResponse(BaseModel):
         default=None,
         serialization_alias="excelFileName",
     )
+
+
+class ResumeParseJobCreateResponse(BaseModel):
+    job_id: str = Field(serialization_alias="jobId")
+    status: str
+    total_files: int = Field(serialization_alias="totalFiles")
+    processed_files: int = Field(serialization_alias="processedFiles")
+
+
+class ResumeParseJobResponse(BaseModel):
+    job_id: str = Field(serialization_alias="jobId")
+    status: str
+    total_files: int = Field(serialization_alias="totalFiles")
+    processed_files: int = Field(serialization_alias="processedFiles")
+    result: ResumeParseResponse | None = None
+    error: str | None = None
