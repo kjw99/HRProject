@@ -5,6 +5,7 @@ from app.ai.schemas.question_generation import (
     InterviewQuestionGenerationInput,
     InterviewQuestionGenerationOutput,
     QuestionFitAnalysis,
+    QuestionPlan,
     QuestionReviewOutput,
 )
 
@@ -12,6 +13,7 @@ from app.ai.schemas.question_generation import (
 class InterviewQuestionGraphState(TypedDict, total=False):
     generation_input: InterviewQuestionGenerationInput
     analysis: QuestionFitAnalysis
+    question_plan: QuestionPlan
     candidate_questions: list[GeneratedQuestion]
     questions: list[GeneratedQuestion]
     review: QuestionReviewOutput

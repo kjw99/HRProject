@@ -88,6 +88,20 @@ class QuestionSelectionOutput(BaseModel):
 
         return normalized_values
 
+########사비카 코드######################
+
+class QuestionPlanItem(BaseModel):
+    category: str = Field(..., min_length=1)
+    count: int = Field(..., ge=1)
+    focus: str = Field(..., min_length=1)
+
+
+class QuestionPlan(BaseModel):
+    items: list[QuestionPlanItem] = Field(..., min_length=1)
+    must_cover: list[str] = Field(default_factory=list)
+    avoid: list[str] = Field(default_factory=list)
+#####################################################33
+
 
 class QuestionFitAnalysis(BaseModel):
     jd_key_requirements: list[str] = Field(default_factory=list)
