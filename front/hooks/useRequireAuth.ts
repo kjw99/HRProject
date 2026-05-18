@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import useAuthStore from "@/store/getAuth"; // 경로에 맞게 수정해주세요
+import useAuthStore from "@lib/stores/auth";
 
 export const useRequireAuth = () => {
     const router = useRouter();

@@ -22,6 +22,56 @@ class InterviewerInviteService:
     def _hash_token(raw_token: str) -> str:
         return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
+    @staticmethod
+    def _frontend_base_url() -> str:
+        return os.getenv("FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
+
+    @classmethod
+    def _build_invite_url(cls, raw_token: str) -> str:
+        return f"{cls._frontend_base_url()}/interviewer-invite?token={raw_token}"
+
+    @classmethod
+    def _to_response(
+        cls,
+        invite: InterviewerInvite,
+        *,
+        reused: bool = False,
+    ) -> InterviewerInviteCreateResponse:
+        if not invite.raw_token:
+            raise ValueError("Invite is missing raw_token.")
+
+        return InterviewerInviteCreateResponse(
+            invite_id=invite.invite_id,
+            interviewer_id=invite.interviewer_id,
+            expires_at=invite.expires_at,
+            invite_url=cls._build_invite_url(invite.raw_token),
+            reused=reused,
+        )
+
+    async def get_active_invite(
+        self,
+        db: AsyncSession,
+        interviewer_id: int,
+    ) -> InterviewerInviteCreateResponse | None:
+        invite = await interviewer_invite_repository.find_active_by_interviewer_id(
+            db,
+            interviewer_id,
+        )
+        if invite is None:
+            return None
+        return self._to_response(invite, reused=True)
+
+    async def get_or_create_invite(
+        self,
+        db: AsyncSession,
+        data: InterviewerInviteCreateRequest,
+        created_by_user_id: int,
+    ) -> InterviewerInviteCreateResponse:
+        active = await self.get_active_invite(db, data.interviewer_id)
+        if active is not None:
+            return active
+        return await self.create_invite(db, data, created_by_user_id)
+
     async def create_invite(
         self,
         db: AsyncSession,
@@ -39,6 +89,7 @@ class InterviewerInviteService:
         invite = InterviewerInvite(
             interviewer_id=interviewer.interviewer_id,
             token_hash=token_hash,
+            raw_token=raw_token,
             expires_at=expires_at,
             created_by_user_id=created_by_user_id,
         )
@@ -46,15 +97,7 @@ class InterviewerInviteService:
         await db.commit()
         await db.refresh(invite)
 
-        frontend_base_url = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-        invite_url = f"{frontend_base_url}/interviewer-invite?token={raw_token}"
-
-        return InterviewerInviteCreateResponse(
-            invite_id=invite.invite_id,
-            interviewer_id=invite.interviewer_id,
-            expires_at=invite.expires_at,
-            invite_url=invite_url,
-        )
+        return self._to_response(invite, reused=False)
 
     async def accept_invite(
         self,

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, JSON, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.dependencies.database import Base
@@ -37,6 +37,11 @@ class InterviewBookingInvitation(Base):
         nullable=False,
         index=True,
         comment="초대 링크 만료 시각",
+    )
+    allowed_slot_ids: Mapped[list[int] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="초대 링크로 선택 가능한 면접 슬롯 id 목록",
     )
     revoked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

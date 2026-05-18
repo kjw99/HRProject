@@ -34,18 +34,6 @@ from app.routers.interviewer_question_router import (
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://[::1]:3000",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # 예외 핸들러 등록
 register_exception_handlers(app)
 
@@ -69,6 +57,19 @@ app.include_router(mail_router)
 app.include_router(email_template_router)
 app.include_router(candidate_mail_router)
 app.include_router(interviewer_mail_router)
+
+# CORS: 라우터 등록 이후 마지막에 두면(Starlette 권장) 에러 응답에도 헤더가 붙기 쉽습니다.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://[::1]:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")

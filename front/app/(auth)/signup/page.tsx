@@ -1,4 +1,4 @@
-import ComingSoon from "@/components/rest/ComingSoon"
+import ComingSoon from "@/components/ui/ComingSoon"
 
 function page() {
 

@@ -15,6 +15,7 @@ class CaseModel(BaseModel):
 class InterviewBookingInvitationCreate(CaseModel):
     candidate_id: int = Field(..., gt=0)
     expires_at: datetime | None = None
+    slot_ids: list[int] = Field(default_factory=list)
 
     @field_validator("expires_at")
     @classmethod
@@ -24,10 +25,22 @@ class InterviewBookingInvitationCreate(CaseModel):
 
         return value
 
+    @field_validator("slot_ids")
+    @classmethod
+    def validate_slot_ids(cls, value: list[int]) -> list[int]:
+        if any(slot_id <= 0 for slot_id in value):
+            raise ValueError("면접 슬롯 id는 1 이상의 정수여야 합니다.")
+
+        if len(value) != len(set(value)):
+            raise ValueError("면접 슬롯 id는 중복될 수 없습니다.")
+
+        return value
+
 
 class InterviewBookingInvitationCreateResponse(CaseModel):
     invitation_id: int
     candidate_id: int
+    slot_ids: list[int]
     invitation_url: str
     expires_at: datetime
     created_at: datetime

@@ -1,43 +1,74 @@
-// ==========================================
-// 🏷️ 1. 공통 Enum / Union Types
-// ==========================================
-export type ChatRole = 'ai' | 'user';
-export type FeedbackRating = 'Excellent' | 'Good' | 'Needs Improvement';
+export interface Applicant {
+  candidate_id: number; // 기존 id -> candidate_id (number형)
+  position_id: number; // 지원 공고 ID
+  name: string;
+  date_of_birth: string; // "YYYY-MM-DD"
+  gender: string | null; // null 허용
+  address: string;
+  phone: string;
+  email: string | null; // null 허용
 
-// ==========================================
-// 💬 2. AI 면접 세션 (Interview Session)
-// ==========================================
-export interface InterviewMessage {
-  id: string;
-  role: ChatRole;
-  content: string;
-  timestamp: string;         // HH:mm 포맷
+  // 경력 구분: 서버 데이터 기준
+  experience_level: "신입" | "경력" | "무관";
+
+  // 지원 단계 (예: 서류, 면접 등)
+  application_status: "서류" | "면접" | "최종합격" | "불합격";
+
+  // 최종 상태 (예: 진행중, 완료 등)
+  final_status: "진행중" | "합격" | "불합격";
+
+  // 우대 조건 충족 리스트
+  meets_preferred_criteria: string[];
 }
 
-// ==========================================
-// 📊 3. AI 역량 분석 리포트 (Report)
-// ==========================================
-export interface Competency {
-  label: string;             // 역량명 (예: 기술 전문성, 의사소통)
-  score: number;             // 0 ~ 100 점수
+export interface ApplicantListResponse {
+  content: Applicant[];
 }
 
-export interface QuestionFeedback {
-  id: string;
-  question: string;          // AI가 던진 질문
-  myAnswerSummary: string;   // 지원자 답변 요약
-  aiComment: string;         // AI의 상세 피드백
-  rating: FeedbackRating;    // 평가 등급
+export interface ApplicantUpdatePayload {
+  position_id?: number;
+  name?: string;
+  date_of_birth?: string;
+  gender?: string | null;
+  address?: string;
+  phone?: string;
+  email?: string | null;
+  experience_level?: "신입" | "경력" | "무관";
+  application_status?: "서류" | "면접" | "최종합격" | "불합격";
+  final_status?: "진행중" | "합격" | "불합격";
+  meets_preferred_criteria?: string[];
 }
 
-export interface CandidateReport {
-  applicantId: string;       // 지원자 고유 ID
-  applicantName: string;     // 지원자 이름
-  appliedJob: string;        // 지원 직무
-  overallScore: number;      // 총점 (0~100)
-  summary: string;           // 총평 (한 줄 요약)
-  competencies: Competency[];// 방사형(레이더) 차트용 데이터
-  strengths: string[];       // 주요 강점 리스트
-  weaknesses: string[];      // 보완 포인트 리스트
-  feedbacks: QuestionFeedback[]; // 문항별 상세 피드백
+export interface ApplicantMutationResponse {
+  message: string;
+}
+
+export interface ApplicantInvitationHistory {
+  invitation_id: number;
+  candidate_id: number;
+  slot_ids: number[];
+  expires_at: string | null;
+  created_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface ApplicantCurrentBooking {
+  booking_id: number;
+  candidate_id: number;
+  slot_id: number;
+  interview_round: string | null;
+  interview_starts_at: string | null;
+  interview_ends_at: string | null;
+  interview_location: string | null;
+  position_name: string | null;
+  created_at: string | null;
+  cancelled_at: string | null;
+}
+
+export interface ApplicantDetail extends Applicant {
+  position_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  current_booking?: ApplicantCurrentBooking | null;
+  booking_invitations: ApplicantInvitationHistory[];
 }

@@ -4,6 +4,7 @@ import secrets
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestException, ConflictException, NotFoundException
@@ -16,10 +17,18 @@ from app.repositories.interview_booking_repository import interview_booking_repo
 from app.schemas.interview_booking_invitation import (
     InterviewBookingInvitationCreateResponse,
 )
+from app.services.interview_booking_service import interview_booking_service
 
 
 KST = ZoneInfo("Asia/Seoul")
 DEFAULT_INVITATION_EXPIRES_IN_DAYS = 3
+
+
+def _as_kst(dt: datetime) -> datetime:
+    """응답 직렬화 시 naive/다른 TZ datetime을 KST로 통일"""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=KST)
+    return dt.astimezone(KST)
 
 
 class InterviewBookingInvitationService:
@@ -28,6 +37,7 @@ class InterviewBookingInvitationService:
         db: AsyncSession,
         candidate_id: int,
         expires_at: datetime | None = None,
+        slot_ids: list[int] | None = None,
     ) -> InterviewBookingInvitationCreateResponse:
         candidate = await candidate_repository.find_by_id(db, candidate_id)
         if not candidate:
@@ -39,6 +49,12 @@ class InterviewBookingInvitationService:
         )
         if expires_at <= now:
             raise BadRequestException("초대 링크 만료 시각은 현재보다 이후여야 합니다.")
+
+        allowed_slot_ids = await self._validate_allowed_slot_ids(
+            db,
+            candidate_id,
+            slot_ids or [],
+        )
 
         active_invitations = (
             await interview_booking_invitation_repository.find_active_by_candidate_id(
@@ -56,18 +72,26 @@ class InterviewBookingInvitationService:
             candidate_id=candidate_id,
             token_hash=token_hash,
             expires_at=expires_at,
+            allowed_slot_ids=allowed_slot_ids,
         )
         interview_booking_invitation_repository.save(db, invitation)
 
-        await db.commit()
-        await db.refresh(invitation)
+        try:
+            await db.commit()
+            await db.refresh(invitation)
+        except IntegrityError:
+            await db.rollback()
+            raise ConflictException(
+                "초대 링크를 저장하지 못했습니다. 이미 유효한 초대가 있거나 데이터가 충돌했을 수 있습니다.",
+            ) from None
 
         return InterviewBookingInvitationCreateResponse(
             invitation_id=invitation.invitation_id,
             candidate_id=invitation.candidate_id,
+            slot_ids=invitation.allowed_slot_ids or [],
             invitation_url=self._build_invitation_url(raw_token),
-            expires_at=invitation.expires_at,
-            created_at=invitation.created_at,
+            expires_at=_as_kst(invitation.expires_at),
+            created_at=_as_kst(invitation.created_at),
         )
 
     async def validate_usable_invitation(
@@ -104,6 +128,32 @@ class InterviewBookingInvitationService:
 
         return invitation
 
+    async def get_available_slots_for_invitation(
+        self,
+        db: AsyncSession,
+        invitation: InterviewBookingInvitation,
+    ):
+        slots = await interview_booking_service.get_available_slots(
+            db,
+            invitation.candidate_id,
+        )
+        if not invitation.allowed_slot_ids:
+            return slots
+
+        allowed_slot_id_set = set(invitation.allowed_slot_ids)
+        return [slot for slot in slots if slot.slot_id in allowed_slot_id_set]
+
+    def validate_slot_allowed_for_invitation(
+        self,
+        invitation: InterviewBookingInvitation,
+        slot_id: int,
+    ) -> None:
+        if not invitation.allowed_slot_ids:
+            return
+
+        if slot_id not in set(invitation.allowed_slot_ids):
+            raise ConflictException("이 초대 링크에서 선택할 수 없는 면접 슬롯입니다.")
+
     async def revoke_invitation(
         self,
         db: AsyncSession,
@@ -131,9 +181,34 @@ class InterviewBookingInvitationService:
     def _build_invitation_url(self, raw_token: str) -> str:
         frontend_base_url = os.getenv(
             "FRONTEND_BASE_URL",
-            "http://localhost:5173",
+            "http://localhost:3000",
         ).rstrip("/")
         return f"{frontend_base_url}/interview-booking?token={raw_token}"
+
+    async def _validate_allowed_slot_ids(
+        self,
+        db: AsyncSession,
+        candidate_id: int,
+        slot_ids: list[int],
+    ) -> list[int] | None:
+        if not slot_ids:
+            return None
+
+        available_slots = await interview_booking_service.get_available_slots(
+            db,
+            candidate_id,
+        )
+        available_slot_ids = {slot.slot_id for slot in available_slots}
+        invalid_slot_ids = [
+            slot_id for slot_id in slot_ids if slot_id not in available_slot_ids
+        ]
+        if invalid_slot_ids:
+            raise ConflictException(
+                "지원자가 예약할 수 없는 면접 슬롯이 포함되어 있습니다: "
+                f"{', '.join(map(str, invalid_slot_ids))}"
+            )
+
+        return slot_ids
 
 
 interview_booking_invitation_service = InterviewBookingInvitationService()

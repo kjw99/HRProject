@@ -47,7 +47,7 @@ class InterviewerMailService:
         created_by_user_id: int,
     ) -> InterviewerMail:
         to_email = await self.get_interviewer_email(db, interviewer_id)
-        invite = await interviewer_invite_service.create_invite(
+        invite = await interviewer_invite_service.get_or_create_invite(
             db=db,
             data=InterviewerInviteCreateRequest(
                 interviewer_id=interviewer_id,

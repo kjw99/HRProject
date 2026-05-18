@@ -83,3 +83,75 @@ body {
   box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
 
 }
+
+@layer utilities {
+
+  /* 1. 기본 커스텀 스크롤바 (항상 노출되는 버전) */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  /* ✨ 화살표(방향 버튼) 제거 */
+  .custom-scrollbar::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+  }
+
+  /* -------------------------------------------------- */
+
+  /* 2. 평소엔 숨김 → 호버 시 노출 (가장 세련된 버전) */
+  .hide-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  /* ✨ 여기서도 화살표 제거 */
+  .hide-scrollbar::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
+    /* 평소엔 투명 */
+    border-radius: 10px;
+  }
+
+  .hide-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    /* 호버 시 색상 노출 */
+  }
+
+  /* Firefox: 평소 트랙만 얇게, 호버 시 thumb 색 */
+  .hide-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .hide-scrollbar:hover {
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #e2e8f0 transparent;
+  }
+
+  .custom-scrollbar:hover {
+    scrollbar-color: #cbd5e1 transparent;
+  }
+}

@@ -1,20 +1,19 @@
-export type InterviewStatus = 'UPCOMING' | 'COMPLETED' | 'CANCELLED';
-export type InterviewType = 'ONLINE' | 'OFFLINE';
-
-export interface InterviewEvent {
-    id: string;
-    title: string;
-    date: string; // YYYY-MM-DD
-    time: string; // HH:mm AM/PM
-    type: InterviewType;
-    status: InterviewStatus;
-    locationOrLink: string; // 화상 링크 또는 오프라인 주소
-    interviewerInfo?: string;
-    preparation?: string[];
+// GET 요청 시 사용할 Query Parameters (모두 optional)
+export interface InterviewSlotParams {
+  year?: string | number;
+  month?: string | number;
+  day?: string | number;
+  positionId?: string | number;
 }
 
-export interface ScheduleData {
-    applicantName: string;
-    upcomingCount: number;
-    events: InterviewEvent[];
+// 응답받을 면접 슬롯 데이터 구조
+export interface InterviewSlot {
+  slotId: number;
+  positionName: string;
+  interviewerNames: string[];
+  interviewRound: string; // 예: "1차", "2차", "최종"
+  interviewStartsAt: string; // ISO String
+  interviewEndsAt: string; // ISO String
+  slotStatus: "open" | "closed" | string; // 상태값
+  interviewLocation: string;
 }

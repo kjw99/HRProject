@@ -17,12 +17,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def decode_bearer_token(token: str) -> dict:
+    if not SECRET_KEY:
+        raise UnauthorizedException(
+            "서버에 JWT_SECRET_KEY가 설정되어 있지 않습니다. 백엔드 .env를 확인해 주세요.",
+        )
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise UnauthorizedException("Token expired")
     except jwt.InvalidTokenError:
         raise UnauthorizedException("Invalid token")
+    except (TypeError, ValueError) as exc:
+        # PyJWT 등에서 키/알고리즘 문제 시 500 대신 인증 오류로 처리
+        raise UnauthorizedException("Invalid token configuration") from exc
 
 
 async def get_current_user(

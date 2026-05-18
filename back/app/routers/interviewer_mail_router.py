@@ -1,18 +1,38 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.dependencies.database import get_async_db
 from app.dependencies.dependencies import get_current_user, require_roles
 from app.models.user import User
+from app.schemas.interviewer_invite import InterviewerInviteCreateResponse
 from app.schemas.interviewer_mail import (
     InterviewerMailSendRequest,
     InterviewerMailSendResponse,
 )
+from app.services.interviewer_invite_service import interviewer_invite_service
 from app.services.interviewer_mail_service import interviewer_mail_service
 
 
 router = APIRouter(prefix="/api/interviewers", tags=["Interviewer-Email"])
+
+
+@router.get(
+    "/{interviewer_id}/active-invite",
+    response_model=InterviewerInviteCreateResponse,
+    dependencies=[Depends(require_roles(("admin", "hr")))],
+)
+async def get_active_interviewer_invite(
+    interviewer_id: int,
+    db: AsyncSession = Depends(get_async_db),
+):
+    invite = await interviewer_invite_service.get_active_invite(db, interviewer_id)
+    if invite is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용 가능한 초대 링크가 없습니다.",
+        )
+    return invite
 
 
 @router.post(

@@ -29,7 +29,7 @@ async def create_interviewer(
 @router.get(
     "/recruitment-status",
     response_model=DepartmentRecruitmentStatusListResponse,
-    dependencies=[Depends(require_roles(("hr",)))],
+    dependencies=[Depends(require_roles(("admin", "hr")))],
 )
 async def get_recruitment_status(
     db: AsyncSession = Depends(get_async_db),

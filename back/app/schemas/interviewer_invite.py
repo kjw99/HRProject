@@ -21,6 +21,7 @@ class InterviewerInviteCreateResponse(CaseModel):
     interviewer_id: int
     expires_at: datetime
     invite_url: str
+    reused: bool = False
 
 
 class InterviewerInviteAcceptRequest(CaseModel):

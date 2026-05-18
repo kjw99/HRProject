@@ -1,7 +1,8 @@
-import useAuthStore from '@/store/getAuth';
+import useAuthStore from '@lib/stores/auth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ToastUI } from '@/components/rest/ToastUI'; // 실제 경로에 맞게 수정
+import { ToastUI } from '@/components/ui/ToastUI';
+import Cookies from 'js-cookie';
 
 export default function useLogout() {
   const router = useRouter();
@@ -10,17 +11,18 @@ export default function useLogout() {
   // 실행할 로그아웃 함수
   const logout = () => {
     toast.custom((t) => (
-      <ToastUI t={t} message="로그인 화면으로 이동합니다" duration={1000} />
+      <ToastUI t={t} message="로그인 화면으로 이동합니다" duration={500} />
     ), {
-      duration: 1000,
+      duration: 500,
     });
 
     setTimeout(() => {
       clearAuth();
       // TODO: 실제 로그아웃 로직 추가 (예: signOut(), 로컬 스토리지 삭제 등)
-      localStorage.removeItem('candidate_info');
-      localStorage.removeItem('last_job_posting');
-      router.push('/login');
+      Cookies.remove('accessToken', { path: '/' });
+      Cookies.remove('userRole', { path: '/' });
+      Cookies.remove('userName', { path: '/' });
+      router.push('/');
     }, 1000);
   };
 
