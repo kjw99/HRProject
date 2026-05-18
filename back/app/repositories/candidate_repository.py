@@ -60,20 +60,9 @@ class CandidateRepository:
     async def find_by_identity(
         self,
         db: AsyncSession,
-        email: str | None,
         phone: str | None,
         name: str | None,
     ) -> Candidate | None:
-        if email:
-            candidate = await db.scalar(
-                select(Candidate)
-                .where(Candidate.email == email)
-                .order_by(Candidate.candidate_id.asc())
-                .limit(1)
-            )
-            if candidate is not None:
-                return candidate
-
         if phone and name:
             return await db.scalar(
                 select(Candidate)
