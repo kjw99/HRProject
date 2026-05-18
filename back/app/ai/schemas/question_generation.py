@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class InterviewQuestionGenerationInput(BaseModel):
     position_name: str = Field(..., min_length=1, max_length=100)
-    question_count: int = Field(default=5, ge=1, le=20)
+    question_count: int = Field(default=10, ge=1, le=20)
     additional_request: str | None = Field(default=None, max_length=1000)
     generation_mode: str = Field(default="candidate_job_fit_based", max_length=50)
     job_description_context: str | None = Field(default=None, max_length=12000)
