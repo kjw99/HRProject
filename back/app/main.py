@@ -66,7 +66,7 @@ load_dotenv()
 # CORS: 라우터 등록 이후 마지막에 두면(Starlette 권장) 에러 응답에도 헤더가 붙기 쉽습니다.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("OPENAI_API_KEY", "http://localhost:3000"),    
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000"),    
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
