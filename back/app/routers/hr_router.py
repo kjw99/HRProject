@@ -10,6 +10,7 @@ from app.schemas.hr_dashboard import DepartmentRecruitmentStatusListResponse
 from app.services.position_service import position_service
 
 from app.schemas.hr_dashboard import HrDashboardStatsResponse
+from app.schemas.hr_interview_schedule import TodayInterviewScheduleListResponse
 from app.services.hr_dashboard_service import hr_dashboard_service
 
 router = APIRouter(prefix="/api/hr", tags=["HR"])
@@ -47,4 +48,16 @@ async def get_dashboard_stats(
     db: AsyncSession = Depends(get_async_db),
 ):
     return await hr_dashboard_service.get_dashboard_stats(db)
+
+
+@router.get(
+    "/interviews/today",
+    response_model=TodayInterviewScheduleListResponse,
+    response_model_by_alias=True,
+    dependencies=[Depends(require_roles(("admin", "hr")))],
+)
+async def get_today_interview_schedules(
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await hr_dashboard_service.get_today_interview_schedules(db)
 
