@@ -13,6 +13,23 @@ import { DeptStatus, DeptStatusListResponse } from "@/types/hr";
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
+export interface TodayInterviewScheduleItem {
+  slotId: number;
+  bookingId: number;
+  candidateId: number;
+  interviewStartsAt: string;
+  interviewEndsAt: string;
+  interviewTimeLabel: string;
+  candidateName: string;
+  positionName: string | null;
+  interviewRound: string;
+  attendanceStatus: string;
+}
+
+interface TodayInterviewScheduleListResponse {
+  items: TodayInterviewScheduleItem[];
+}
+
 /**
  * [Server-side] 지원자 리스트 조회
  * @param department 필터링할 부서명 (백엔드 position_id 매핑용)
@@ -240,5 +257,22 @@ export const fetchDeptStatusServer = async (): Promise<DeptStatus[]> => {
         lastUpdated: new Date().toISOString(),
       },
     ];
+  }
+};
+
+export const fetchTodayInterviewSchedulesServer = async (): Promise<
+  TodayInterviewScheduleItem[]
+> => {
+  try {
+    const response = await apiServer.get<TodayInterviewScheduleListResponse>(
+      "/api/hr/interviews/today",
+    );
+    return response.data?.items ?? [];
+  } catch (error: unknown) {
+    console.warn(
+      "[Server API] 오늘 면접 일정 로드 실패. 목업 데이터를 반환합니다.",
+      getErrorMessage(error),
+    );
+    return [];
   }
 };

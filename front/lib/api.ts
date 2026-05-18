@@ -30,13 +30,24 @@ export const api = axios.create({
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    if (config.data instanceof FormData) {
+      config.headers.delete("Content-Type");
+    }
+
     if (typeof window !== "undefined") {
       try {
         const authData = Cookies.get("auth-storage");
 
         if (authData) {
-          const parsedData = JSON.parse(authData);
-          const token = parsedData.state.token;
+          let parsedData: unknown = null;
+          try {
+            parsedData = JSON.parse(authData);
+          } catch {
+            parsedData = JSON.parse(decodeURIComponent(authData));
+          }
+
+          const token =
+            (parsedData as { state?: { token?: string } })?.state?.token;
 
           if (token) {
             config.headers.set("Authorization", `Bearer ${token}`);

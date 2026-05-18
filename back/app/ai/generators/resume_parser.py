@@ -1,5 +1,6 @@
 import os
 
+from app.ai.clients.llm_errors import map_llm_exception
 from app.ai.clients.openai_client import get_chat_model
 from app.ai.prompts.resume_parse_prompt import build_resume_parse_messages
 from app.ai.schemas.resume_parsing import ResumeParseAIOutput
@@ -30,7 +31,9 @@ class ResumeParser:
         except ExternalServiceException:
             raise
         except Exception as exc:
-            raise ExternalServiceException("AI로 이력서를 파싱하지 못했습니다.") from exc
+            raise ExternalServiceException(
+                map_llm_exception(exc, "AI로 이력서를 파싱하지 못했습니다."),
+            ) from exc
 
         try:
             return ResumeParseAIOutput.model_validate(result)

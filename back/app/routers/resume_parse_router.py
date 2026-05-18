@@ -126,22 +126,33 @@ async def _run_parse_job(job_id: str, file_payloads: list[tuple[str, bytes]]) ->
     items: list[ResumeParseItem] = []
     errors: list[ResumeParseFileError] = []
 
-    try:
-        for filename, file_bytes in file_payloads:
-            upload = StarletteUploadFile(filename=filename, file=BytesIO(file_bytes))
+    for filename, file_bytes in file_payloads:
+        try:
+            upload = StarletteUploadFile(
+                filename=filename,
+                file=BytesIO(file_bytes),
+            )
             async with AsyncSessionLocal() as session:
-                result = await _resume_parse_service.parse_resumes(session, [upload])
+                result = await _resume_parse_service.parse_resumes(
+                    session,
+                    [upload],
+                )
                 items.extend(result.items)
                 errors.extend(result.errors)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(
+                ResumeParseFileError(
+                    filename=filename,
+                    detail=str(exc) or "이력서 파싱 중 알 수 없는 오류가 발생했습니다.",
+                )
+            )
+        finally:
             job["processed_files"] += 1
 
-        job["result"] = ResumeParseResponse(
-            items=items,
-            errors=errors,
-            excel_base64=None,
-            excel_file_name=None,
-        )
-        job["status"] = "succeeded"
-    except Exception as exc:  # noqa: BLE001
-        job["status"] = "failed"
-        job["error"] = str(exc)
+    job["result"] = ResumeParseResponse(
+        items=items,
+        errors=errors,
+        excel_base64=None,
+        excel_file_name=None,
+    )
+    job["status"] = "succeeded"

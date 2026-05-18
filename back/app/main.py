@@ -1,4 +1,9 @@
 ﻿import os
+from dotenv import load_dotenv
+
+# Important: load .env before importing routers/dependencies.
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers.interview_booking_invitation_router import (
@@ -26,7 +31,6 @@ from app.routers.interviewer_question_router import (
     router as interviewer_question_router,
 )
 
-from dotenv import load_dotenv
 
 app = FastAPI()
 
@@ -51,7 +55,6 @@ app.include_router(email_template_router)
 app.include_router(candidate_mail_router)
 app.include_router(interviewer_mail_router)
 
-load_dotenv()
 
 raw_cors_origins = os.getenv("CORS_ORIGINS", "").strip()
 if raw_cors_origins:
@@ -84,3 +87,5 @@ def root():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+

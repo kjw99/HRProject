@@ -27,7 +27,11 @@ import {
   ResumeParseJobToastUI,
 } from "./ResumeParseJobToastUI";
 import { coerceToErrorString, getApiErrorMessage } from "@/lib/hr/api-error";
-import { createParseJob, getParseJob } from "@/lib/hr/parsing.client";
+import {
+  createParseJob,
+  getParseJob,
+  summarizeParseErrors,
+} from "@/lib/hr/parsing.client";
 import {
   RESUME_PARSE_POLL_INTERVAL_MS,
 } from "@/lib/hr/parsing.constants";
@@ -212,17 +216,40 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
+    if (jobQuery.isError) {
+      const message = getApiErrorMessage(
+        jobQuery.error,
+        "파싱 작업 상태를 불러오지 못했습니다. 백엔드가 재시작되었으면 다시 업로드해 주세요.",
+      );
+      setJobError(message);
+      toast.dismiss(RESUME_PARSE_TOAST_ID);
+      toast.error(message, { position: "bottom-right" });
+      setJobId(null);
+      return;
+    }
+
     const job = jobQuery.data;
     if (!job) return;
 
     if (job.status === "succeeded" && job.result) {
+      const successCount = job.result.items.length;
+      const errorCount = job.result.errors?.length ?? 0;
+
       applyParseResult(job.result);
 
-      const errorCount = job.result.errors?.length ?? 0;
       toast.dismiss(RESUME_PARSE_TOAST_ID);
-      if (errorCount > 0) {
+
+      if (successCount === 0 && errorCount > 0) {
+        const message = summarizeParseErrors(job.result.errors);
+        setJobError(message);
+        toast.error(message, {
+          position: "bottom-right",
+          duration: 8000,
+        });
+      } else if (errorCount > 0) {
+        setJobError(null);
         toast.warning(
-          `파싱 완료 · ${job.result.items.length}건 성공, ${errorCount}건 오류`,
+          `파싱 완료 · ${successCount}건 성공, ${errorCount}건 오류`,
           {
             position: "bottom-right",
             action: {
@@ -232,8 +259,9 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
           },
         );
       } else {
+        setJobError(null);
         toast.success(
-          `${job.result.items.length}건의 이력서 분석이 완료되었습니다.`,
+          `${successCount}건의 이력서 분석이 완료되었습니다.`,
           {
             position: "bottom-right",
             action: {
@@ -259,7 +287,14 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
       setJobId(null);
       queryClient.removeQueries({ queryKey: [JOB_QUERY_KEY, job.jobId] });
     }
-  }, [jobQuery.data, applyParseResult, queryClient, router]);
+  }, [
+    jobQuery.data,
+    jobQuery.isError,
+    jobQuery.error,
+    applyParseResult,
+    queryClient,
+    router,
+  ]);
 
   const progress = useMemo(() => {
     if (jobQuery.data) return toProgress(jobQuery.data);
