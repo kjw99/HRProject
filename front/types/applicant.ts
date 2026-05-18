@@ -1,6 +1,7 @@
 export interface Applicant {
   candidate_id: number; // 기존 id -> candidate_id (number형)
-  position_id: number; // 지원 공고 ID
+  position_id: number | null; // 지원 공고 ID
+  position_name?: string | null;
   name: string;
   date_of_birth: string; // "YYYY-MM-DD"
   gender: string | null; // null 허용

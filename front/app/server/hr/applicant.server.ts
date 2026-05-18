@@ -33,6 +33,14 @@ export const fetchApplicantsServer = async (
     );
 
     // 15명의 가상 지원자 생성 (서버 데이터 구조인 Snake Case 준수)
+    const mockPositionNames = [
+      "백엔드 개발",
+      "프론트엔드 개발",
+      "UI/UX 디자인",
+      "마케팅",
+      "영업관리",
+    ];
+
     let mockData: Applicant[] = Array.from({ length: 15 }).map((_, idx) => {
       const expLevel = ["신입", "경력", "무관"][idx % 3] as
         | "신입"
@@ -48,9 +56,15 @@ export const fetchApplicantsServer = async (
       if (idx % 2 === 0) criteria.push("정보처리기사");
       if (idx % 3 === 0) criteria.push("TOEIC 900점 이상");
 
+      const positionIndex = idx % 5;
+      const omitPosition = idx === 13;
+
       return {
         candidate_id: 100 + idx,
-        position_id: 10 + (idx % 5),
+        position_id: omitPosition ? null : 10 + positionIndex,
+        position_name: omitPosition
+          ? null
+          : mockPositionNames[positionIndex],
         name: `지원자${idx + 1}`,
         date_of_birth: `199${idx % 9}-0${(idx % 9) + 1}-10`,
         gender: idx % 2 === 0 ? "남" : "여",

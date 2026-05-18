@@ -16,7 +16,9 @@ class CandidateRepository:
     async def find_all(self, db: AsyncSession) -> list[Candidate]:
         # 지원자 전체 목록 최신순으로 조회
         result = await db.scalars(
-            select(Candidate).order_by(Candidate.candidate_id.desc())
+            select(Candidate)
+            .options(selectinload(Candidate.position))
+            .order_by(Candidate.candidate_id.desc())
         )
         return result.all()
 

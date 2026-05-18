@@ -2,15 +2,50 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.candidate_repository import candidate_repository
 from app.repositories.interview_booking_repository import interview_booking_repository
-from app.schemas.candidate import CandidateBookingRead, CandidateDetailRead, CandidateUpdate
+from app.models.candidate import Candidate
+from app.schemas.candidate import (
+    CandidateBookingRead,
+    CandidateDetailRead,
+    CandidateRead,
+    CandidateUpdate,
+)
 
 
 class CandidateService:
-    async def get_candidates(self, db: AsyncSession):
-        return await candidate_repository.find_all(db)
+    def _to_candidate_read(self, candidate: Candidate) -> CandidateRead:
+        return CandidateRead(
+            candidate_id=candidate.candidate_id,
+            position_id=candidate.position_id,
+            name=candidate.name,
+            date_of_birth=candidate.date_of_birth,
+            gender=candidate.gender,
+            address=candidate.address,
+            phone=candidate.phone,
+            email=candidate.email,
+            experience_level=candidate.experience_level,
+            application_status=candidate.application_status,
+            final_status=candidate.final_status,
+            meets_preferred_criteria=candidate.meets_preferred_criteria or [],
+            position_name=(
+                candidate.position.position_name
+                if candidate.position is not None
+                else None
+            ),
+        )
 
-    async def get_candidate(self, db: AsyncSession, candidate_id: int):
-        return await candidate_repository.find_by_id_with_position(db, candidate_id)
+    async def get_candidates(self, db: AsyncSession) -> list[CandidateRead]:
+        candidates = await candidate_repository.find_all(db)
+        return [self._to_candidate_read(candidate) for candidate in candidates]
+
+    async def get_candidate(
+        self, db: AsyncSession, candidate_id: int
+    ) -> CandidateRead | None:
+        candidate = await candidate_repository.find_by_id_with_position(
+            db, candidate_id
+        )
+        if not candidate:
+            return None
+        return self._to_candidate_read(candidate)
 
     async def get_candidate_detail(
         self, db: AsyncSession, candidate_id: int
@@ -94,15 +129,22 @@ class CandidateService:
 
     async def update_candidate(
         self, db: AsyncSession, candidate_id: int, data: CandidateUpdate
-    ):
+    ) -> CandidateRead | None:
         update_data = data.model_dump(exclude_unset=True)
         updated_candidate = await candidate_repository.update_candidate(
             db, candidate_id, update_data
         )
 
-        if updated_candidate:
-            await db.commit()
-        return updated_candidate
+        if not updated_candidate:
+            return None
+
+        await db.commit()
+        candidate = await candidate_repository.find_by_id_with_position(
+            db, candidate_id
+        )
+        if not candidate:
+            return None
+        return self._to_candidate_read(candidate)
 
     async def delete_candidate(self, db: AsyncSession, candidate_id: int):
         success = await candidate_repository.delete_candidate(db, candidate_id)

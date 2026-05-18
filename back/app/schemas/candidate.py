@@ -27,6 +27,7 @@ class CandidateRead(CandidateBase):
     candidate_id: int
     position_id: int | None
     application_status: str
+    position_name: str | None = None
 
 
 class CandidateInvitationHistoryRead(BaseModel):

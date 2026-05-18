@@ -1,14 +1,27 @@
 import AgentClient from "@/components/interviewer/agent/AgentClient";
+import { QuestionGenerationJobProvider } from "@/components/hr/question-generation/QuestionGenerationJobProvider";
 import {
   fetchCandidates,
+  fetchMyInterviewerPositionId,
   fetchPositions,
 } from "../server/interviewer/interviewer.server";
 
 export default async function InterviewerPage() {
-  const [positionsData, candidatesData] = await Promise.all([
+  const [positionsData, candidatesData, myPositionId] = await Promise.all([
     fetchPositions(),
     fetchCandidates(),
+    fetchMyInterviewerPositionId(),
   ]);
+
+  const filteredCandidatesData =
+    myPositionId == null
+      ? candidatesData
+      : candidatesData.filter((candidate) => candidate.position_id === myPositionId);
+
+  const filteredPositionsData =
+    myPositionId == null
+      ? positionsData
+      : positionsData.filter((position) => position.positionId === myPositionId);
 
   return (
     <div className="animate-in fade-in duration-500 h-full flex flex-col">
@@ -23,10 +36,12 @@ export default async function InterviewerPage() {
       </div>
 
       <div className="flex-1 min-h-0">
-        <AgentClient
-          initialPositions={positionsData}
-          initialCandidates={candidatesData}
-        />
+        <QuestionGenerationJobProvider>
+          <AgentClient
+            initialPositions={filteredPositionsData}
+            initialCandidates={filteredCandidatesData}
+          />
+        </QuestionGenerationJobProvider>
       </div>
     </div>
   );

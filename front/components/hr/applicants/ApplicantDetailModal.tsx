@@ -20,6 +20,7 @@ import { resolveBookingInviteStatus } from "@/lib/hr/invitation-status";
 import ApplicantDeleteConfirmModal from "./ApplicantDeleteConfirmModal";
 import ApplicantDetailActionBar from "./ApplicantDetailActionBar";
 import ApplicantEditModal from "./ApplicantEditModal";
+import ApplicantEmailValue from "./ApplicantEmailValue";
 
 interface ApplicantDetailModalProps {
   isOpen: boolean;
@@ -267,14 +268,12 @@ export default function ApplicantDetailModal({
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+              <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-black uppercase tracking-wider text-slate-400">
                   이메일
                 </p>
-                <p className="mt-2 text-sm font-semibold text-slate-700">
-                  {profile.email || "미등록"}
-                </p>
+                <ApplicantEmailValue email={profile.email} />
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">

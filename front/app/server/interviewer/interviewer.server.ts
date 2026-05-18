@@ -4,7 +4,10 @@ import {
   QuestionGeneratePayload,
   BackendGeneratedQuestion,
   QuestionSavePayload,
+  HrInterviewer,
 } from "@/types/interviewer";
+import { getAuthMeServer } from "../auth/controlOfAuthority.server";
+import { fetchInterviewersServer } from "../hr/interviewer.server";
 
 import "server-only";
 import { apiServer } from "../axios-server";
@@ -93,5 +96,27 @@ export const fetchCandidates = async (): Promise<BackendCandidate[]> => {
         meets_preferred_criteria: [],
       },
     ];
+  }
+};
+
+export const fetchMyInterviewerPositionId = async (): Promise<number | null> => {
+  try {
+    const me = await getAuthMeServer();
+    const email = me.userEmail?.trim().toLowerCase();
+    if (!email) return null;
+
+    const list = await fetchInterviewersServer({
+      keyword: email,
+      size: 100,
+    });
+
+    const exact = list.content.find(
+      (item: HrInterviewer) =>
+        item.interviewerEmail?.trim().toLowerCase() === email,
+    );
+
+    return exact?.positionId ?? null;
+  } catch {
+    return null;
   }
 };

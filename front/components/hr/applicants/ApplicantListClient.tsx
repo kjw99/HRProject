@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -12,6 +12,10 @@ import {
 import { toast } from "sonner";
 import { deleteApplicant, updateApplicant } from "@/lib/hr/interview.client";
 import { getApiErrorMessage } from "@/lib/hr/api-error";
+import {
+  buildDuplicateIdentityKey,
+  findDuplicateIdentityKeys,
+} from "@/lib/hr/parsing-mapper";
 import type { Applicant } from "@/types/applicant";
 import type { CriteriaFilter } from "@/types/hr-ui";
 import ApplicantDetailModal from "./ApplicantDetailModal";
@@ -48,9 +52,95 @@ const getExperienceTone = (value: string) => {
   return "bg-slate-100 text-slate-600";
 };
 
-const getPositionLabel = (applicant: Applicant) => {
-  const addressParts = applicant.address.split(")");
-  return addressParts[1]?.trim() || `공고 #${applicant.position_id}`;
+interface ApplicantPositionDisplay {
+  label: string;
+  isMissing: boolean;
+  positionId: number | null;
+}
+
+function getApplicantPositionDisplay(
+  applicant: Applicant,
+): ApplicantPositionDisplay {
+  const positionName = applicant.position_name?.trim();
+  if (positionName) {
+    return {
+      label: positionName,
+      isMissing: false,
+      positionId: applicant.position_id,
+    };
+  }
+
+  const hasPositionId =
+    applicant.position_id != null && applicant.position_id > 0;
+
+  if (hasPositionId) {
+    return {
+      label: `직무 ID ${applicant.position_id} (명칭 없음)`,
+      isMissing: true,
+      positionId: applicant.position_id,
+    };
+  }
+
+  return {
+    label: "지원 포지션 미지정",
+    isMissing: true,
+    positionId: null,
+  };
+}
+
+function ApplicantPositionCell({ applicant }: { applicant: Applicant }) {
+  const { label, isMissing, positionId } = getApplicantPositionDisplay(applicant);
+
+  return (
+    <div
+      className={`flex max-w-[240px] flex-col gap-1 rounded-xl px-3 py-2 ${
+        isMissing
+          ? "border border-dashed border-rose-200 bg-rose-50/80 ring-1 ring-rose-100"
+          : ""
+      }`}
+    >
+      {positionId != null ? (
+        <span
+          className={`text-[10px] font-bold tabular-nums ${
+            isMissing ? "text-rose-500" : "text-slate-400"
+          }`}
+        >
+          공고 ID: {positionId}
+        </span>
+      ) : (
+        <span className="flex items-center gap-1 text-[10px] font-bold text-rose-600">
+          <i className="bx bx-error-circle text-sm" />
+          공고 ID 없음
+        </span>
+      )}
+      <span
+        className={`truncate text-sm font-bold leading-snug ${
+          isMissing ? "text-rose-800" : "text-slate-700"
+        }`}
+        title={label}
+      >
+        {isMissing ? (
+          <span className="inline-flex items-center gap-1">
+            <i className="bx bx-briefcase-alt shrink-0 text-base opacity-80" />
+            {label}
+          </span>
+        ) : (
+          label
+        )}
+      </span>
+    </div>
+  );
+}
+
+const getDisplayApplicantName = (rawName: string): string => {
+  return rawName
+    .replace(/[\(\（][^\)\）]*[\)\）]/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+};
+
+const isApplicantNameNormalized = (rawName: string): boolean => {
+  return getDisplayApplicantName(rawName) !== rawName.trim();
 };
 
 export default function ApplicantListClient({
@@ -59,6 +149,7 @@ export default function ApplicantListClient({
   const [data, setData] = useState<Applicant[]>(initialData);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [criteriaFilter, setCriteriaFilter] = useState<CriteriaFilter>("ALL");
+  const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(
     null,
@@ -75,6 +166,19 @@ export default function ApplicantListClient({
   useEffect(() => {
     setData(initialData);
   }, [initialData]);
+
+  const duplicateIdentityKeys = useMemo(
+    () =>
+      findDuplicateIdentityKeys(
+        data.map((item) => ({
+          name: item.name,
+          birth: item.date_of_birth,
+          phone: item.phone,
+          email: item.email,
+        })),
+      ),
+    [data],
+  );
 
   const filteredData = useMemo(() => {
     let result = [...data];
@@ -99,8 +203,21 @@ export default function ApplicantListClient({
       );
     }
 
+    if (showDuplicatesOnly) {
+      result = result.filter((item) =>
+        duplicateIdentityKeys.has(
+          buildDuplicateIdentityKey({
+            name: item.name,
+            birth: item.date_of_birth,
+            phone: item.phone,
+            email: item.email,
+          }),
+        ),
+      );
+    }
+
     return result;
-  }, [criteriaFilter, data, searchKeyword]);
+  }, [criteriaFilter, data, duplicateIdentityKeys, searchKeyword, showDuplicatesOnly]);
 
   const columns = useMemo(
     () => [
@@ -122,7 +239,7 @@ export default function ApplicantListClient({
         enableSorting: false,
         cell: (info) => (
           <div className="flex flex-col">
-            <span className="font-black text-slate-800">{info.getValue()}</span>
+            <span className="font-black text-slate-800">{getDisplayApplicantName(String(info.getValue()))}</span>
             <span className="text-[10px] font-medium text-slate-400">
               {info.row.original.date_of_birth}
             </span>
@@ -146,16 +263,7 @@ export default function ApplicantListClient({
       columnHelper.display({
         id: "position",
         header: "지원 정보",
-        cell: ({ row }) => (
-          <div className="flex flex-col">
-            <span className="mb-0.5 text-xs font-bold text-slate-400">
-              공고 ID: {row.original.position_id}
-            </span>
-            <span className="max-w-[200px] truncate text-sm font-bold text-slate-700">
-              {getPositionLabel(row.original)}
-            </span>
-          </div>
-        ),
+        cell: ({ row }) => <ApplicantPositionCell applicant={row.original} />,
       }),
       columnHelper.display({
         id: "status",
@@ -201,7 +309,7 @@ export default function ApplicantListClient({
               className="group flex items-center gap-1.5 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-[11px] font-bold text-indigo-600 transition-colors hover:bg-indigo-100"
             >
               <i className="bx bx-certification text-base" />
-              <span>{criteria.length}개 충족</span>
+              <span>{criteria.length}건 충족</span>
               <i className="bx bx-search-alt ml-1 text-indigo-400 group-hover:text-indigo-600" />
             </button>
           );
@@ -328,6 +436,19 @@ export default function ApplicantListClient({
               </button>
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowDuplicatesOnly((prev) => !prev)}
+            className={`h-11 rounded-xl border px-4 text-[11px] font-black tracking-widest transition-all ${
+              showDuplicatesOnly
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-700"
+            }`}
+            title="이름 + 전화번호 기준 중복만 보기"
+          >
+            중복만
+          </button>
         </div>
       </div>
 
@@ -393,7 +514,11 @@ export default function ApplicantListClient({
                 table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.original.candidate_id}
-                    className="group transition-colors hover:bg-slate-50/60"
+                    className={`group transition-colors hover:bg-slate-50/60 ${
+                      isApplicantNameNormalized(row.original.name)
+                        ? "bg-amber-50/70"
+                        : ""
+                    }`}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="whitespace-nowrap px-6 py-5">
@@ -475,3 +600,6 @@ export default function ApplicantListClient({
     </div>
   );
 }
+
+
+

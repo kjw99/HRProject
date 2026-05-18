@@ -125,26 +125,40 @@ function normalizeDupKey(value: string | null | undefined): string {
     .replace(/[^a-z0-9가-힣]/g, "");
 }
 
-function duplicateKey(row: Pick<TableRowData, "name" | "phone">): string {
-  const name = normalizeDupKey(row.name);
-  const phone = normalizeDupKey(row.phone);
-  return `${name}::${phone}`;
+function hasTwoOrMoreMatchingIdentityFields(
+  left: Pick<TableRowData, "name" | "phone" | "email">,
+  right: Pick<TableRowData, "name" | "phone" | "email">,
+): boolean {
+  const leftName = normalizeDupKey(left.name);
+  const leftPhone = normalizeDupKey(left.phone);
+  const leftEmail = normalizeDupKey(left.email);
+
+  const rightName = normalizeDupKey(right.name);
+  const rightPhone = normalizeDupKey(right.phone);
+  const rightEmail = normalizeDupKey(right.email);
+
+  let matchCount = 0;
+
+  if (leftName && rightName && leftName === rightName) matchCount += 1;
+  if (leftPhone && rightPhone && leftPhone === rightPhone) matchCount += 1;
+  if (leftEmail && rightEmail && leftEmail === rightEmail) matchCount += 1;
+
+  return matchCount >= 2;
 }
 
 export function recomputeDuplicateFlags(rows: TableRowData[]): TableRowData[] {
-  const countByKey = new Map<string, number>();
+  const duplicateIds = new Set<string>();
 
-  for (const row of rows) {
-    const key = duplicateKey(row);
-    if (!key || key === "::") continue;
-    countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
+  for (let i = 0; i < rows.length; i += 1) {
+    for (let j = i + 1; j < rows.length; j += 1) {
+      if (hasTwoOrMoreMatchingIdentityFields(rows[i], rows[j])) {
+        duplicateIds.add(rows[i].id);
+        duplicateIds.add(rows[j].id);
+      }
+    }
   }
 
-  return rows.map((row) => {
-    const key = duplicateKey(row);
-    const isDuplicate = key !== "::" && (countByKey.get(key) ?? 0) > 1;
-    return { ...row, isDuplicate };
-  });
+  return rows.map((row) => ({ ...row, isDuplicate: duplicateIds.has(row.id) }));
 }
 
 export function collectPositionOptions(rows: TableRowData[]): string[] {
@@ -156,4 +170,76 @@ export function collectPositionOptions(rows: TableRowData[]): string[] {
     RESUME_PARSE_POSITION_ALL,
     ...[...set].sort((a, b) => a.localeCompare(b, "ko")),
   ];
+}
+
+export interface DuplicateIdentityInput {
+  name: string | null | undefined;
+  birth: string | null | undefined;
+  phone: string | null | undefined;
+  email: string | null | undefined;
+}
+
+function normalizeIdentityValue(value: string | null | undefined): string {
+  return (value ?? "").toLowerCase().replace(/\s+/g, "").replace(/-/g, "");
+}
+
+function normalizeNameValue(value: string | null | undefined): string {
+  // Remove parenthetical aliases like "최태형 (崔泰亨)".
+  const withoutParen = (value ?? "")
+    .replace(/[\(\（][^\)\）]*[\)\）]/g, "")
+    .trim();
+  return normalizeIdentityValue(withoutParen);
+}
+
+export function buildDuplicateIdentityKey(input: DuplicateIdentityInput): string {
+  const name = normalizeNameValue(input.name);
+  const birth = normalizeIdentityValue(input.birth);
+  const phone = normalizeIdentityValue(input.phone);
+  const email = normalizeIdentityValue(input.email);
+  return `${name}::${birth}::${phone}::${email}`;
+}
+
+export function findDuplicateIdentityKeys(
+  entries: DuplicateIdentityInput[],
+): Set<string> {
+  const duplicateKeys = new Set<string>();
+
+  for (let i = 0; i < entries.length; i += 1) {
+    for (let j = i + 1; j < entries.length; j += 1) {
+      const left = entries[i];
+      const right = entries[j];
+
+      const leftName = normalizeNameValue(left.name);
+      const rightName = normalizeNameValue(right.name);
+      const leftBirth = normalizeIdentityValue(left.birth);
+      const rightBirth = normalizeIdentityValue(right.birth);
+      const leftPhone = normalizeIdentityValue(left.phone);
+      const rightPhone = normalizeIdentityValue(right.phone);
+      const leftEmail = normalizeIdentityValue(left.email);
+      const rightEmail = normalizeIdentityValue(right.email);
+
+      const nameMatched = leftName !== "" && leftName === rightName;
+      const birthMatched = leftBirth !== "" && leftBirth === rightBirth;
+      const phoneMatched = leftPhone !== "" && leftPhone === rightPhone;
+      const emailMatched = leftEmail !== "" && leftEmail === rightEmail;
+
+      // Primary rule: name + birth + phone all match.
+      if (nameMatched && birthMatched && phoneMatched) {
+        duplicateKeys.add(buildDuplicateIdentityKey(left));
+        duplicateKeys.add(buildDuplicateIdentityKey(right));
+        continue;
+      }
+
+      // Secondary rule: at least 2 matched among name/phone/email.
+      const matchedFieldCount =
+        Number(nameMatched) + Number(phoneMatched) + Number(emailMatched);
+
+      if (matchedFieldCount >= 2) {
+        duplicateKeys.add(buildDuplicateIdentityKey(left));
+        duplicateKeys.add(buildDuplicateIdentityKey(right));
+      }
+    }
+  }
+
+  return duplicateKeys;
 }

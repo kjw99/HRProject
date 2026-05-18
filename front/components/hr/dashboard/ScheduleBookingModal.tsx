@@ -224,6 +224,7 @@ export default function ScheduleOperationsModal({
         if (ignore) return;
         const map = new Map<number, string>();
         applicants.forEach((a) => {
+          if (a.position_id == null) return;
           if (!map.has(a.position_id)) {
             map.set(a.position_id, `공고 #${a.position_id}`);
           }
@@ -252,11 +253,12 @@ export default function ScheduleOperationsModal({
     const fromApi = positions.slice();
     const ids = new Set(fromApi.map((p) => p.positionId));
     applicants.forEach((a) => {
+      if (a.position_id == null) return;
       if (!ids.has(a.position_id)) {
         ids.add(a.position_id);
         fromApi.push({
           positionId: a.position_id,
-          positionName: `공고 #${a.position_id}`,
+          positionName: a.position_name?.trim() || `공고 #${a.position_id}`,
           createdAt: "",
         });
       }

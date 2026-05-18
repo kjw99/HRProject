@@ -8,8 +8,8 @@ import PositionFormModal from "./PositionFormModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import { toast } from "sonner";
 import { ToastUI } from "@/components/ui/ToastUI";
+import { buildPositionDisplayGroups } from "@/lib/hr/position-grouping";
 
-// 상단에 정렬 관련 타입 추가 (파일 상단이나 컴포넌트 밖)
 export type SortKey = "positionName" | "createdAt";
 export type SortOrder = "asc" | "desc";
 
@@ -27,8 +27,8 @@ export default function PositionClient({
   const [positions, setPositions] = useState<Position[]>(initialData);
   const [searchQuery, setSearchQuery] = useState("");
   // 컴포넌트 내부 State 추가
-  const [sortKey, setSortKey] = useState<SortKey>("createdAt");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc"); // 기본값: 최신순
+  const [sortKey, setSortKey] = useState<SortKey>("positionName");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   // 💡 모달 제어 상태
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -42,31 +42,23 @@ export default function PositionClient({
     setPositions(initialData);
   }, [initialData]);
 
-  // 💡 검색 필터링 (최적화를 위해 useMemo 사용)
-  const filteredAndSortedPositions = useMemo(() => {
-    // 1. 먼저 검색어로 필터링
-    let result = positions;
-    if (searchQuery.trim()) {
-      result = result.filter((pos) =>
-        pos.positionName.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-    }
+  const filteredPositions = useMemo(() => {
+    if (!searchQuery.trim()) return positions;
+    const keyword = searchQuery.toLowerCase();
+    return positions.filter((pos) =>
+      pos.positionName.toLowerCase().includes(keyword),
+    );
+  }, [positions, searchQuery]);
 
-    // 2. 필터링된 배열을 복사([...result])한 후 정렬 (원본 데이터 오염 방지)
-    return [...result].sort((a, b) => {
-      if (sortKey === "positionName") {
-        // 문자열 가나다순 정렬 (localeCompare 사용)
-        return sortOrder === "asc"
-          ? a.positionName.localeCompare(b.positionName)
-          : b.positionName.localeCompare(a.positionName);
-      } else {
-        // 날짜순 정렬
-        const timeA = new Date(a.createdAt).getTime();
-        const timeB = new Date(b.createdAt).getTime();
-        return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
-      }
-    });
-  }, [positions, searchQuery, sortKey, sortOrder]); // 💡 의존성 배열에 정렬 State 추가
+  const displayGroups = useMemo(
+    () => buildPositionDisplayGroups(filteredPositions, sortKey, sortOrder),
+    [filteredPositions, sortKey, sortOrder],
+  );
+
+  const filteredAndSortedPositions = useMemo(
+    () => displayGroups.flatMap((group) => group.positions),
+    [displayGroups],
+  );
 
   // 🛠️ CRUD 핸들러 (실제로는 여기서 API 통신을 수행합니다)
 
@@ -176,8 +168,8 @@ export default function PositionClient({
             <span className="tabular-nums text-slate-600">표시 {visibleCount}개</span>
           </p>
           <p className="hidden items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-400 lg:flex">
-            <i className="bx bx-sort text-sm text-slate-300" />
-            열 헤더 클릭으로 정렬
+            <i className="bx bx-category text-sm text-slate-300" />
+            유사 직무 분류별 · 열 헤더로 정렬
           </p>
         </div>
 
@@ -197,10 +189,10 @@ export default function PositionClient({
             }}
             className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-[13px] font-bold text-slate-600 shadow-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
           >
-            <option value="createdAt:desc">최신 등록순</option>
-            <option value="createdAt:asc">오래된 등록순</option>
-            <option value="positionName:asc">직무명 가나다순</option>
-            <option value="positionName:desc">직무명 역순</option>
+            <option value="positionName:asc">분류별 · 직무명 가나다순</option>
+            <option value="positionName:desc">분류별 · 직무명 역순</option>
+            <option value="createdAt:desc">분류별 · 최신 등록순</option>
+            <option value="createdAt:asc">분류별 · 오래된 등록순</option>
           </select>
         </div>
 
@@ -244,7 +236,7 @@ export default function PositionClient({
       {/* 테이블 영역 (스크롤 가능) */}
       <div className="flex-1 overflow-auto bg-white">
         <PositionTable
-          positions={filteredAndSortedPositions}
+          groups={displayGroups}
           sortKey={sortKey}
           sortOrder={sortOrder}
           onSort={(key) => {
