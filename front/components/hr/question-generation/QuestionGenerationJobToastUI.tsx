@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -14,11 +14,15 @@ export interface QuestionGenerationToastProgress {
 interface QuestionGenerationJobToastUIProps {
   toastId: string | number;
   progress: QuestionGenerationToastProgress;
+  isMinimized: boolean;
+  onToggleMinimize: () => void;
 }
 
 export function QuestionGenerationJobToastUI({
   toastId,
   progress,
+  isMinimized,
+  onToggleMinimize,
 }: QuestionGenerationJobToastUIProps) {
   const router = useRouter();
   const isSpinning =
@@ -28,6 +32,36 @@ export function QuestionGenerationJobToastUI({
     toast.dismiss(toastId);
     router.push("/hr/ai-gen");
   };
+
+  if (isMinimized) {
+    return (
+      <div className="pointer-events-auto flex w-[min(100vw-2rem,320px)] items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-2 shadow-lg">
+        <i
+          className={`bx text-violet-600 ${
+            isSpinning ? "bx-loader-alt animate-spin" : "bx-brain"
+          }`}
+        />
+        <span className="flex-1 truncate text-xs font-bold text-slate-700">
+          질문 생성 {progress.percent}%
+        </span>
+        <button
+          type="button"
+          onClick={onToggleMinimize}
+          className="text-xs font-black text-violet-600 hover:text-violet-800"
+        >
+          복원
+        </button>
+        <button
+          type="button"
+          onClick={() => toast.dismiss(toastId)}
+          className="text-slate-400 hover:text-slate-600"
+          aria-label="알림 닫기"
+        >
+          <i className="bx bx-x text-lg" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -62,14 +96,24 @@ export function QuestionGenerationJobToastUI({
           ) : null}
         </div>
 
-        <button
-          type="button"
-          onClick={() => toast.dismiss(toastId)}
-          className="shrink-0 text-slate-300 transition hover:text-slate-500"
-          aria-label="알림 닫기"
-        >
-          <i className="bx bx-x text-xl" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onToggleMinimize}
+            className="shrink-0 text-slate-300 transition hover:text-slate-500"
+            aria-label="최소화"
+          >
+            <i className="bx bx-minus text-xl" />
+          </button>
+          <button
+            type="button"
+            onClick={() => toast.dismiss(toastId)}
+            className="shrink-0 text-slate-300 transition hover:text-slate-500"
+            aria-label="알림 닫기"
+          >
+            <i className="bx bx-x text-xl" />
+          </button>
+        </div>
       </div>
 
       <div className="mx-4 mb-3 h-2 overflow-hidden rounded-full bg-violet-50">
@@ -83,7 +127,7 @@ export function QuestionGenerationJobToastUI({
 
       <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/80 px-4 py-2.5">
         <p className="text-[11px] font-semibold text-slate-500">
-          다른 메뉴로 이동해도 생성은 계속됩니다
+          다른 메뉴로 이동해도 생성은 계속됩니다.
         </p>
         <button
           type="button"

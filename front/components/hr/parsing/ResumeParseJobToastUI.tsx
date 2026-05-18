@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,15 +10,18 @@ export const RESUME_PARSE_TOAST_ID = "resume-parse-job";
 interface ResumeParseJobToastUIProps {
   toastId: string | number;
   progress: ResumeParseProgress;
+  isMinimized: boolean;
+  onToggleMinimize: () => void;
 }
 
 export function ResumeParseJobToastUI({
   toastId,
   progress,
+  isMinimized,
+  onToggleMinimize,
 }: ResumeParseJobToastUIProps) {
   const router = useRouter();
-  const label =
-    RESUME_PARSE_STATUS_LABEL[progress.status] ?? progress.status;
+  const label = RESUME_PARSE_STATUS_LABEL[progress.status] ?? progress.status;
   const isSpinning =
     progress.status === "running" || progress.status === "queued";
 
@@ -26,6 +29,36 @@ export function ResumeParseJobToastUI({
     toast.dismiss(toastId);
     router.push("/hr/parsing");
   };
+
+  if (isMinimized) {
+    return (
+      <div className="pointer-events-auto flex w-[min(100vw-2rem,320px)] items-center gap-2 rounded-full border border-indigo-200 bg-white px-3 py-2 shadow-lg">
+        <i
+          className={`bx text-indigo-600 ${
+            isSpinning ? "bx-loader-alt animate-spin" : "bx-bot"
+          }`}
+        />
+        <span className="flex-1 truncate text-xs font-bold text-slate-700">
+          이력서 파싱 {progress.processed}/{progress.total}
+        </span>
+        <button
+          type="button"
+          onClick={onToggleMinimize}
+          className="text-xs font-black text-indigo-600 hover:text-indigo-800"
+        >
+          복원
+        </button>
+        <button
+          type="button"
+          onClick={() => toast.dismiss(toastId)}
+          className="text-slate-400 hover:text-slate-600"
+          aria-label="알림 닫기"
+        >
+          <i className="bx bx-x text-lg" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -56,14 +89,24 @@ export function ResumeParseJobToastUI({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => toast.dismiss(toastId)}
-          className="shrink-0 text-slate-300 transition hover:text-slate-500"
-          aria-label="알림 닫기"
-        >
-          <i className="bx bx-x text-xl" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onToggleMinimize}
+            className="shrink-0 text-slate-300 transition hover:text-slate-500"
+            aria-label="최소화"
+          >
+            <i className="bx bx-minus text-xl" />
+          </button>
+          <button
+            type="button"
+            onClick={() => toast.dismiss(toastId)}
+            className="shrink-0 text-slate-300 transition hover:text-slate-500"
+            aria-label="알림 닫기"
+          >
+            <i className="bx bx-x text-xl" />
+          </button>
+        </div>
       </div>
 
       <div className="mx-4 mb-3 h-2 overflow-hidden rounded-full bg-indigo-50">
@@ -75,7 +118,7 @@ export function ResumeParseJobToastUI({
 
       <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/80 px-4 py-2.5">
         <p className="text-[11px] font-semibold text-slate-500">
-          다른 메뉴로 이동해도 분석은 계속됩니다
+          다른 메뉴로 이동해도 분석은 계속됩니다.
         </p>
         <button
           type="button"

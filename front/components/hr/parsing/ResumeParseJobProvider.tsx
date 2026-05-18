@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   useMutation,
@@ -83,9 +83,13 @@ const ResumeParseJobContext = createContext<ResumeParseJobContextValue | null>(
 function ResumeParseJobToastHost({
   isJobActive,
   progress,
+  isMinimized,
+  onToggleMinimize,
 }: {
   isJobActive: boolean;
   progress: ResumeParseProgress;
+  isMinimized: boolean;
+  onToggleMinimize: () => void;
 }) {
   useEffect(() => {
     if (!isJobActive) {
@@ -94,7 +98,12 @@ function ResumeParseJobToastHost({
     }
 
     toast.custom(
-      (t) => <ResumeParseJobToastUI toastId={t} progress={progress} />,
+      (t) => <ResumeParseJobToastUI
+          toastId={t}
+          progress={progress}
+          isMinimized={isMinimized}
+          onToggleMinimize={onToggleMinimize}
+        />,
       {
         id: RESUME_PARSE_TOAST_ID,
         duration: Infinity,
@@ -108,6 +117,8 @@ function ResumeParseJobToastHost({
     progress.total,
     progress.percent,
     progress.status,
+    isMinimized,
+    onToggleMinimize,
   ]);
 
   return null;
@@ -127,6 +138,7 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
   const [excelPayload, setExcelPayload] = useState<ParseExcelPayload | null>(
     null,
   );
+  const [isToastMinimized, setIsToastMinimized] = useState(false);
 
   const goToParsingPage = useCallback(() => {
     router.push("/hr/parsing");
@@ -194,10 +206,11 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
       setPendingTotal(data.totalFiles);
       setJobError(null);
       setLastResult(null);
+      setIsToastMinimized(false);
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, "파싱 작업을 시작하지 못했습니다."),
+        getApiErrorMessage(error, "?뚯떛 ?묒뾽???쒖옉?섏? 紐삵뻽?듬땲??"),
       );
     },
   });
@@ -219,7 +232,7 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
     if (jobQuery.isError) {
       const message = getApiErrorMessage(
         jobQuery.error,
-        "파싱 작업 상태를 불러오지 못했습니다. 백엔드가 재시작되었으면 다시 업로드해 주세요.",
+        "?뚯떛 ?묒뾽 ?곹깭瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲?? 諛깆뿏?쒓? ?ъ떆?묐릺?덉쑝硫??ㅼ떆 ?낅줈?쒗빐 二쇱꽭??",
       );
       setJobError(message);
       toast.dismiss(RESUME_PARSE_TOAST_ID);
@@ -249,11 +262,11 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
       } else if (errorCount > 0) {
         setJobError(null);
         toast.warning(
-          `파싱 완료 · ${successCount}건 성공, ${errorCount}건 오류`,
+          `?뚯떛 ?꾨즺 쨌 ${successCount}嫄??깃났, ${errorCount}嫄??ㅻ쪟`,
           {
             position: "bottom-right",
             action: {
-              label: "결과 보기",
+              label: "寃곌낵 蹂닿린",
               onClick: () => router.push("/hr/parsing"),
             },
           },
@@ -261,11 +274,11 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
       } else {
         setJobError(null);
         toast.success(
-          `${successCount}건의 이력서 분석이 완료되었습니다.`,
+          `${successCount}嫄댁쓽 ?대젰??遺꾩꽍???꾨즺?섏뿀?듬땲??`,
           {
             position: "bottom-right",
             action: {
-              label: "결과 보기",
+              label: "寃곌낵 蹂닿린",
               onClick: () => router.push("/hr/parsing"),
             },
           },
@@ -273,18 +286,20 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
       }
 
       setJobId(null);
+      setIsToastMinimized(false);
       queryClient.removeQueries({ queryKey: [JOB_QUERY_KEY, job.jobId] });
     }
 
     if (job.status === "failed") {
       const message = coerceToErrorString(
         job.error,
-        "이력서 파싱 작업에 실패했습니다.",
+        "?대젰???뚯떛 ?묒뾽???ㅽ뙣?덉뒿?덈떎.",
       );
       setJobError(message);
       toast.dismiss(RESUME_PARSE_TOAST_ID);
       toast.error(message, { position: "bottom-right" });
       setJobId(null);
+      setIsToastMinimized(false);
       queryClient.removeQueries({ queryKey: [JOB_QUERY_KEY, job.jobId] });
     }
   }, [
@@ -371,7 +386,12 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
 
   return (
     <ResumeParseJobContext.Provider value={value}>
-      <ResumeParseJobToastHost isJobActive={isJobActive} progress={progress} />
+      <ResumeParseJobToastHost
+        isJobActive={isJobActive}
+        progress={progress}
+        isMinimized={isToastMinimized}
+        onToggleMinimize={() => setIsToastMinimized((prev) => !prev)}
+      />
       {children}
     </ResumeParseJobContext.Provider>
   );
@@ -386,3 +406,5 @@ export function useResumeParseJobContext(): ResumeParseJobContextValue {
   }
   return ctx;
 }
+
+
