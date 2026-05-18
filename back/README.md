@@ -4,7 +4,7 @@
 3. notion에 있는 .env 복붙. 위치는 back 폴더에. 백엔드 readme.md랑 같은 위치임.
 4. PostgreSQL에서 사용할 DB 생성(로컬 기준)
 5. uv run alembic upgrade head 실행. (alembic를 실행해서 기존에 작성되어 있는 테이블 구조 적용.)
-6. 서버 실행. uv run fastapi dev
+6. 서버 실행. uv run fastapi dev 
 
 ## 백엔드 첫 시작시 admin 계정 추가
 1. back 폴더에 들어간다.
