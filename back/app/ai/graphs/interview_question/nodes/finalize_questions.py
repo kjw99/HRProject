@@ -11,7 +11,8 @@ async def finalize_questions(
     questions = normalize_questions(state["questions"])
     if len(questions) < data.question_count:
         raise ExternalServiceException(
-            "AI가 요청한 개수보다 적은 면접 질문을 생성했습니다."
+            # "AI가 요청한 개수보다 적은 면접 질문을 생성했습니다."
+            f"Final question count is too small. actual={len(questions)}, expected={data.question_count}"
         )
 
     return {

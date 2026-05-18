@@ -4,11 +4,12 @@ from langgraph.graph import END, StateGraph
 
 from app.ai.graphs.interview_question.nodes import (
     analyze_fit,
-    finalize_questions,
+    plan_questions,
     generate_question_candidates,
+    select_questions,
     review_questions,
     revise_questions,
-    select_questions,
+    finalize_questions,  
 )
 from app.ai.graphs.interview_question.state import InterviewQuestionGraphState
 from app.ai.schemas.question_generation import (
@@ -56,6 +57,7 @@ class InterviewQuestionGraph:
         workflow = StateGraph(InterviewQuestionGraphState)
 
         workflow.add_node("analyze_fit", analyze_fit)
+        workflow.add_node("plan_questions", plan_questions)
         workflow.add_node("generate_question_candidates", generate_question_candidates)
         workflow.add_node("select_questions", select_questions)
         workflow.add_node("review_questions", review_questions)
@@ -63,7 +65,8 @@ class InterviewQuestionGraph:
         workflow.add_node("finalize_questions", finalize_questions)
 
         workflow.set_entry_point("analyze_fit")
-        workflow.add_edge("analyze_fit", "generate_question_candidates")
+        workflow.add_edge("analyze_fit", "plan_questions")
+        workflow.add_edge("plan_questions", "generate_question_candidates")
         workflow.add_edge("generate_question_candidates", "select_questions")
         workflow.add_edge("select_questions", "review_questions")
         workflow.add_conditional_edges(

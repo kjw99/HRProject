@@ -18,6 +18,9 @@ async def revise_questions(
         ),
         question_count=data.question_count,
         error_message="면접 질문을 수정하지 못했습니다.",
+        count_error_message=(
+            f"AI generated fewer revised questions than required. "
+            f"expected={data.question_count}")
     )
 
     return {

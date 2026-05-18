@@ -5,6 +5,7 @@ from app.ai.prompts.interview_question.utils import model_to_json, optional_text
 from app.ai.schemas.question_generation import (
     InterviewQuestionGenerationInput,
     QuestionFitAnalysis,
+    QuestionPlan,
 )
 
 
@@ -56,10 +57,14 @@ def build_interview_question_messages(
 def build_question_candidate_messages(
     data: InterviewQuestionGenerationInput,
     analysis: QuestionFitAnalysis,
+    question_plan: QuestionPlan | None,
     candidate_count: int,
 ) -> list[SystemMessage | HumanMessage]:
     additional_request = optional_text(data.additional_request)
     analysis_text = model_to_json(analysis)
+    question_plan_text = (
+    model_to_json(question_plan) if question_plan else "No question plan provided."
+)
     human_prompt = f"""
 아래 분석 결과, 직무기술서, 이력서 정보를 바탕으로 면접 질문 후보를 정확히 {candidate_count}개 생성하세요.
 최종 질문 개수는 {data.question_count}개이며, 각 최종 질문 슬롯마다 후보 A/B를 비교하기 위해 총 {candidate_count}개를 생성합니다.
@@ -72,6 +77,15 @@ def build_question_candidate_messages(
 
 ## 핵심 분석 결과
 {analysis_text}
+
+## Question Plan
+{question_plan_text}
+
+- Question Plan의 category, count, focus를 기준으로 후보 질문 주제를 구성하세요.
+- 각 plan item의 count가 최종 질문 개수 기준이라면, 후보 질문은 그 2배 정도 생성하세요.
+- 특정 category가 3개 필요하면 후보 질문은 최소 6개 생성해서 selection 단계가 고를 수 있게 하세요.
+
+
 
 ## 직무기술서 정보
 {optional_text(data.job_description_context)}
@@ -90,6 +104,14 @@ def build_question_candidate_messages(
 - 이력서나 직무기술서에 근거가 없는 내용은 단정하지 말고 확인 질문으로 작성하세요.
 - 보호 대상 개인정보나 직무와 무관한 사적 정보는 질문하지 마세요.
 - pair끼리는 평가 관점이 지나치게 중복되지 않도록 구성하세요.
+
+중요한 개수 규칙:
+- 반드시 후보 질문을 정확히 {candidate_count}개 반환하세요.
+- Question Plan의 count는 최종 질문 개수 기준입니다. 후보 질문 개수가 아닙니다.
+- 각 Question Plan item마다 count의 약 2배 후보 질문을 생성하세요.
+- 예: 어떤 category의 count가 3이면, 해당 category 후보 질문은 약 6개 생성하세요.
+- {data.question_count}개만 생성하면 안 됩니다.
+- 이 단계의 최종 출력은 반드시 후보 질문 {candidate_count}개여야 합니다.
 
 각 항목은 다음 필드만 포함하세요:
 - question_text: "[ ] 질문 내용"
