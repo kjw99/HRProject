@@ -187,7 +187,6 @@ class ResumeParseService:
 
         candidate = await self._candidate_repo.find_by_identity(
             db=session,
-            email=self._normalizer.email(personal_info.email),
             phone=self._normalizer.clean(personal_info.phone),
             name=self._normalizer.clean(personal_info.name),
         )
