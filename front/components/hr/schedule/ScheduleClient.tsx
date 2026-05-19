@@ -43,11 +43,15 @@ import type {
 const ScheduleOperationsModal = dynamic(
   () => import("@/components/hr/dashboard/ScheduleBookingModal"),
 );
-const ScheduleSlotDetailModal = dynamic(
-  () => import("@/components/hr/schedule/ScheduleSlotDetailModal").then((mod) => mod.ScheduleSlotDetailModal),
+const ScheduleSlotDetailModal = dynamic(() =>
+  import("@/components/hr/schedule/ScheduleSlotDetailModal").then(
+    (mod) => mod.ScheduleSlotDetailModal,
+  ),
 );
-const ScheduleSlotEditorPanel = dynamic(
-  () => import("@/components/hr/schedule/ScheduleSlotEditorPanel").then((mod) => mod.ScheduleSlotEditorPanel),
+const ScheduleSlotEditorPanel = dynamic(() =>
+  import("@/components/hr/schedule/ScheduleSlotEditorPanel").then(
+    (mod) => mod.ScheduleSlotEditorPanel,
+  ),
 );
 
 type ScheduleClientProps = ScheduleClientInitialData;
@@ -67,13 +71,16 @@ const defaultForm = (date: Date): ScheduleSlotFormState => ({
 });
 
 const toLocalTime = (isoString: string) => format(parseISO(isoString), "HH:mm");
-const toLocalDate = (isoString: string) => format(parseISO(isoString), "yyyy-MM-dd");
+const toLocalDate = (isoString: string) =>
+  format(parseISO(isoString), "yyyy-MM-dd");
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   const maybe = error as {
     response?: { data?: { message?: string; detail?: string } };
   };
-  return maybe.response?.data?.message || maybe.response?.data?.detail || fallback;
+  return (
+    maybe.response?.data?.message || maybe.response?.data?.detail || fallback
+  );
 };
 
 export default function ScheduleClient({
@@ -85,28 +92,42 @@ export default function ScheduleClient({
 }: ScheduleClientProps) {
   const queryClient = useQueryClient();
 
-  const [monthCursor, setMonthCursor] = useState(() => parseISO(`${initialMonth}-01`));
-  const [weekAnchor, setWeekAnchor] = useState(() => parseISO(`${initialMonth}-01`));
+  const [monthCursor, setMonthCursor] = useState(() =>
+    parseISO(`${initialMonth}-01`),
+  );
+  const [weekAnchor, setWeekAnchor] = useState(() =>
+    parseISO(`${initialMonth}-01`),
+  );
   const [viewMode, setViewMode] = useState<ScheduleCalendarViewMode>("month");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [selectedSlotIds, setSelectedSlotIds] = useState<number[]>([]);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [detailModalSlot, setDetailModalSlot] = useState<InterviewSlotDetailItem | null>(null);
+  const [detailModalSlot, setDetailModalSlot] =
+    useState<InterviewSlotDetailItem | null>(null);
   const [isDetailModalLoading, setIsDetailModalLoading] = useState(false);
   const [formMode, setFormMode] = useState<ScheduleSlotFormMode>("create");
-  const [form, setForm] = useState<ScheduleSlotFormState>(() => defaultForm(new Date()));
+  const [form, setForm] = useState<ScheduleSlotFormState>(() =>
+    defaultForm(new Date()),
+  );
   const [slotEditorOpen, setSlotEditorOpen] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
-  const [modalInterviewDateSeed, setModalInterviewDateSeed] = useState<string | undefined>(undefined);
+  const [modalInterviewDateSeed, setModalInterviewDateSeed] = useState<
+    string | undefined
+  >(undefined);
   const [isRemoteMinimized, setIsRemoteMinimized] = useState(false);
   const [isDeletingSlots, setIsDeletingSlots] = useState(false);
 
   const makeSlotsQueryKey = useCallback(
-    (targetMonth: Date) => [SCHEDULE_SLOTS_QUERY_KEY, targetMonth.getFullYear(), targetMonth.getMonth() + 1],
+    (targetMonth: Date) => [
+      SCHEDULE_SLOTS_QUERY_KEY,
+      targetMonth.getFullYear(),
+      targetMonth.getMonth() + 1,
+    ],
     [],
   );
 
-  const activeMonth = viewMode === "month" ? monthCursor : startOfMonth(weekAnchor);
+  const activeMonth =
+    viewMode === "month" ? monthCursor : startOfMonth(weekAnchor);
   const slotsQuery = useQuery({
     queryKey: makeSlotsQueryKey(activeMonth),
     queryFn: () =>
@@ -115,30 +136,44 @@ export default function ScheduleClient({
         month: activeMonth.getMonth() + 1,
       }),
     placeholderData: (prev) => prev,
-    initialData: initialMonth === format(activeMonth, "yyyy-MM") ? initialSlots : undefined,
+    initialData:
+      initialMonth === format(activeMonth, "yyyy-MM")
+        ? initialSlots
+        : undefined,
   });
 
   const slots = useMemo(() => slotsQuery.data ?? [], [slotsQuery.data]);
 
-  const monthGridDays = useMemo(() => getMonthCalendarDays(monthCursor), [monthCursor]);
-  const weekGridDays = useMemo(() => getWeekCalendarDays(weekAnchor), [weekAnchor]);
+  const monthGridDays = useMemo(
+    () => getMonthCalendarDays(monthCursor),
+    [monthCursor],
+  );
+  const weekGridDays = useMemo(
+    () => getWeekCalendarDays(weekAnchor),
+    [weekAnchor],
+  );
   const gridDays = viewMode === "month" ? monthGridDays : weekGridDays;
   const displayMonth = viewMode === "month" ? monthCursor : weekAnchor;
 
   const slotsByDate = useMemo(() => {
-    return slots.reduce<Record<string, InterviewSlotListItem[]>>((acc, slot) => {
-      const key = toLocalDate(slot.interviewStartsAt);
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(slot);
-      return acc;
-    }, {});
+    return slots.reduce<Record<string, InterviewSlotListItem[]>>(
+      (acc, slot) => {
+        const key = toLocalDate(slot.interviewStartsAt);
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(slot);
+        return acc;
+      },
+      {},
+    );
   }, [slots]);
 
   const selectedDayKey = format(selectedDate, "yyyy-MM-dd");
   const selectedDaySlots = useMemo(
     () =>
       [...(slotsByDate[selectedDayKey] ?? [])].sort(
-        (a, b) => parseISO(a.interviewStartsAt).getTime() - parseISO(b.interviewStartsAt).getTime(),
+        (a, b) =>
+          parseISO(a.interviewStartsAt).getTime() -
+          parseISO(b.interviewStartsAt).getTime(),
       ),
     [selectedDayKey, slotsByDate],
   );
@@ -146,10 +181,13 @@ export default function ScheduleClient({
   const totalSlotCount = useMemo(() => {
     if (viewMode === "month") return slots.length;
     const weekKeys = new Set(weekGridDays.map((d) => format(d, "yyyy-MM-dd")));
-    return slots.filter((slot) => weekKeys.has(toLocalDate(slot.interviewStartsAt))).length;
+    return slots.filter((slot) =>
+      weekKeys.has(toLocalDate(slot.interviewStartsAt)),
+    ).length;
   }, [slots, viewMode, weekGridDays]);
 
-  const selectedSlotId = selectedSlotIds.length === 1 ? selectedSlotIds[0] : null;
+  const selectedSlotId =
+    selectedSlotIds.length === 1 ? selectedSlotIds[0] : null;
 
   const selectedSlotDetailQuery = useQuery({
     queryKey: [SCHEDULE_SLOT_DETAIL_QUERY_KEY, selectedSlotId],
@@ -159,7 +197,8 @@ export default function ScheduleClient({
   });
 
   const primarySlotDetail = selectedSlotDetailQuery.data ?? null;
-  const isPrimaryDetailLoading = selectedSlotId != null && selectedSlotDetailQuery.isFetching;
+  const isPrimaryDetailLoading =
+    selectedSlotId != null && selectedSlotDetailQuery.isFetching;
 
   const fetchSlotDetailCached = useCallback(
     async (slotId: number) =>
@@ -173,7 +212,8 @@ export default function ScheduleClient({
   const filteredInterviewers = useMemo(() => {
     const positionId = Number(form.positionId);
     return initialInterviewers.filter((interviewer) => {
-      const positionMatched = !positionId || interviewer.positionId === positionId;
+      const positionMatched =
+        !positionId || interviewer.positionId === positionId;
       const roundMatched = interviewer.interviewRound === form.interviewRound;
       return positionMatched && roundMatched;
     });
@@ -236,7 +276,10 @@ export default function ScheduleClient({
   };
 
   const moveMonth = (direction: "prev" | "next") => {
-    const nextMonth = direction === "prev" ? subMonths(monthCursor, 1) : addMonths(monthCursor, 1);
+    const nextMonth =
+      direction === "prev"
+        ? subMonths(monthCursor, 1)
+        : addMonths(monthCursor, 1);
     setMonthCursor(nextMonth);
     setSelectedDate(startOfMonth(nextMonth));
     setWeekAnchor(startOfMonth(nextMonth));
@@ -262,7 +305,11 @@ export default function ScheduleClient({
   };
 
   const toggleSlotSelection = (slotId: number) => {
-    setSelectedSlotIds((prev) => (prev.includes(slotId) ? prev.filter((id) => id !== slotId) : [...prev, slotId]));
+    setSelectedSlotIds((prev) =>
+      prev.includes(slotId)
+        ? prev.filter((id) => id !== slotId)
+        : [...prev, slotId],
+    );
   };
 
   const clearSlotSelection = () => {
@@ -277,7 +324,9 @@ export default function ScheduleClient({
         setDetailModalSlot(detail);
         setDetailModalOpen(true);
       } catch (error) {
-        toast.error(getErrorMessage(error, "면접 일정 상세를 불러오지 못했습니다."));
+        toast.error(
+          getErrorMessage(error, "면접 일정 상세를 불러오지 못했습니다."),
+        );
       } finally {
         setIsDetailModalLoading(false);
       }
@@ -300,7 +349,9 @@ export default function ScheduleClient({
 
   const inferPositionId = useCallback(
     (slot: InterviewSlotDetailItem) => {
-      const matched = initialPositions.find((position) => position.positionName === slot.positionName);
+      const matched = initialPositions.find(
+        (position) => position.positionName === slot.positionName,
+      );
       return matched ? String(matched.positionId) : "";
     },
     [initialPositions],
@@ -309,7 +360,9 @@ export default function ScheduleClient({
   const inferInterviewerIds = useCallback(
     (slot: InterviewSlotDetailItem) =>
       initialInterviewers
-        .filter((interviewer) => slot.interviewerNames.includes(interviewer.interviewerName))
+        .filter((interviewer) =>
+          slot.interviewerNames.includes(interviewer.interviewerName),
+        )
         .map((interviewer) => interviewer.interviewerId),
     [initialInterviewers],
   );
@@ -325,7 +378,9 @@ export default function ScheduleClient({
         interviewStartTime: toLocalTime(detail.interviewStartsAt),
         interviewEndTime: toLocalTime(detail.interviewEndsAt),
         interviewLocation: detail.interviewLocation ?? "",
-        capacity: String(detail.remainingCapacity + detail.bookedCandidateNames.length),
+        capacity: String(
+          detail.remainingCapacity + detail.bookedCandidateNames.length,
+        ),
       });
     },
     [inferInterviewerIds, inferPositionId],
@@ -350,9 +405,16 @@ export default function ScheduleClient({
       applyDetailToEditForm(detail);
       setSlotEditorOpen(true);
     } catch (error) {
-      toast.error(getErrorMessage(error, "면접 일정 상세를 불러오지 못했습니다."));
+      toast.error(
+        getErrorMessage(error, "면접 일정 상세를 불러오지 못했습니다."),
+      );
     }
-  }, [applyDetailToEditForm, fetchSlotDetailCached, primarySlotDetail, selectedSlotIds]);
+  }, [
+    applyDetailToEditForm,
+    fetchSlotDetailCached,
+    primarySlotDetail,
+    selectedSlotIds,
+  ]);
 
   const openEditFromDetailModal = (detail: InterviewSlotDetailItem) => {
     setDetailModalOpen(false);
@@ -362,7 +424,10 @@ export default function ScheduleClient({
     setSlotEditorOpen(true);
   };
 
-  const updateForm = <K extends keyof ScheduleSlotFormState>(key: K, value: ScheduleSlotFormState[K]) => {
+  const updateForm = <K extends keyof ScheduleSlotFormState>(
+    key: K,
+    value: ScheduleSlotFormState[K],
+  ) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -413,7 +478,10 @@ export default function ScheduleClient({
         setWeekAnchor(anchor);
         setSelectedDate(anchor);
         await refreshSlots(monthStart);
-        await queryClient.invalidateQueries({ queryKey: [SCHEDULE_SLOT_DETAIL_QUERY_KEY, slotId], exact: true });
+        await queryClient.invalidateQueries({
+          queryKey: [SCHEDULE_SLOT_DETAIL_QUERY_KEY, slotId],
+          exact: true,
+        });
         setSelectedSlotIds([slotId]);
         setSlotEditorOpen(false);
       } else {
@@ -425,7 +493,9 @@ export default function ScheduleClient({
         setForm(defaultForm(selectedDate));
       }
     } catch (error) {
-      toast.error(getErrorMessage(error, "면접 일정 저장 중 오류가 발생했습니다."));
+      toast.error(
+        getErrorMessage(error, "면접 일정 저장 중 오류가 발생했습니다."),
+      );
     }
   };
 
@@ -515,7 +585,9 @@ export default function ScheduleClient({
           });
         }
 
-        setSelectedSlotIds((prev) => prev.filter((id) => !succeededSet.has(id)));
+        setSelectedSlotIds((prev) =>
+          prev.filter((id) => !succeededSet.has(id)),
+        );
         setSlotEditorOpen(false);
         setFormMode("create");
         setForm(defaultForm(selectedDate));
@@ -583,7 +655,7 @@ export default function ScheduleClient({
           isRemoteMinimized ? "pb-24 sm:pb-28" : "pb-40 sm:pb-44"
         }`}
       >
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-5 lg:gap-6">
+        <div className="mx-auto flex max-w-400 flex-col gap-5 lg:gap-6">
           <ScheduleHeader
             headerTitle={calendarHeaderTitle}
             viewMode={viewMode}
@@ -596,8 +668,8 @@ export default function ScheduleClient({
             onJumpToday={jumpToToday}
           />
 
-          <div className="grid grid-cols-1 gap-5 lg:h-[calc(100vh-200px)] lg:max-h-[920px] lg:min-h-[640px] lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,1fr)] lg:gap-6 lg:items-stretch">
-            <div className="h-[min(78vh,760px)] min-h-[460px] lg:h-full lg:min-h-0">
+          <div className="grid grid-cols-1 gap-5 lg:h-[calc(100vh-200px)] lg:max-h-230 lg:min-h-160 lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,1fr)] lg:gap-6 lg:items-stretch">
+            <div className="h-[min(78vh,760px)] min-h-115 lg:h-full lg:min-h-0">
               <ScheduleCalendarPanel
                 viewMode={viewMode}
                 gridDays={gridDays}
@@ -608,7 +680,7 @@ export default function ScheduleClient({
               />
             </div>
 
-            <div className="h-[min(76vh,720px)] min-h-[420px] lg:h-full lg:min-h-0">
+            <div className="h-[min(76vh,720px)] min-h-105 lg:h-full lg:min-h-0">
               <ScheduleListPanel
                 selectedDate={selectedDate}
                 selectedDaySlots={selectedDaySlots}
@@ -632,7 +704,9 @@ export default function ScheduleClient({
         isLoading={slotsQuery.isFetching}
         isSaving={isSaving}
         isMinimized={isRemoteMinimized}
-        enableEscapeToMinimize={!slotEditorOpen && !detailModalOpen && !bookingModalOpen}
+        enableEscapeToMinimize={
+          !slotEditorOpen && !detailModalOpen && !bookingModalOpen
+        }
         onMinimize={() => setIsRemoteMinimized(true)}
         onRestore={() => setIsRemoteMinimized(false)}
         onOpenOperations={() => {

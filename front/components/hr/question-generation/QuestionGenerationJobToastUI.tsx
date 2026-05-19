@@ -71,7 +71,7 @@ export function QuestionGenerationJobToastUI({
       aria-busy={isSpinning}
     >
       <div className="flex items-start gap-3 p-4 pr-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-200/50">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-200/50">
           <i
             className={`bx text-xl ${
               isSpinning ? "bx-loader-alt animate-spin" : "bx-brain"
@@ -118,7 +118,7 @@ export function QuestionGenerationJobToastUI({
 
       <div className="mx-4 mb-3 h-2 overflow-hidden rounded-full bg-violet-50">
         <div
-          className={`h-full rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 transition-all duration-500 ease-out ${
+          className={`h-full rounded-full bg-linear-to-r from-violet-600 to-indigo-500 transition-all duration-500 ease-out ${
             isSpinning ? "animate-pulse" : ""
           }`}
           style={{ width: `${progress.percent}%` }}

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -91,17 +91,19 @@ const QuestionGenerationJobContext =
 
 function QuestionGenerationJobToastHost({
   isJobActive,
+  shouldShowToast,
   progress,
   isMinimized,
   onToggleMinimize,
 }: {
   isJobActive: boolean;
+  shouldShowToast: boolean;
   progress: QuestionGenerationToastProgress;
   isMinimized: boolean;
   onToggleMinimize: () => void;
 }) {
   useEffect(() => {
-    if (!isJobActive) {
+    if (!isJobActive || !shouldShowToast) {
       toast.dismiss(QUESTION_GENERATION_TOAST_ID);
       return;
     }
@@ -124,10 +126,17 @@ function QuestionGenerationJobToastHost({
     );
   }, [
     isJobActive,
+    shouldShowToast,
     progress,
     isMinimized,
     onToggleMinimize,
   ]);
+
+  useEffect(() => {
+    return () => {
+      toast.dismiss(QUESTION_GENERATION_TOAST_ID);
+    };
+  }, []);
 
   return null;
 }
@@ -138,6 +147,7 @@ export function QuestionGenerationJobProvider({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const listenersRef = useRef<Set<SuccessListener>>(new Set());
   const [jobId, setJobId] = useState<number | null>(null);
@@ -231,6 +241,8 @@ export function QuestionGenerationJobProvider({
       const uiItems = mapToUiQuestions(job.resultQuestions);
       setTimeout(() => {
         applySucceeded(uiItems);
+        setJobId(null);
+        setIsToastMinimized(false);
       }, 0);
 
       toast.dismiss(QUESTION_GENERATION_TOAST_ID);
@@ -247,8 +259,6 @@ export function QuestionGenerationJobProvider({
         },
       );
 
-      setJobId(null);
-      setIsToastMinimized(false);
       queryClient.removeQueries({ queryKey: [JOB_QUERY_KEY, job.jobId] });
     }
 
@@ -259,11 +269,13 @@ export function QuestionGenerationJobProvider({
           ? "질문 생성이 취소되었습니다."
           : "질문 생성에 실패했습니다.",
       );
-      setJobError(message);
       toast.dismiss(QUESTION_GENERATION_TOAST_ID);
       toast.error(message, { position: "bottom-right" });
-      setJobId(null);
-      setIsToastMinimized(false);
+      setTimeout(() => {
+        setJobError(message);
+        setJobId(null);
+        setIsToastMinimized(false);
+      }, 0);
       queryClient.removeQueries({ queryKey: [JOB_QUERY_KEY, job.jobId] });
     }
   }, [jobQuery.data, applySucceeded, queryClient, router]);
@@ -279,6 +291,9 @@ export function QuestionGenerationJobProvider({
       (jobQuery.data?.status === "queued" ||
         jobQuery.data?.status === "running" ||
         jobQuery.isFetching));
+  const shouldShowToast =
+    pathname?.startsWith("/hr/ai-gen") === true ||
+    pathname?.startsWith("/interviewer") === true;
 
   const startGeneration = useCallback(
     async (payload: QuestionGeneratePayload) => {
@@ -322,6 +337,7 @@ export function QuestionGenerationJobProvider({
     <QuestionGenerationJobContext.Provider value={value}>
       <QuestionGenerationJobToastHost
         isJobActive={isJobActive}
+        shouldShowToast={shouldShowToast}
         progress={progress}
         isMinimized={isToastMinimized}
         onToggleMinimize={() => setIsToastMinimized((prev) => !prev)}
