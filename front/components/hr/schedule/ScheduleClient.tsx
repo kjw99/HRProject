@@ -604,10 +604,13 @@ export default function ScheduleClient({
           setDetailModalSlot(null);
         }}
         getStatusMeta={getSlotStatusMeta}
-        positions={initialPositions}
-        applicants={initialApplicants}
         onSlotMutated={handleDetailSlotMutated}
         onEditSlot={openEditFromDetailModal}
+        onOpenInvitation={() => {
+          setDetailModalOpen(false);
+          setDetailModalSlot(null);
+          openScheduleOperations();
+        }}
       />
     </>
   );

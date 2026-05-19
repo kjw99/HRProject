@@ -63,6 +63,8 @@ class CandidateDetailRead(CandidateRead):
 
 
 class CandidateUpdate(BaseModel):
+    # position_id를 명시적으로 받아 PATCH 시 지원 공고 변경/해제(null)를 허용
+    position_id: int | None = None
     name: str | None = Field(None, max_length=255)
     date_of_birth: date | None = None
     gender: str | None = Field(None, max_length=100)

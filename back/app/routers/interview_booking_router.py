@@ -5,6 +5,7 @@ from app.dependencies.database import get_async_db
 from app.dependencies.dependencies import require_roles
 from app.schemas.common import MessageResponse
 from app.schemas.interview_booking import (
+    ActiveBookingSummaryResponse,
     AvailableInterviewSlotResponse,
     InterviewBookingCancelRequest,
     InterviewBookingCreate,
@@ -29,6 +30,24 @@ async def get_available_interview_slots(
     db: AsyncSession = Depends(get_async_db),
 ):
     return await interview_booking_service.get_available_slots(db, candidate_id)
+
+
+@router.get(
+    "/active",
+    response_model=list[ActiveBookingSummaryResponse],
+)
+async def get_active_bookings_by_position(
+    position_id: int = Query(..., alias="positionId", gt=0),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """직무에 걸린 활성(미취소) 면접 예약 일괄 조회.
+
+    스케줄 슬롯 상세 모달에서 "다른 슬롯에 배정됨" 라벨을 표시하기 위해 사용합니다.
+    """
+    return await interview_booking_service.get_active_bookings_by_position(
+        db,
+        position_id,
+    )
 
 
 @router.post(

@@ -11,6 +11,7 @@ from app.repositories.candidate_repository import candidate_repository
 from app.repositories.interview_booking_repository import interview_booking_repository
 from app.repositories.interview_slot_repository import interview_slot_repository
 from app.schemas.interview_booking import (
+    ActiveBookingSummaryResponse,
     AvailableInterviewSlotResponse,
     InterviewBookingResponse,
 )
@@ -101,6 +102,46 @@ class InterviewBookingService:
         await db.refresh(booking)
 
         return self._to_response(booking, slot)
+
+    async def get_active_bookings_by_position(
+        self,
+        db: AsyncSession,
+        position_id: int,
+    ) -> list[ActiveBookingSummaryResponse]:
+        """직무에 걸린 모든 활성 booking 일괄 조회.
+
+        스케줄 모달의 "다른 슬롯에 배정됨" 라벨 표시용.
+        """
+        bookings = await interview_booking_repository.find_active_by_position_id(
+            db,
+            position_id,
+        )
+
+        return [
+            ActiveBookingSummaryResponse(
+                booking_id=booking.booking_id,
+                candidate_id=booking.candidate_id,
+                slot_id=booking.slot_id,
+                position_id=booking.slot.position_id if booking.slot else None,
+                position_name=(
+                    booking.slot.position.position_name
+                    if booking.slot and booking.slot.position
+                    else None
+                ),
+                interview_round=booking.slot.interview_round if booking.slot else "",
+                interview_starts_at=booking.slot.interview_starts_at
+                if booking.slot
+                else booking.created_at,
+                interview_ends_at=booking.slot.interview_ends_at
+                if booking.slot
+                else booking.created_at,
+                interview_location=(
+                    booking.slot.interview_location if booking.slot else None
+                ),
+                booked_at=booking.created_at,
+            )
+            for booking in bookings
+        ]
 
     async def cancel_booking(
         self,

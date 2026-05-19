@@ -89,13 +89,14 @@ function getApplicantPositionDisplay(
 }
 
 function ApplicantPositionCell({ applicant }: { applicant: Applicant }) {
-  const { label, isMissing, positionId } = getApplicantPositionDisplay(applicant);
+  const { label, isMissing, positionId } =
+    getApplicantPositionDisplay(applicant);
 
   return (
     <div
       className={`flex max-w-[240px] flex-col gap-1 rounded-xl px-3 py-2 ${isMissing
-          ? "border border-dashed border-rose-200 bg-rose-50/80 ring-1 ring-rose-100"
-          : ""
+        ? "border border-dashed border-rose-200 bg-rose-50/80 ring-1 ring-rose-100"
+        : ""
         }`}
     >
       {positionId != null ? (
@@ -172,7 +173,8 @@ export default function ApplicantListClient({
   const [data, setData] = useState<Applicant[]>(initialData);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [criteriaFilter, setCriteriaFilter] = useState<CriteriaFilter>("ALL");
-  const [positionFilter, setPositionFilter] = useState<string>(POSITION_FILTER_ALL);
+  const [positionFilter, setPositionFilter] =
+    useState<string>(POSITION_FILTER_ALL);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [showProblemOnly, setShowProblemOnly] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -233,7 +235,9 @@ export default function ApplicantListClient({
       const keyword = searchKeyword.toLowerCase().replace(/-/g, "");
       result = result.filter((item) => {
         const nameMatch = item.name.toLowerCase().includes(keyword);
-        const phoneMatch = (item.phone || "").replace(/-/g, "").includes(keyword);
+        const phoneMatch = (item.phone || "")
+          .replace(/-/g, "")
+          .includes(keyword);
         const emailMatch = (item.email || "").toLowerCase().includes(keyword);
         return nameMatch || phoneMatch || emailMatch;
       });
@@ -327,7 +331,9 @@ export default function ApplicantListClient({
         enableSorting: false,
         cell: (info) => (
           <div className="flex flex-col">
-            <span className="font-black text-slate-800">{getDisplayApplicantName(String(info.getValue()))}</span>
+            <span className="font-black text-slate-800">
+              {getDisplayApplicantName(String(info.getValue()))}
+            </span>
             <span className="text-[10px] font-medium text-slate-400">
               {info.row.original.date_of_birth}
             </span>
@@ -437,7 +443,10 @@ export default function ApplicantListClient({
 
   const visibleCount = table.getRowModel().rows.length;
 
-  const handleSaveApplicant = async (candidateId: number, payload: Parameters<typeof updateApplicant>[1]) => {
+  const handleSaveApplicant = async (
+    candidateId: number,
+    payload: Parameters<typeof updateApplicant>[1],
+  ) => {
     try {
       const updated = await updateApplicant(candidateId, payload);
       setData((prev) =>
@@ -479,7 +488,7 @@ export default function ApplicantListClient({
 
   return (
     <div className="w-full space-y-4 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:gap-3">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:gap-3 lg:justify-between">
         <div className="flex items-center gap-2 lg:shrink-0">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
             <i className="bx bx-filter-alt text-lg" />
@@ -489,7 +498,7 @@ export default function ApplicantListClient({
           </p>
         </div>
 
-        <div className="flex w-full flex-1 flex-col items-stretch gap-2 lg:flex-row lg:items-center">
+        <div className="flex w-full flex-col items-stretch gap-4 lg:w-auto lg:flex-none lg:flex-row lg:items-center">
           <div className="relative w-full shrink-0 lg:w-64">
             <i className="bx bx-search absolute left-3.5 top-1/2 -translate-y-1/2 text-base text-slate-400" />
             <input
@@ -507,11 +516,10 @@ export default function ApplicantListClient({
                 key={filter}
                 type="button"
                 onClick={() => setCriteriaFilter(filter)}
-                className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1 text-[11px] font-black tracking-widest transition-all ${
-                  criteriaFilter === filter
-                    ? "bg-white text-indigo-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
+                className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1 text-[11px] font-black tracking-widest transition-all ${criteriaFilter === filter
+                  ? "bg-white text-indigo-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+                  }`}
               >
                 {filter === "ALL"
                   ? "전체"
@@ -560,11 +568,10 @@ export default function ApplicantListClient({
                     ? "필터 해제: 모든 row 보기"
                     : "이름 정제 필요, 공고 미지정, 연락처 누락 등 문제 있는 row만 보기"
                 }
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-black tracking-widest transition ${
-                  showProblemOnly
-                    ? "bg-amber-200 text-amber-800 ring-1 ring-amber-300 shadow-inner"
-                    : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                }`}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-black tracking-widest transition ${showProblemOnly
+                  ? "bg-amber-200 text-amber-800 ring-1 ring-amber-300 shadow-inner"
+                  : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                  }`}
               >
                 <i className="bx bx-error" />
                 문제 row {totalProblemCount}건
@@ -584,11 +591,10 @@ export default function ApplicantListClient({
                     ? "필터 해제: 모든 row 보기"
                     : "이름·생년월일·전화·이메일 기준 중복 의심 row만 보기"
                 }
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-black tracking-widest transition ${
-                  showDuplicatesOnly
-                    ? "bg-rose-200 text-rose-800 ring-1 ring-rose-300 shadow-inner"
-                    : "bg-rose-100 text-rose-700 hover:bg-rose-200"
-                }`}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-black tracking-widest transition ${showDuplicatesOnly
+                  ? "bg-rose-200 text-rose-800 ring-1 ring-rose-300 shadow-inner"
+                  : "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                  }`}
               >
                 <i className="bx bx-copy" />
                 중복 {totalDuplicateCount}건
@@ -616,8 +622,8 @@ export default function ApplicantListClient({
                       key={header.id}
                       onClick={header.column.getToggleSortingHandler()}
                       className={`px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400 ${header.column.getCanSort()
-                          ? "cursor-pointer select-none hover:text-indigo-600"
-                          : ""
+                        ? "cursor-pointer select-none hover:text-indigo-600"
+                        : ""
                         }`}
                     >
                       <div className="flex items-center gap-1.5">
@@ -628,8 +634,8 @@ export default function ApplicantListClient({
                         {header.column.getIsSorted() && (
                           <i
                             className={`bx bx-sort-${header.column.getIsSorted() === "asc"
-                                ? "up"
-                                : "down"
+                              ? "up"
+                              : "down"
                               } text-indigo-600`}
                           />
                         )}
@@ -660,8 +666,8 @@ export default function ApplicantListClient({
                       key={row.original.candidate_id}
                       title={issueTitle}
                       className={`group transition-colors hover:bg-slate-50/60 ${issue.hasIssue
-                          ? "bg-amber-50/70 ring-1 ring-inset ring-amber-100"
-                          : ""
+                        ? "bg-amber-50/70 ring-1 ring-inset ring-amber-100"
+                        : ""
                         }`}
                     >
                       {row.getVisibleCells().map((cell) => (
@@ -751,6 +757,3 @@ export default function ApplicantListClient({
     </div>
   );
 }
-
-
-

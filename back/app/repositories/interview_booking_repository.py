@@ -83,6 +83,31 @@ class InterviewBookingRepository:
             .with_for_update()
         )
 
+    async def find_active_by_position_id(
+        self,
+        db: AsyncSession,
+        position_id: int,
+    ) -> list[InterviewBooking]:
+        """해당 직무의 슬롯들에 걸린 활성(active) booking 목록을 한 번에 조회.
+
+        같은 직무 지원자 카드에서 "다른 슬롯에 배정됨" 라벨을 보여주기 위한 batch fetch.
+        """
+        result = await db.scalars(
+            select(InterviewBooking)
+            .join(InterviewSlot, InterviewBooking.slot_id == InterviewSlot.slot_id)
+            .where(
+                InterviewSlot.position_id == position_id,
+                InterviewBooking.cancelled_at.is_(None),
+            )
+            .options(
+                selectinload(InterviewBooking.slot).selectinload(
+                    InterviewSlot.position
+                ),
+            )
+            .order_by(InterviewBooking.candidate_id, InterviewBooking.booking_id)
+        )
+        return list(result.all())
+
     async def count_active_by_slot_id(
         self,
         db: AsyncSession,

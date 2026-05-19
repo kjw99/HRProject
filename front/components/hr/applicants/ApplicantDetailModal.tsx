@@ -129,6 +129,12 @@ export default function ApplicantDetailModal({
   const handleSaveApplicant = async (payload: ApplicantUpdatePayload) => {
     try {
       const updated = await updateApplicant(applicant.candidate_id, payload);
+
+      /**
+       * PATCH 응답을 1차 반영하여 즉시 UI에 변경사항을 표시.
+       * - 그 후 detail을 다시 불러와 join 필드(position_name 등)와
+       *   파생 데이터(current_booking, booking_invitations)까지 최신화한다.
+       */
       setDetail((prev) =>
         prev
           ? {
@@ -138,8 +144,16 @@ export default function ApplicantDetailModal({
           : null,
       );
       onApplicantUpdated?.(updated);
-      toast.success("지원자 정보가 수정되었습니다.");
       setIsEditModalOpen(false);
+      toast.success("지원자 정보가 수정되었습니다.");
+
+      try {
+        const fresh = await fetchApplicantDetail(applicant.candidate_id);
+        setDetail(fresh);
+        onApplicantUpdated?.(fresh);
+      } catch {
+        /* 새로고침 실패는 사용자 흐름을 막지 않는다 (이미 1차 반영 완료) */
+      }
     } catch (error) {
       toast.error(getErrorMessage(error, "지원자 정보 수정 중 오류가 발생했습니다."));
     }

@@ -1,4 +1,5 @@
 import {
+  ActiveBookingSummary,
   AvailableInterviewSlot,
   InterviewBookingCancelPayload,
   InterviewBookingMutationResponse,
@@ -41,6 +42,20 @@ export const interviewBookingApi = {
       payload,
     );
 
+    return response.data;
+  },
+
+  /**
+   * 직무에 걸린 활성(미취소) booking 일괄 조회.
+   * 같은 직무 지원자 카드에서 "다른 슬롯에 배정됨" 라벨을 그리는 데 사용.
+   */
+  fetchActiveBookingsByPosition: async (
+    positionId: number,
+  ): Promise<ActiveBookingSummary[]> => {
+    const response = await api.get<ActiveBookingSummary[]>(
+      "/api/interview-bookings/active",
+      { params: { positionId } },
+    );
     return response.data;
   },
 };

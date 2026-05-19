@@ -45,7 +45,16 @@ export interface InterviewSlotListItem {
   interviewLocation: string | null;
 }
 
+export interface BookedCandidateSummary {
+  bookingId: number;
+  candidateId: number;
+  candidateName: string;
+  bookedAt: string | null;
+}
+
 export interface InterviewSlotDetailItem extends InterviewSlotListItem {
   bookingDeadlineAt: string | null;
   remainingCapacity: number;
+  /** 활성 예약 목록 (취소 가능한 식별자 포함). 백엔드가 응답하지 않을 경우 빈 배열로 정규화 */
+  bookedCandidates: BookedCandidateSummary[];
 }

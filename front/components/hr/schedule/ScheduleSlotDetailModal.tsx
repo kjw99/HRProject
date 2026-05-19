@@ -5,42 +5,31 @@ import { createPortal } from "react-dom";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { toast } from "sonner";
-import type { Applicant } from "@/types/applicant";
 import type { InterviewSlotDetailItem } from "@/types/interviewSlotWrite";
-import type { Position } from "@/types/position";
 import { interviewBookingApi } from "@/lib/hr/interview-bookings.client";
-import { interviewerApi } from "@/lib/hr/interviewers.client";
-import { interviewSlotsApi } from "@/lib/hr/interview-slots.client";
-import type { HrInterviewer, InterviewRound } from "@/types/interviewer";
-
-const ROUNDS: InterviewRound[] = ["1차", "2차", "3차"];
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   const maybe = error as {
     response?: { data?: { message?: string; detail?: string } };
   };
-  return maybe.response?.data?.message || maybe.response?.data?.detail || fallback;
+  return (
+    maybe.response?.data?.message || maybe.response?.data?.detail || fallback
+  );
 };
-
-function inferPositionId(slot: InterviewSlotDetailItem, positions: Position[]): number | null {
-  const matched = positions.find((p) => p.positionName === slot.positionName);
-  return matched?.positionId ?? null;
-}
-
-function parseRound(round: string): InterviewRound | undefined {
-  return ROUNDS.includes(round as InterviewRound) ? (round as InterviewRound) : undefined;
-}
 
 export interface ScheduleSlotDetailModalProps {
   isOpen: boolean;
   slot: InterviewSlotDetailItem | null;
   onClose: () => void;
   getStatusMeta: (status: string) => { label: string; className: string };
-  positions: Position[];
-  applicants: Applicant[];
   onSlotMutated: (slotId: number) => Promise<void>;
   /** 일정 수정(슬롯 편집 폼)으로 전환 — `PATCH /api/interview-slots/{id}`와 동일 흐름 */
   onEditSlot?: (slot: InterviewSlotDetailItem) => void;
+  /**
+   * "지원자에게 시간 선택 초대 보내기" CTA 클릭 콜백.
+   * 부모(ScheduleClient)에서 `ScheduleOperationsModal`을 여는 핸들러를 전달하세요.
+   */
+  onOpenInvitation?: () => void;
 }
 
 export function ScheduleSlotDetailModal({
@@ -48,65 +37,21 @@ export function ScheduleSlotDetailModal({
   slot,
   onClose,
   getStatusMeta,
-  positions,
-  applicants,
   onSlotMutated,
   onEditSlot,
+  onOpenInvitation,
 }: ScheduleSlotDetailModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [interviewers, setInterviewers] = useState<HrInterviewer[]>([]);
-  const [loadingInterviewers, setLoadingInterviewers] = useState(false);
-  const [draftInterviewerIds, setDraftInterviewerIds] = useState<number[]>([]);
-  const [savingInterviewers, setSavingInterviewers] = useState(false);
-  const [bookingCandidateId, setBookingCandidateId] = useState<number | null>(null);
-
-  const positionId = useMemo(
-    () => (slot ? inferPositionId(slot, positions) : null),
-    [slot, positions],
+  const [cancellingBookingId, setCancellingBookingId] = useState<number | null>(
+    null,
   );
-
-  const round = useMemo(() => (slot ? parseRound(slot.interviewRound) : undefined), [slot]);
+  const [pendingCancelBookingId, setPendingCancelBookingId] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!isOpen || !slot) return;
-    if (positionId == null || !round) {
-      setInterviewers([]);
-      setDraftInterviewerIds([]);
-      return;
-    }
-    let ignore = false;
-    setLoadingInterviewers(true);
-    interviewerApi
-      .fetchInterviewers({
-        positionId,
-        interviewRound: round,
-        size: 100,
-      })
-      .then((res) => {
-        if (ignore) return;
-        setInterviewers(res.content);
-        const matchedIds = res.content
-          .filter((i) => slot.interviewerNames.includes(i.interviewerName))
-          .map((i) => i.interviewerId);
-        setDraftInterviewerIds(matchedIds);
-      })
-      .catch((error) => {
-        if (ignore) return;
-        toast.error(getErrorMessage(error, "면접관 목록을 불러오지 못했습니다."));
-        setInterviewers([]);
-        setDraftInterviewerIds([]);
-      })
-      .finally(() => {
-        if (!ignore) setLoadingInterviewers(false);
-      });
-    return () => {
-      ignore = true;
-    };
-  }, [isOpen, slot, positionId, round]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -117,47 +62,28 @@ export function ScheduleSlotDetailModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, onClose]);
 
-  const positionApplicants = useMemo(() => {
-    if (positionId == null || !slot) return [];
-    return applicants.filter((a) => a.position_id === positionId);
-  }, [applicants, positionId, slot]);
+  const bookedCandidates = slot?.bookedCandidates ?? [];
 
-  const toggleInterviewerDraft = (id: number) => {
-    setDraftInterviewerIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  };
+  const isStartedSlot = useMemo(() => {
+    if (!slot) return false;
+    return new Date(slot.interviewStartsAt).getTime() <= Date.now();
+  }, [slot]);
 
-  const saveInterviewers = async () => {
+  const cancelCandidateBooking = async (
+    bookingId: number,
+    candidateId: number,
+  ) => {
     if (!slot) return;
-    setSavingInterviewers(true);
+    setCancellingBookingId(bookingId);
     try {
-      await interviewSlotsApi.updateSlot(slot.slotId, {
-        interviewerIds: draftInterviewerIds,
-      });
-      toast.success("면접관 배정이 저장되었습니다.");
+      await interviewBookingApi.cancelBooking(bookingId, { candidateId });
+      toast.success("면접 예약이 취소되었습니다.");
       await onSlotMutated(slot.slotId);
     } catch (error) {
-      toast.error(getErrorMessage(error, "면접관 저장에 실패했습니다."));
+      toast.error(getErrorMessage(error, "면접 예약 취소에 실패했습니다."));
     } finally {
-      setSavingInterviewers(false);
-    }
-  };
-
-  const assignCandidateToSlot = async (candidateId: number) => {
-    if (!slot) return;
-    setBookingCandidateId(candidateId);
-    try {
-      await interviewBookingApi.createBooking({
-        candidateId,
-        slotId: slot.slotId,
-      });
-      toast.success("해당 지원자를 이 일정에 예약했습니다.");
-      await onSlotMutated(slot.slotId);
-    } catch (error) {
-      toast.error(getErrorMessage(error, "예약 배정에 실패했습니다."));
-    } finally {
-      setBookingCandidateId(null);
+      setCancellingBookingId(null);
+      setPendingCancelBookingId(null);
     }
   };
 
@@ -166,8 +92,8 @@ export function ScheduleSlotDetailModal({
   const status = getStatusMeta(slot.slotStatus);
   const start = parseISO(slot.interviewStartsAt);
   const end = parseISO(slot.interviewEndsAt);
-
-  const isBookedName = (name: string) => slot.bookedCandidateNames.includes(name);
+  const totalCapacity =
+    slot.remainingCapacity + slot.bookedCandidateNames.length;
 
   return createPortal(
     <div
@@ -227,8 +153,7 @@ export function ScheduleSlotDetailModal({
               {status.label}
             </span>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-              정원 {slot.remainingCapacity + slot.bookedCandidateNames.length}명 · 잔여{" "}
-              {slot.remainingCapacity}명
+              정원 {totalCapacity}명 · 잔여 {slot.remainingCapacity}명
             </span>
           </div>
 
@@ -243,13 +168,16 @@ export function ScheduleSlotDetailModal({
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
               <dt className="text-[10px] font-black uppercase tracking-wide text-slate-400">
-                현재 면접관
+                배정된 면접관
               </dt>
               <dd className="mt-1 font-bold text-slate-900">
                 {slot.interviewerNames.length > 0
                   ? slot.interviewerNames.join(", ")
                   : "미배정"}
               </dd>
+              <p className="mt-1.5 text-[11px] font-semibold text-slate-400">
+                면접관 변경은 상단의 <b>[일정 수정]</b>에서 진행하세요.
+              </p>
             </div>
             {slot.bookingDeadlineAt ? (
               <div className="rounded-xl bg-slate-50 p-3">
@@ -263,118 +191,156 @@ export function ScheduleSlotDetailModal({
                 </dd>
               </div>
             ) : null}
-            <div className="rounded-xl bg-slate-50 p-3">
-              <dt className="text-[10px] font-black uppercase tracking-wide text-slate-400">
-                예약 지원자
-              </dt>
-              <dd className="mt-1 font-bold text-slate-900">
-                {slot.bookedCandidateNames.length > 0
-                  ? slot.bookedCandidateNames.join(", ")
-                  : "없음"}
-              </dd>
-            </div>
           </dl>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-black text-slate-900">면접관 조회·배정</h3>
-            <p className="mt-1 text-xs font-semibold text-slate-500">
-              같은 직무·차수에 등록된 면접관입니다. 선택 후 저장하면 슬롯에 반영됩니다.
-            </p>
-            {positionId == null || !round ? (
-              <p className="mt-3 text-xs font-bold text-amber-700">
-                직무명이 공고 목록과 일치하지 않거나 차수가 올바르지 않아 API로 조회할 수
-                없습니다.
-              </p>
-            ) : loadingInterviewers ? (
-              <p className="mt-4 text-sm font-bold text-slate-500">불러오는 중…</p>
-            ) : interviewers.length === 0 ? (
-              <p className="mt-3 text-xs font-bold text-slate-500">
-                조건에 맞는 면접관이 없습니다.
-              </p>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-black text-slate-900">
+                예약된 지원자 ({bookedCandidates.length}명)
+              </h3>
+              {isStartedSlot ? (
+                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-black tracking-widest text-slate-500">
+                  종료/진행 슬롯 · 취소 불가
+                </span>
+              ) : null}
+            </div>
+            {bookedCandidates.length === 0 ? (
+              slot.bookedCandidateNames.length > 0 ? (
+                <p className="mt-3 text-xs font-bold text-amber-700">
+                  <i className="bx bx-error-circle mr-1" />
+                  {slot.bookedCandidateNames.join(", ")} 의 예약 식별 정보가
+                  누락되어 취소 버튼을 표시할 수 없습니다. 서버를 재시작했거나
+                  데이터가 동기화되지 않은 상태일 수 있어요.
+                </p>
+              ) : (
+                <p className="mt-3 text-xs font-bold text-slate-500">
+                  아직 예약된 지원자가 없습니다. 지원자가 초대 링크에서 가능
+                  시간을 선택하면 자동으로 이 칸이 채워집니다.
+                </p>
+              )
             ) : (
-              <>
-                <ul className="mt-3 max-h-40 space-y-2 overflow-y-auto">
-                  {interviewers.map((iv) => {
-                    const on = draftInterviewerIds.includes(iv.interviewerId);
-                    return (
-                      <li key={iv.interviewerId}>
-                        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 transition hover:bg-slate-100">
-                          <input
-                            type="checkbox"
-                            checked={on}
-                            onChange={() => toggleInterviewerDraft(iv.interviewerId)}
-                            className="h-4 w-4 rounded border-slate-300 accent-slate-900"
-                          />
-                          <span className="min-w-0 flex-1 text-sm font-bold text-slate-900">
-                            {iv.interviewerName}
-                            <span className="mt-0.5 block truncate text-[11px] font-semibold text-slate-500">
-                              {iv.interviewerEmail}
-                            </span>
-                          </span>
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <button
-                  type="button"
-                  disabled={savingInterviewers}
-                  onClick={() => void saveInterviewers()}
-                  className="mt-3 w-full rounded-xl bg-slate-900 py-2.5 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-50"
-                >
-                  {savingInterviewers ? "저장 중…" : "면접관 저장"}
-                </button>
-              </>
-            )}
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-black text-slate-900">같은 직무 지원자 예약 배정</h3>
-            <p className="mt-1 text-xs font-semibold text-slate-500">
-              이 공고에 지원한 지원자 중 아직 이 슬롯에 예약되지 않은 사람만 배정할 수
-              있습니다.
-            </p>
-            {positionId == null ? (
-              <p className="mt-3 text-xs font-bold text-amber-700">
-                직무를 식별할 수 없어 지원자 목록을 필터링하지 못했습니다.
-              </p>
-            ) : positionApplicants.length === 0 ? (
-              <p className="mt-3 text-xs font-bold text-slate-500">해당 직무 지원자가 없습니다.</p>
-            ) : (
-              <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto">
-                {positionApplicants.map((a) => {
-                  const booked = isBookedName(a.name);
-                  const disabled =
-                    booked || slot.remainingCapacity <= 0 || bookingCandidateId !== null;
+              <ul className="mt-3 space-y-2">
+                {bookedCandidates.map((booking) => {
+                  const isCancelling = cancellingBookingId === booking.bookingId;
+                  const isPending = pendingCancelBookingId === booking.bookingId;
+                  const disableAll =
+                    cancellingBookingId !== null && !isCancelling;
                   return (
                     <li
-                      key={a.candidate_id}
+                      key={booking.bookingId}
                       className="flex flex-col gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-slate-900">{a.name}</p>
+                        <p className="truncate text-sm font-black text-slate-900">
+                          <i className="bx bx-user-check mr-1 text-emerald-600" />
+                          {booking.candidateName}
+                          <span className="ml-1.5 text-[10px] font-bold text-slate-400">
+                            #{booking.candidateId}
+                          </span>
+                        </p>
                         <p className="truncate text-[11px] font-semibold text-slate-500">
-                          {a.application_status} · {a.experience_level}
-                          {booked ? " · 이미 예약됨" : ""}
+                          예약 ID {booking.bookingId}
+                          {booking.bookedAt
+                            ? ` · ${format(parseISO(booking.bookedAt), "M.d HH:mm", { locale: ko })} 확정`
+                            : ""}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => void assignCandidateToSlot(a.candidate_id)}
-                        className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-black text-white transition hover:bg-indigo-700 disabled:opacity-40"
-                      >
-                        {bookingCandidateId === a.candidate_id
-                          ? "처리 중…"
-                          : booked
-                            ? "예약됨"
-                            : "이 슬롯에 배정"}
-                      </button>
+
+                      {isPending ? (
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="text-[11px] font-black text-rose-600">
+                            정말 취소할까요?
+                          </span>
+                          <button
+                            type="button"
+                            disabled={isCancelling || disableAll}
+                            onClick={() =>
+                              void cancelCandidateBooking(
+                                booking.bookingId,
+                                booking.candidateId,
+                              )
+                            }
+                            className="rounded-lg bg-rose-600 px-3 py-1.5 text-[11px] font-black text-white transition hover:bg-rose-700 disabled:opacity-50"
+                          >
+                            {isCancelling ? (
+                              <span className="inline-flex items-center gap-1">
+                                <i className="bx bx-loader-alt animate-spin" />
+                                취소 중
+                              </span>
+                            ) : (
+                              "예 취소"
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isCancelling}
+                            onClick={() => setPendingCancelBookingId(null)}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            아니오
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isStartedSlot || disableAll}
+                          onClick={() =>
+                            setPendingCancelBookingId(booking.bookingId)
+                          }
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-black text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
+                          title={
+                            isStartedSlot
+                              ? "이미 시작된 면접 예약은 취소할 수 없습니다."
+                              : "이 지원자의 예약을 취소합니다."
+                          }
+                        >
+                          <i className="bx bx-x-circle text-base" />
+                          예약 취소
+                        </button>
+                      )}
                     </li>
                   );
                 })}
               </ul>
             )}
+          </section>
+
+          <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm">
+                <i className="bx bx-paper-plane text-lg" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-black text-indigo-900">
+                  지원자 자동 배정 흐름 안내
+                </h3>
+                <ol className="mt-2 space-y-1 text-[12px] font-semibold leading-relaxed text-indigo-900/80">
+                  <li>
+                    <b>①</b> 여러 시간대의 면접 슬롯을 미리 생성합니다.
+                  </li>
+                  <li>
+                    <b>②</b> 지원자에게 초대 링크를 보내고 가능한 시간을 선택하게
+                    합니다.
+                  </li>
+                  <li>
+                    <b>③</b> 지원자가 선택한 슬롯으로 <b>자동 예약</b>됩니다.
+                  </li>
+                </ol>
+                {onOpenInvitation ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenInvitation();
+                    }}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-indigo-700"
+                  >
+                    <i className="bx bx-paper-plane text-base" />
+                    지원자에게 초대 보내기
+                  </button>
+                ) : null}
+              </div>
+            </div>
           </section>
         </div>
 

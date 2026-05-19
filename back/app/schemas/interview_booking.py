@@ -38,3 +38,18 @@ class InterviewBookingResponse(CaseModel):
     interview_ends_at: datetime
     interview_location: str | None
     created_at: datetime
+
+
+class ActiveBookingSummaryResponse(CaseModel):
+    """직무별 활성 예약 batch 조회 응답 (지원자 → 어떤 슬롯에 배정되어 있는지)"""
+
+    booking_id: int
+    candidate_id: int
+    slot_id: int
+    position_id: int | None
+    position_name: str | None
+    interview_round: str
+    interview_starts_at: datetime
+    interview_ends_at: datetime
+    interview_location: str | None
+    booked_at: datetime

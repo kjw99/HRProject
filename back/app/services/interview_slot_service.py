@@ -16,6 +16,7 @@ from app.repositories.interview_slot_repository import interview_slot_repository
 from app.repositories.interviewer_repository import interviewer_repository
 from app.repositories.position_repository import position_repository
 from app.schemas.interview_slot import (
+    BookedCandidateSummary,
     InterviewSlotBatchCreate,
     InterviewSlotCreate,
     InterviewSlotDetailResponse,
@@ -47,6 +48,17 @@ class InterviewSlotService:
         now = datetime.now(KST)
         active_bookings = self._get_active_bookings(slot)
 
+        booked_candidates = [
+            BookedCandidateSummary(
+                booking_id=booking.booking_id,
+                candidate_id=booking.candidate_id,
+                candidate_name=booking.candidate.name,
+                booked_at=booking.created_at,
+            )
+            for booking in active_bookings
+            if booking.candidate and booking.candidate.name
+        ]
+
         return InterviewSlotDetailResponse(
             slot_id=slot.slot_id,
             position_name=slot.position.position_name if slot.position else None,
@@ -54,10 +66,9 @@ class InterviewSlotService:
                 interviewer.interviewer_name for interviewer in slot.interviewers
             ],
             booked_candidate_names=[
-                booking.candidate.name
-                for booking in active_bookings
-                if booking.candidate and booking.candidate.name
+                summary.candidate_name for summary in booked_candidates
             ],
+            booked_candidates=booked_candidates,
             interview_round=slot.interview_round,
             interview_starts_at=slot.interview_starts_at,
             interview_ends_at=slot.interview_ends_at,
