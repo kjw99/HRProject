@@ -106,6 +106,7 @@ class QuestionSaveRequest(CaseModel):
 class QuestionResponse(CaseModel):
     question_id: int
     candidate_id: int | None
+    candidate_name: str | None
     position_id: int | None
     question_text: str
     question_type: str

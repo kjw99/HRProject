@@ -27,6 +27,14 @@ export default function QuestionCard({
     onToggleSelect?.(question.questionId);
   };
 
+  const candidateName = question.candidateName?.trim();
+  const candidateLabel =
+    candidateName && candidateName.length > 0
+      ? candidateName
+      : question.candidateId != null
+        ? `지원자 #${question.candidateId}`
+        : null;
+
   return (
     <article
       className={`rounded-2xl border p-4 shadow-sm transition sm:p-5 ${
@@ -72,10 +80,10 @@ export default function QuestionCard({
               <i className="bx bx-purchase-tag" aria-hidden />
               {question.questionType}
             </span>
-            {question.candidateId != null ? (
+            {candidateLabel ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">
                 <i className="bx bx-user" aria-hidden />
-                지원자 #{question.candidateId}
+                {candidateLabel}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">

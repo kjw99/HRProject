@@ -51,3 +51,9 @@ class Question(Base):
     created_by_interviewer: Mapped["Interviewer | None"] = relationship(
         back_populates="created_questions"
     )
+
+    @property
+    def candidate_name(self) -> str | None:
+        if self.candidate is None:
+            return None
+        return self.candidate.name
