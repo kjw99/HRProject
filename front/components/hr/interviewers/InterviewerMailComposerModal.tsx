@@ -32,6 +32,28 @@ export default function InterviewerMailComposerModal({
   inviteReused = false,
   allInterviewers = [],
 }: InterviewerMailComposerModalProps) {
+  const autoAppliedTemplateRef = useRef(false);
+  const [templates, setTemplates] = useState<
+    Awaited<ReturnType<typeof emailTemplateApi.fetchEmailTemplates>>
+  >([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
+    null,
+  );
+  const [customVariablesText, setCustomVariablesText] = useState(
+    JSON.stringify(INTERVIEWER_MAIL_DEFAULT_EXTRA, null, 2),
+  );
+  const [subject, setSubject] = useState("");
+  const [content, setContent] = useState("");
+  const [expiresInDays, setExpiresInDays] = useState(initialExpiresInDays);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [mailSent, setMailSent] = useState(false);
+  const [assigningVariableKey, setAssigningVariableKey] = useState<string | null>(
+    null,
+  );
+
   const openMailPreviewPopup = () => {
     const popup = window.open(
       "",
@@ -70,28 +92,6 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
     popup.focus();
   };
 
-  const autoAppliedTemplateRef = useRef(false);
-  const [templates, setTemplates] = useState<
-    Awaited<ReturnType<typeof emailTemplateApi.fetchEmailTemplates>>
-  >([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
-    null,
-  );
-  const [customVariablesText, setCustomVariablesText] = useState(
-    JSON.stringify(INTERVIEWER_MAIL_DEFAULT_EXTRA, null, 2),
-  );
-  const [subject, setSubject] = useState("");
-  const [content, setContent] = useState("");
-  const [expiresInDays, setExpiresInDays] = useState(initialExpiresInDays);
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
-  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [mailSent, setMailSent] = useState(false);
-  const [assigningVariableKey, setAssigningVariableKey] = useState<string | null>(
-    null,
-  );
-
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
@@ -106,7 +106,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
       } catch (error) {
         if (!cancelled) {
           toast.error(
-            getApiErrorMessage(error, "?대찓???쒗뵆由우쓣 遺덈윭?ㅼ? 紐삵뻽?듬땲??"),
+            getApiErrorMessage(error, "이메일 템플릿을 불러오지 못했습니다."),
           );
         }
       } finally {
@@ -209,7 +209,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
       mergeVariableIntoVariablesJson(prev, key, value),
     );
     const label = getMailTemplateVariableMeta(key).label;
-    toast.success(`{${key}} (${label})??媛믪쓣 諛섏쁺?덉뒿?덈떎.`);
+    toast.success(`{${key}} (${label}) 값을 반영했습니다.`);
   };
 
   const handleAssignVariableWithExtras = (
@@ -226,7 +226,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
       }
       return next;
     });
-    toast.success(`{${key}} 諛?愿??蹂?섎? 諛섏쁺?덉뒿?덈떎.`);
+    toast.success(`{${key}} 및 관련 변수를 반영했습니다.`);
   };
 
   const handleFillAllMissingVariables = () => {
@@ -251,13 +251,13 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
 
     if (filled === 0) {
       toast.error(
-        "?먮룞?쇰줈 梨꾩슱 ???덈뒗 蹂?섍? ?놁뒿?덈떎. 蹂?섎? ?대┃??吏곸젒 ?낅젰??二쇱꽭??",
+        "자동으로 채울 수 있는 변수가 없습니다. 변수를 클릭해 직접 입력해 주세요.",
       );
       return;
     }
 
     setCustomVariablesText(nextJson);
-    toast.success(`${filled}媛?蹂?섎? ?먮룞?쇰줈 梨꾩썱?듬땲??`);
+    toast.success(`${filled}개 변수를 자동으로 채웠습니다.`);
   };
 
   const applyTemplateWithVariables = async () => {
@@ -289,13 +289,13 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
       .then(() => {
         toast.success(
           inviteReused
-            ? "湲곗〈 珥덈? 留곹겕媛 諛섏쁺???쒗뵆由?珥덉븞??遺덈윭?붿뒿?덈떎."
-            : "珥덈? 留곹겕媛 諛섏쁺???쒗뵆由?珥덉븞??遺덈윭?붿뒿?덈떎.",
+            ? "기존 초대 링크가 반영된 템플릿 초안을 불러왔습니다."
+            : "초대 링크가 반영된 템플릿 초안을 불러왔습니다.",
         );
       })
       .catch((error) => {
         toast.error(
-          getApiErrorMessage(error, "硫붿씪 ?쒗뵆由??곸슜 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎."),
+          getApiErrorMessage(error, "메일 템플릿 적용 중 오류가 발생했습니다."),
         );
       })
       .finally(() => {
@@ -314,13 +314,15 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
 
   const handleApplyTemplate = async () => {
     if (!selectedTemplateId) {
-      toast.error("?곸슜???쒗뵆由우쓣 ?좏깮?댁＜?몄슂.");
+      toast.error("적용할 템플릿을 선택해주세요.");
       return;
     }
 
     if (missingTemplateKeys.length > 0) {
       toast.error(
-        `?쒗뵆由우뿉 ?꾩슂??蹂?섍? 鍮꾩뼱 ?덉뒿?덈떎: ${missingTemplateKeys.map((k) => `{${k}}`).join(", ")}. JSON??媛믪쓣 ?ｌ뼱二쇱꽭??`,
+        `템플릿에 필요한 변수가 비어 있습니다: ${missingTemplateKeys
+          .map((k) => `{${k}}`)
+          .join(", ")}. JSON에 값을 넣어주세요.`,
       );
       return;
     }
@@ -328,10 +330,10 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
     setIsApplyingTemplate(true);
     try {
       await applyTemplateWithVariables();
-      toast.success("?쒗뵆由우쓣 硫붿씪 珥덉븞??諛섏쁺?덉뒿?덈떎.");
+      toast.success("템플릿을 메일 초안에 반영했습니다.");
     } catch (error) {
       toast.error(
-        getApiErrorMessage(error, "硫붿씪 ?쒗뵆由??곸슜 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎."),
+        getApiErrorMessage(error, "메일 템플릿 적용 중 오류가 발생했습니다."),
       );
     } finally {
       setIsApplyingTemplate(false);
@@ -340,7 +342,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
 
   const handleSend = async () => {
     if (!subject.trim() || !content.trim()) {
-      toast.error("硫붿씪 ?쒕ぉ怨?蹂몃Ц???낅젰?댁＜?몄슂.");
+      toast.error("메일 제목과 본문을 입력해주세요.");
       return;
     }
 
@@ -360,7 +362,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
       toast.success(response.message);
     } catch (error) {
       toast.error(
-        getApiErrorMessage(error, "硫댁젒愿 硫붿씪 諛쒖넚 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎."),
+        getApiErrorMessage(error, "면접관 메일 발송 중 오류가 발생했습니다."),
       );
     } finally {
       setIsSending(false);
@@ -372,7 +374,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
       isOpen={isOpen}
       onClose={() => !isSending && onClose()}
       title="면접관 메일 보내기"
-      subtitle={`${interviewer.interviewerName} 쨌 ${interviewer.interviewerEmail}`}
+      subtitle={`${interviewer.interviewerName} · ${interviewer.interviewerEmail}`}
       eyebrow="Interviewer Mail"
       eyebrowIcon="envelope"
       theme="indigo"
@@ -381,13 +383,13 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
         <HrModalFooter
           actions={[
             {
-              label: "?リ린",
+              label: "닫기",
               onClick: onClose,
               variant: "secondary",
               disabled: isSending,
             },
             {
-              label: "硫붿씪 諛쒖넚",
+              label: "메일 발송",
               onClick: () => void handleSend(),
               icon: "send",
               variant: "primary",
@@ -433,5 +435,3 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
     </HrModal>
   );
 }
-
-
