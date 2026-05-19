@@ -1,4 +1,3 @@
-/** 역할별 로그인 후 기본 이동 경로 (미들웨어·서버 가드 공통) */
 export const ROLE_DEFAULT_PATHS: Record<string, string> = {
   admin: "/admin",
   hr: "/hr",
@@ -6,7 +5,6 @@ export const ROLE_DEFAULT_PATHS: Record<string, string> = {
   interviewer: "/interviewer",
 };
 
-/** URL 접두사별 허용 역할 */
 export const PROTECTED_ROUTE_RULES: { prefix: string; roles: string[] }[] = [
   { prefix: "/admin", roles: ["admin"] },
   { prefix: "/hr", roles: ["hr"] },
@@ -14,9 +12,26 @@ export const PROTECTED_ROUTE_RULES: { prefix: string; roles: string[] }[] = [
   { prefix: "/interviewer", roles: ["interviewer"] },
 ];
 
+/**
+ * Public token-entry routes that must bypass auth guard.
+ * Keep this list shared between middleware and client-side guard.
+ */
+export const PUBLIC_AUTH_EXCEPTIONS = [
+  "/interviewer/invite",
+  "/interviewer-invite",
+  "/interview-booking",
+  "/interviewer-availability",
+] as const;
+
 export function pathnameMatchesProtectedPrefix(
   pathname: string,
   prefix: string,
 ): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+export function pathnameMatchesPublicException(pathname: string): boolean {
+  return PUBLIC_AUTH_EXCEPTIONS.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
 }

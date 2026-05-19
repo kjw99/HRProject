@@ -3,12 +3,20 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import {
+  pathnameMatchesPublicException,
+  pathnameMatchesProtectedPrefix,
+} from "@/lib/route-guard";
 
 const PROTECTED_PREFIXES = ["/admin", "/hr", "/applicant", "/interviewer"];
 
 function isProtectedPath(pathname: string): boolean {
-  return PROTECTED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  if (pathnameMatchesPublicException(pathname)) {
+    return false;
+  }
+
+  return PROTECTED_PREFIXES.some((prefix) =>
+    pathnameMatchesProtectedPrefix(pathname, prefix),
   );
 }
 

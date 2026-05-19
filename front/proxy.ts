@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import {
   PROTECTED_ROUTE_RULES,
   ROLE_DEFAULT_PATHS,
+  pathnameMatchesPublicException,
   pathnameMatchesProtectedPrefix,
 } from "@lib/route-guard";
 
@@ -17,7 +18,7 @@ type PersistedAuthStorage = {
   };
 };
 
-function shouldBypassProxyInDev(request: NextRequest): boolean {
+function shouldBypassProxyInDev(_request: NextRequest): boolean {
   // Disabled on purpose:
   // do not bypass auth/route guard in development.
   return false;
@@ -103,6 +104,11 @@ export async function proxy(request: NextRequest) {
     );
 
     return NextResponse.redirect(url);
+  }
+
+  // Allow token-entry public pages to bypass auth middleware.
+  if (pathnameMatchesPublicException(pathname)) {
+    return NextResponse.next();
   }
 
   const rule = PROTECTED_ROUTE_RULES.find((entry) =>

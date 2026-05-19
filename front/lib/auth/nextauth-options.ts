@@ -6,6 +6,7 @@ function resolveBackendBaseUrl(): string {
   const isDev = process.env.NODE_ENV === "development";
   const raw = (
     process.env.NEXTAUTH_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
     (isDev
       ? process.env.NEXT_PUBLIC_API_URL_DEV || "http://localhost:8000"
       : process.env.NEXT_PUBLIC_API_URL)
@@ -16,6 +17,17 @@ function resolveBackendBaseUrl(): string {
   }
 
   return raw.replace(/\/+$/, "");
+}
+
+function resolveNextAuthSecret(): string {
+  const configured = process.env.NEXTAUTH_SECRET?.trim();
+  if (configured) return configured;
+
+  if (process.env.NODE_ENV === "development") {
+    return "dev-only-nextauth-secret-change-me";
+  }
+
+  throw new Error("NEXTAUTH_SECRET is required in production.");
 }
 
 export const nextAuthOptions: NextAuthOptions = {
@@ -70,6 +82,7 @@ export const nextAuthOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       session.accessToken = (token.accessToken as string | null) ?? null;
+      session.user = session.user ?? { name: null, email: null, image: null };
       session.user.role = (token.role as string | null) ?? null;
       return session;
     },
@@ -77,5 +90,5 @@ export const nextAuthOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: resolveNextAuthSecret(),
 };
