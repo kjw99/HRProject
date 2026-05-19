@@ -2,6 +2,7 @@ import axios from "axios";
 import {
   InterviewerInviteAcceptPayload,
   InterviewerInviteAcceptResponse,
+  InterviewerAvailabilityResponse,
   InterviewerInvitePayload,
   InterviewerInviteResponse,
 } from "@/types/interviewer";
@@ -87,6 +88,26 @@ export const interviewerInviteApi = {
   ): Promise<InterviewerInviteAcceptResponse> => {
     const response = await api.post<InterviewerInviteAcceptResponse>(
       "/api/interviewer-invites/accept",
+      payload,
+    );
+    return response.data;
+  },
+
+  getAvailability: async (
+    token: string,
+  ): Promise<InterviewerAvailabilityResponse> => {
+    const response = await api.get<InterviewerAvailabilityResponse>(
+      `/api/interviewer-invites/${token}/availability`,
+    );
+    return response.data;
+  },
+
+  submitAvailability: async (
+    token: string,
+    payload: { decision: "accepted" | "declined"; note?: string },
+  ): Promise<InterviewerAvailabilityResponse> => {
+    const response = await api.post<InterviewerAvailabilityResponse>(
+      `/api/interviewer-invites/${token}/availability`,
       payload,
     );
     return response.data;

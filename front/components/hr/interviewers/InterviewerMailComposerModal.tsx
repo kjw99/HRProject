@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -32,6 +32,44 @@ export default function InterviewerMailComposerModal({
   inviteReused = false,
   allInterviewers = [],
 }: InterviewerMailComposerModalProps) {
+  const openMailPreviewPopup = () => {
+    const popup = window.open(
+      "",
+      "interviewer-mail-preview",
+      "width=980,height=760,left=140,top=90",
+    );
+    if (!popup) {
+      toast.error("브라우저 팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.");
+      return;
+    }
+
+    const escapeHtml = (value: string) =>
+      value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+
+    popup.document.write(`<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8" /><title>면접관 메일 미리보기</title>
+<style>
+body{font-family:Pretendard,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
+.wrap{max-width:860px;margin:24px auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:20px}
+h1{margin:0 0 12px;font-size:20px}.meta{font-size:13px;color:#475569;margin-bottom:12px}
+.subject{font-weight:700;margin:8px 0 12px}
+pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;font-size:14px;line-height:1.5}
+</style></head>
+<body><div class="wrap">
+<h1>면접관 메일 미리보기</h1>
+<div class="meta">수신자: ${escapeHtml(interviewer.interviewerEmail)}</div>
+<div class="meta">초대 링크: ${escapeHtml(inviteUrl ?? "(발송 시 생성/반영)")}</div>
+<div class="subject">제목: ${escapeHtml(subject)}</div>
+<pre>${escapeHtml(content)}</pre>
+</div></body></html>`);
+    popup.document.close();
+    popup.focus();
+  };
+
   const autoAppliedTemplateRef = useRef(false);
   const [templates, setTemplates] = useState<
     Awaited<ReturnType<typeof emailTemplateApi.fetchEmailTemplates>>
@@ -68,7 +106,7 @@ export default function InterviewerMailComposerModal({
       } catch (error) {
         if (!cancelled) {
           toast.error(
-            getApiErrorMessage(error, "이메일 템플릿을 불러오지 못했습니다."),
+            getApiErrorMessage(error, "?대찓???쒗뵆由우쓣 遺덈윭?ㅼ? 紐삵뻽?듬땲??"),
           );
         }
       } finally {
@@ -141,9 +179,9 @@ export default function InterviewerMailComposerModal({
       const raw = resolvedVariables[key];
       const value =
         raw === undefined || raw === null
-          ? "—"
+          ? "(비어 있음)"
           : String(raw).startsWith("{")
-            ? "—"
+            ? "(미할당)"
             : String(raw);
       return {
         key,
@@ -171,7 +209,7 @@ export default function InterviewerMailComposerModal({
       mergeVariableIntoVariablesJson(prev, key, value),
     );
     const label = getMailTemplateVariableMeta(key).label;
-    toast.success(`{${key}} (${label})에 값을 반영했습니다.`);
+    toast.success(`{${key}} (${label})??媛믪쓣 諛섏쁺?덉뒿?덈떎.`);
   };
 
   const handleAssignVariableWithExtras = (
@@ -188,7 +226,7 @@ export default function InterviewerMailComposerModal({
       }
       return next;
     });
-    toast.success(`{${key}} 및 관련 변수를 반영했습니다.`);
+    toast.success(`{${key}} 諛?愿??蹂?섎? 諛섏쁺?덉뒿?덈떎.`);
   };
 
   const handleFillAllMissingVariables = () => {
@@ -213,13 +251,13 @@ export default function InterviewerMailComposerModal({
 
     if (filled === 0) {
       toast.error(
-        "자동으로 채울 수 있는 변수가 없습니다. 변수를 클릭해 직접 입력해 주세요.",
+        "?먮룞?쇰줈 梨꾩슱 ???덈뒗 蹂?섍? ?놁뒿?덈떎. 蹂?섎? ?대┃??吏곸젒 ?낅젰??二쇱꽭??",
       );
       return;
     }
 
     setCustomVariablesText(nextJson);
-    toast.success(`${filled}개 변수를 자동으로 채웠습니다.`);
+    toast.success(`${filled}媛?蹂?섎? ?먮룞?쇰줈 梨꾩썱?듬땲??`);
   };
 
   const applyTemplateWithVariables = async () => {
@@ -251,13 +289,13 @@ export default function InterviewerMailComposerModal({
       .then(() => {
         toast.success(
           inviteReused
-            ? "기존 초대 링크가 반영된 템플릿 초안을 불러왔습니다."
-            : "초대 링크가 반영된 템플릿 초안을 불러왔습니다.",
+            ? "湲곗〈 珥덈? 留곹겕媛 諛섏쁺???쒗뵆由?珥덉븞??遺덈윭?붿뒿?덈떎."
+            : "珥덈? 留곹겕媛 諛섏쁺???쒗뵆由?珥덉븞??遺덈윭?붿뒿?덈떎.",
         );
       })
       .catch((error) => {
         toast.error(
-          getApiErrorMessage(error, "메일 템플릿 적용 중 오류가 발생했습니다."),
+          getApiErrorMessage(error, "硫붿씪 ?쒗뵆由??곸슜 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎."),
         );
       })
       .finally(() => {
@@ -276,13 +314,13 @@ export default function InterviewerMailComposerModal({
 
   const handleApplyTemplate = async () => {
     if (!selectedTemplateId) {
-      toast.error("적용할 템플릿을 선택해주세요.");
+      toast.error("?곸슜???쒗뵆由우쓣 ?좏깮?댁＜?몄슂.");
       return;
     }
 
     if (missingTemplateKeys.length > 0) {
       toast.error(
-        `템플릿에 필요한 변수가 비어 있습니다: ${missingTemplateKeys.map((k) => `{${k}}`).join(", ")}. JSON에 값을 넣어주세요.`,
+        `?쒗뵆由우뿉 ?꾩슂??蹂?섍? 鍮꾩뼱 ?덉뒿?덈떎: ${missingTemplateKeys.map((k) => `{${k}}`).join(", ")}. JSON??媛믪쓣 ?ｌ뼱二쇱꽭??`,
       );
       return;
     }
@@ -290,10 +328,10 @@ export default function InterviewerMailComposerModal({
     setIsApplyingTemplate(true);
     try {
       await applyTemplateWithVariables();
-      toast.success("템플릿을 메일 초안에 반영했습니다.");
+      toast.success("?쒗뵆由우쓣 硫붿씪 珥덉븞??諛섏쁺?덉뒿?덈떎.");
     } catch (error) {
       toast.error(
-        getApiErrorMessage(error, "메일 템플릿 적용 중 오류가 발생했습니다."),
+        getApiErrorMessage(error, "硫붿씪 ?쒗뵆由??곸슜 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎."),
       );
     } finally {
       setIsApplyingTemplate(false);
@@ -302,10 +340,11 @@ export default function InterviewerMailComposerModal({
 
   const handleSend = async () => {
     if (!subject.trim() || !content.trim()) {
-      toast.error("메일 제목과 본문을 입력해주세요.");
+      toast.error("硫붿씪 ?쒕ぉ怨?蹂몃Ц???낅젰?댁＜?몄슂.");
       return;
     }
 
+    openMailPreviewPopup();
     setIsSending(true);
     try {
       const response = await interviewerMailApi.sendInterviewerMail(
@@ -321,7 +360,7 @@ export default function InterviewerMailComposerModal({
       toast.success(response.message);
     } catch (error) {
       toast.error(
-        getApiErrorMessage(error, "면접관 메일 발송 중 오류가 발생했습니다."),
+        getApiErrorMessage(error, "硫댁젒愿 硫붿씪 諛쒖넚 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎."),
       );
     } finally {
       setIsSending(false);
@@ -333,7 +372,7 @@ export default function InterviewerMailComposerModal({
       isOpen={isOpen}
       onClose={() => !isSending && onClose()}
       title="면접관 메일 보내기"
-      subtitle={`${interviewer.interviewerName} · ${interviewer.interviewerEmail}`}
+      subtitle={`${interviewer.interviewerName} 쨌 ${interviewer.interviewerEmail}`}
       eyebrow="Interviewer Mail"
       eyebrowIcon="envelope"
       theme="indigo"
@@ -342,13 +381,13 @@ export default function InterviewerMailComposerModal({
         <HrModalFooter
           actions={[
             {
-              label: "닫기",
+              label: "?リ린",
               onClick: onClose,
               variant: "secondary",
               disabled: isSending,
             },
             {
-              label: "메일 발송",
+              label: "硫붿씪 諛쒖넚",
               onClick: () => void handleSend(),
               icon: "send",
               variant: "primary",
@@ -394,3 +433,5 @@ export default function InterviewerMailComposerModal({
     </HrModal>
   );
 }
+
+

@@ -101,24 +101,40 @@ export default function InterviewerClient({
       );
     }
 
-    return [...result].sort((a, b) => {
-      const pickValue = (item: HrInterviewer) => {
-        if (sortKey === "createdAt") {
-          return new Date(item.createdAt).getTime();
-        }
-        return String(item[sortKey] ?? "");
-      };
+    const pickValue = (item: HrInterviewer): number | string | null => {
+      if (sortKey === "createdAt") {
+        const time = new Date(item.createdAt).getTime();
+        return Number.isFinite(time) ? time : null;
+      }
+      if (sortKey === "interviewRound") {
+        const raw = item.interviewRound;
+        if (!raw) return null;
+        const matched = String(raw).match(/\d+/);
+        return matched ? Number(matched[0]) : null;
+      }
+      const raw = item[sortKey];
+      if (raw == null || raw === "") return null;
+      return String(raw);
+    };
 
+    return [...result].sort((a, b) => {
       const valueA = pickValue(a);
       const valueB = pickValue(b);
+
+      // null/빈값은 정렬 방향과 관계없이 항상 마지막에 노출
+      if (valueA == null && valueB == null) return 0;
+      if (valueA == null) return 1;
+      if (valueB == null) return -1;
 
       if (typeof valueA === "number" && typeof valueB === "number") {
         return sortOrder === "asc" ? valueA - valueB : valueB - valueA;
       }
 
+      const stringA = String(valueA);
+      const stringB = String(valueB);
       return sortOrder === "asc"
-        ? String(valueA).localeCompare(String(valueB))
-        : String(valueB).localeCompare(String(valueA));
+        ? stringA.localeCompare(stringB, "ko", { numeric: true })
+        : stringB.localeCompare(stringA, "ko", { numeric: true });
     });
   }, [interviewers, positionFilter, roundFilter, searchQuery, sortKey, sortOrder]);
 
@@ -212,6 +228,14 @@ export default function InterviewerClient({
 
   const visibleCount = filteredAndSortedInterviewers.length;
 
+  const sortOptions: { key: InterviewerSortKey; label: string }[] = [
+    { key: "createdAt", label: "생성일" },
+    { key: "interviewerName", label: "이름" },
+    { key: "interviewerEmail", label: "이메일" },
+    { key: "positionName", label: "담당 직무" },
+    { key: "interviewRound", label: "차수" },
+  ];
+
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-[24px]">
       <div className="shrink-0 space-y-3 border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white p-4 sm:p-5 lg:p-6">
@@ -279,6 +303,44 @@ export default function InterviewerClient({
               </select>
               <i className="bx bx-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
             </div>
+          </div>
+
+          {/* 모바일·태블릿 전용 정렬 컨트롤 (데스크탑은 테이블 헤더 사용) */}
+          <div className="flex items-stretch gap-2 lg:hidden">
+            <div className="relative flex-1">
+              <i className="bx bx-sort pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-slate-400" />
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as InterviewerSortKey)}
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-[13px] font-bold text-slate-600 shadow-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+                aria-label="정렬 기준"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}순
+                  </option>
+                ))}
+              </select>
+              <i className="bx bx-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+              }
+              className="flex shrink-0 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] font-black text-slate-600 shadow-sm transition-all hover:border-indigo-200 hover:text-indigo-600"
+              aria-label={sortOrder === "asc" ? "오름차순" : "내림차순"}
+              title={sortOrder === "asc" ? "오름차순" : "내림차순"}
+            >
+              <i
+                className={`bx text-lg ${
+                  sortOrder === "asc" ? "bx-sort-up" : "bx-sort-down"
+                }`}
+              />
+              <span className="hidden sm:inline">
+                {sortOrder === "asc" ? "오름차순" : "내림차순"}
+              </span>
+            </button>
           </div>
 
           <button

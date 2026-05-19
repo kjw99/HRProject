@@ -7,6 +7,18 @@ export const INTERVIEWER_MAIL_DEFAULT_EXTRA = {
   sender_name: "HR Team",
 } as const;
 
+function toAvailabilityUrl(inviteUrl?: string | null): string {
+  if (!inviteUrl) return "{availability_url}";
+  try {
+    const parsed = new URL(inviteUrl);
+    const token = parsed.searchParams.get("token");
+    if (!token) return inviteUrl;
+    return `${parsed.origin}/interviewer-availability?token=${encodeURIComponent(token)}`;
+  } catch {
+    return inviteUrl;
+  }
+}
+
 /** 면접관 메일 템플릿 치환용 변수 맵 생성 */
 export function buildInterviewerMailVariables(params: {
   interviewer: HrInterviewer;
@@ -39,6 +51,8 @@ export function buildInterviewerMailVariables(params: {
     invite_url: inviteUrl ?? "{invite_url}",
     access_link: inviteUrl ?? "{invite_url}",
     invitation_url: inviteUrl ?? "{invitation_url}",
+    availability_url: toAvailabilityUrl(inviteUrl),
+    interviewer_response_url: toAvailabilityUrl(inviteUrl),
   };
 
   const result: Record<string, string | number> = {

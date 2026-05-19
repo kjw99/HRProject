@@ -133,6 +133,23 @@ export interface InterviewerInviteAcceptResponse {
   interviewer: InterviewerAuthInfo;
 }
 
+export interface InterviewerAvailabilitySlotSummary {
+  slotId: number;
+  interviewRound: string;
+  interviewStartsAt: string;
+  interviewEndsAt: string;
+  interviewLocation: string | null;
+}
+
+export interface InterviewerAvailabilityResponse {
+  interviewer: InterviewerAuthInfo;
+  expiresAt: string;
+  decision: "accepted" | "declined" | null;
+  note: string | null;
+  decidedAt: string | null;
+  slots: InterviewerAvailabilitySlotSummary[];
+}
+
 export interface InterviewerMailPayload {
   subject?: string;
   content?: string;

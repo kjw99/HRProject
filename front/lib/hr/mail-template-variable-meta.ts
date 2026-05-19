@@ -57,6 +57,14 @@ export const MAIL_TEMPLATE_VARIABLE_META: Record<string, MailTemplateVariableMet
       autoSource: "invite_url",
       aliasKeys: [...INVITE_ALIAS_KEYS],
     },
+    availability_url: {
+      label: "면접관 참여응답 링크",
+      placeholder: "https://...",
+    },
+    interviewer_response_url: {
+      label: "면접관 참여응답 링크",
+      placeholder: "https://...",
+    },
     interviewer_name: {
       label: "면접관 이름",
       placeholder: "",

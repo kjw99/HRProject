@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ToastUI } from '@/components/ui/ToastUI';
 import Cookies from 'js-cookie';
+import { signOut } from 'next-auth/react';
 
 export default function useLogout() {
   const router = useRouter();
@@ -16,9 +17,9 @@ export default function useLogout() {
       duration: 500,
     });
 
-    setTimeout(() => {
+    setTimeout(async () => {
       clearAuth();
-      // TODO: 실제 로그아웃 로직 추가 (예: signOut(), 로컬 스토리지 삭제 등)
+      await signOut({ redirect: false });
       Cookies.remove('accessToken', { path: '/' });
       Cookies.remove('userRole', { path: '/' });
       Cookies.remove('userName', { path: '/' });

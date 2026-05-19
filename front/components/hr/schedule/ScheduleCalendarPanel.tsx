@@ -1,8 +1,8 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { format, isSameDay, isSameMonth } from "date-fns";
-import { ko } from "date-fns/locale";
+import { motion } from "framer-motion";
+import { format, isSameDay, isSameMonth, isToday } from "date-fns";
+import { ScheduleCalendarCell } from "./ScheduleCalendarCell";
 import type { InterviewSlotListItem } from "@/types/interviewSlotWrite";
 import type { ScheduleCalendarViewMode } from "./types";
 
@@ -10,12 +10,6 @@ const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"] as cons
 
 export interface ScheduleCalendarPanelProps {
   viewMode: ScheduleCalendarViewMode;
-  onViewModeChange: (mode: ScheduleCalendarViewMode) => void;
-  calendarOpen: boolean;
-  onToggleCalendarOpen: () => void;
-  headerTitle: string;
-  onNavigatePrev: () => void;
-  onNavigateNext: () => void;
   gridDays: Date[];
   displayMonth: Date;
   selectedDate: Date;
@@ -25,167 +19,95 @@ export interface ScheduleCalendarPanelProps {
 
 export function ScheduleCalendarPanel({
   viewMode,
-  onViewModeChange,
-  calendarOpen,
-  onToggleCalendarOpen,
-  headerTitle,
-  onNavigatePrev,
-  onNavigateNext,
   gridDays,
   displayMonth,
   selectedDate,
   onSelectDate,
   slotsByDate,
 }: ScheduleCalendarPanelProps) {
+  const totalRows = Math.max(1, Math.ceil(gridDays.length / 7));
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-black/4">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-            Calendar
-          </p>
-          <h2 className="truncate text-lg font-black tracking-tight text-slate-900 sm:text-xl">
-            {headerTitle}
-          </h2>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-1.5">
-          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-            <button
-              type="button"
-              onClick={() => onViewModeChange("month")}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-black transition sm:px-3 ${
-                viewMode === "month"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500"
-              }`}
-            >
-              월
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewModeChange("week")}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-black transition sm:px-3 ${
-                viewMode === "week"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500"
-              }`}
-            >
-              주
-            </button>
+    <motion.section
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+      className="relative flex h-full flex-col rounded-3xl border border-slate-200/80 bg-white/95 shadow-[0_1px_2px_rgba(15,23,42,0.04),_0_8px_24px_-12px_rgba(15,23,42,0.18)] backdrop-blur"
+      aria-label="면접 일정 캘린더"
+    >
+      <header className="flex shrink-0 items-center justify-between rounded-t-3xl border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-4">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+            <i className="bx bx-calendar text-lg" />
+          </span>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+              Calendar
+            </p>
+            <p className="text-sm font-black text-slate-900">
+              {viewMode === "month" ? "월간 보기" : "주간 보기"}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={onNavigatePrev}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-            aria-label="이전"
-          >
-            <i className="bx bx-chevron-left text-xl" />
-          </button>
-          <button
-            type="button"
-            onClick={onNavigateNext}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-            aria-label="다음"
-          >
-            <i className="bx bx-chevron-right text-xl" />
-          </button>
-          <button
-            type="button"
-            onClick={onToggleCalendarOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white transition hover:bg-slate-800"
-            aria-expanded={calendarOpen}
-            aria-label={calendarOpen ? "달력 접기" : "달력 펼치기"}
-          >
-            <i
-              className={`bx text-lg ${
-                calendarOpen ? "bx-chevron-up" : "bx-chevron-down"
-              }`}
-            />
-          </button>
         </div>
+        <div className="hidden items-center gap-3 text-[11px] font-bold text-slate-500 sm:flex">
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            예약 가능
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-amber-500" />
+            정원 마감
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-slate-400" />
+            종료
+          </span>
+        </div>
+      </header>
+
+      <div className="grid shrink-0 grid-cols-7 border-b border-slate-100 bg-slate-50/70">
+        {WEEKDAY_LABELS.map((day, idx) => (
+          <div
+            key={day}
+            className={`px-1 py-2 text-center text-[10px] font-black uppercase tracking-wider sm:text-[11px] ${
+              idx === 0
+                ? "text-rose-500"
+                : idx === 6
+                  ? "text-sky-500"
+                  : "text-slate-400"
+            }`}
+          >
+            {day}
+          </div>
+        ))}
       </div>
 
-      <AnimatePresence initial={false} mode="wait">
-        {calendarOpen && (
-          <motion.div
-            key={viewMode}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.24, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/90">
-              {WEEKDAY_LABELS.map((day) => (
-                <div
-                  key={day}
-                  className="px-1 py-2 text-center text-[10px] font-black uppercase tracking-wider text-slate-400 sm:text-[11px]"
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-            <div
-              className={`grid bg-white ${
-                viewMode === "week"
-                  ? "grid-cols-7"
-                  : "grid-cols-7 auto-rows-fr sm:auto-rows-[minmax(5.5rem,1fr)]"
-              }`}
-            >
-              {gridDays.map((day) => {
-                const key = format(day, "yyyy-MM-dd");
-                const daySlots = slotsByDate[key] ?? [];
-                const selected = isSameDay(day, selectedDate);
-                const muted = !isSameMonth(day, displayMonth);
-                return (
-                  <button
-                    key={`${viewMode}-${key}`}
-                    type="button"
-                    onClick={() => onSelectDate(day)}
-                    className={`flex min-h-17 flex-col border-b border-r border-slate-100 p-1.5 text-left transition last:border-r-0 sm:min-h-21 sm:p-2 ${
-                      selected
-                        ? "bg-indigo-50 ring-1 ring-inset ring-indigo-200"
-                        : "bg-white hover:bg-slate-50/90"
-                    } ${muted ? "text-slate-300" : "text-slate-800"}`}
-                  >
-                    <span
-                      className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${
-                        selected
-                          ? "bg-slate-900 text-white shadow-sm"
-                          : muted
-                            ? "text-slate-300"
-                            : "text-slate-700"
-                      }`}
-                    >
-                      {format(day, "d")}
-                    </span>
-                    <div className="mt-auto flex flex-wrap gap-0.5 pt-1">
-                      {daySlots.slice(0, viewMode === "week" ? 6 : 3).map((slot) => (
-                        <span
-                          key={slot.slotId}
-                          className="h-1.5 w-1.5 rounded-full bg-indigo-500"
-                          title={slot.interviewRound}
-                        />
-                      ))}
-                      {daySlots.length > (viewMode === "week" ? 6 : 3) && (
-                        <span className="text-[9px] font-black leading-none text-indigo-600 sm:text-[10px]">
-                          +{daySlots.length - (viewMode === "week" ? 6 : 3)}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-2 text-center text-[10px] font-semibold text-slate-400 sm:text-xs">
-              선택:{" "}
-              <span className="font-black text-slate-700">
-                {format(selectedDate, "yyyy.MM.dd (EEE)", { locale: ko })}
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      <div
+        className="relative grid min-h-0 flex-1 auto-rows-fr grid-cols-7 rounded-b-3xl bg-white"
+        style={{
+          gridTemplateRows: `repeat(${totalRows}, minmax(0, 1fr))`,
+        }}
+      >
+        {gridDays.map((day, index) => {
+          const key = format(day, "yyyy-MM-dd");
+          const daySlots = slotsByDate[key] ?? [];
+          return (
+            <ScheduleCalendarCell
+              key={`${viewMode}-${key}`}
+              day={day}
+              viewMode={viewMode}
+              selected={isSameDay(day, selectedDate)}
+              muted={!isSameMonth(day, displayMonth)}
+              today={isToday(day)}
+              daySlots={daySlots}
+              rowIndex={Math.floor(index / 7)}
+              totalRows={totalRows}
+              columnIndex={index % 7}
+              onSelect={onSelectDate}
+            />
+          );
+        })}
+      </div>
+    </motion.section>
   );
 }

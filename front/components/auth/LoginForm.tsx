@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useAuthStore from "@lib/stores/auth";
-import { loginApi } from "@/lib/common/auth";
-import { AuthResponse } from "@typings/auth";
+import { getSession, signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { ToastUI } from "@/components/ui/ToastUI";
 import { roleRouter } from "@lib/roleRouter";
@@ -34,14 +33,14 @@ const LoginForm = () => {
   const [password, setPassword] = useState<string>(""); // 로그인과 회원가입 모두에서 비밀번호 입력 받는 필드
   const [confirmPw, setConfirmPw] = useState<string>(""); // 회원가입 시 비밀번호 확인 입력 받는 필드 추가
   const [loading, setLoading] = useState<boolean>(false); // 로그인/회원가입 요청이 진행 중인지 여부를 나타내는 상태
-  const [disabled, setDisabled] = useState<boolean>(false); // 입력 필드와 버튼을 비활성화할지 여부를 나타내는 상태 (예: 요청이 진행 중일 때)
+  const disabled = loading;
   const setAuth = useAuthStore((state) => state.setAuth);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const router = useRouter();
   useEffect(() => {
     setIsLoaded(true);
     clearAuth();
-  }, []);
+  }, [clearAuth]);
 
   const toggle = () => {
     setName("");
@@ -56,18 +55,35 @@ const LoginForm = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const data: AuthResponse = await loginApi({
+      const result = await signIn("credentials", {
         user_email: email,
-        password: password,
+        password,
+        redirect: false,
       });
-      // Zustand 스토어 업데이트
-      const { user, accessToken } = data;
-      const { userName, role } = user;
-      setAuth(userName, accessToken);
+
+      if (!result || result.error) {
+        throw new Error("이메일 또는 비밀번호를 다시 확인해 주세요.");
+      }
+
+      const session = await getSession();
+      const token = session?.accessToken;
+      const userName = session?.user?.name;
+      const role = session?.user?.role ?? null;
+
+      if (!token || !userName) {
+        throw new Error("로그인 세션을 생성하지 못했습니다. 다시 시도해 주세요.");
+      }
+
+      setAuth(userName, token, role);
       router.push(roleRouter(role));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const authError = error as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
       const message =
-        error?.response?.data?.detail ??
+        authError?.response?.data?.detail ??
+        authError?.message ??
         "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
       toast.custom((t) => <ToastUI t={t} message={message} duration={2000} />, {
         duration: 2000,
