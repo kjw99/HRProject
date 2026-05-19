@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
@@ -86,10 +87,17 @@ function HrQuestionsSyncToastHost({
     progress.departmentName,
   ]);
 
+  useEffect(() => {
+    return () => {
+      toast.dismiss(HR_QUESTIONS_SYNC_TOAST_ID);
+    };
+  }, []);
+
   return null;
 }
 
 export function HrQuestionsBrowseProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<
     number | null
@@ -97,6 +105,7 @@ export function HrQuestionsBrowseProvider({ children }: { children: ReactNode })
   const [questionsCache, setQuestionsCache] = useState<
     Record<number, HrSavedQuestion[]>
   >({});
+  const [isManualCountsRefresh, setIsManualCountsRefresh] = useState(false);
   const countsQuery = useQuery({
     queryKey: COUNTS_QUERY_KEY,
     queryFn: buildQuestionCountMap,
@@ -126,8 +135,13 @@ export function HrQuestionsBrowseProvider({ children }: { children: ReactNode })
   }, [departmentQuery.data, selectedDepartmentId]);
 
   const refreshCounts = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: COUNTS_QUERY_KEY });
-    await countsQuery.refetch();
+    setIsManualCountsRefresh(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: COUNTS_QUERY_KEY });
+      await countsQuery.refetch();
+    } finally {
+      setIsManualCountsRefresh(false);
+    }
   }, [countsQuery, queryClient]);
 
   const invalidateDepartment = useCallback(
@@ -207,7 +221,11 @@ export function HrQuestionsBrowseProvider({ children }: { children: ReactNode })
     };
   }, [loadingDepartmentId]);
 
-  const showSyncToast = isSyncingCounts || loadingDepartmentId != null;
+  const isHrPath = pathname?.startsWith("/hr") === true;
+  const showSyncToast =
+    isHrPath &&
+    (loadingDepartmentId != null ||
+      (isManualCountsRefresh && isSyncingCounts));
 
   const value = useMemo<HrQuestionsBrowseContextValue>(
     () => ({
