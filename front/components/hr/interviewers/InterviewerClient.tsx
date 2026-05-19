@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -12,9 +13,17 @@ import {
   InterviewRound,
 } from "@/types/interviewer";
 import { Position } from "@/types/position";
-import DeleteConfirmModal from "../positions/DeleteConfirmModal";
-import InterviewerFormModal from "./InterviewerFormModal";
-import InterviewerTable from "./InterviewerTable";
+
+const DeleteConfirmModal = dynamic(
+  () => import("../positions/DeleteConfirmModal"),
+);
+const InterviewerFormModal = dynamic(
+  () => import("./InterviewerFormModal"),
+);
+const InterviewerTable = dynamic(
+  () => import("./InterviewerTable"),
+  { loading: () => <div className="h-80 animate-pulse rounded-2xl bg-slate-100" /> },
+);
 
 type ApiError = {
   response?: {

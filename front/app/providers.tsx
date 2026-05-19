@@ -10,6 +10,7 @@ import BackNavAuthGuard from '@/components/auth/BackNavAuthGuard';
 import NextAuthSessionSync from "@/components/auth/NextAuthSessionSync";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+    const isDev = process.env.NODE_ENV === "development";
     // useState를 사용하여 페이지 이동 시 클라이언트가 초기화되는 것을 방지합니다.
     const [queryClient] = useState(() => new QueryClient({
         defaultOptions: {
@@ -27,7 +28,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 <NextAuthSessionSync />
                 <BackNavAuthGuard />
                 {children}
-                <ReactQueryDevtools initialIsOpen={false} />
+                {isDev ? <ReactQueryDevtools initialIsOpen={false} /> : null}
                 <Toaster position="top-right" expand={true} richColors />
             </QueryClientProvider>
         </SessionProvider>

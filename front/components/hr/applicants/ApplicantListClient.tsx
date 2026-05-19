@@ -174,6 +174,8 @@ function getApplicantIssue(applicant: Applicant): ApplicantIssue {
 export default function ApplicantListClient({
   initialData,
 }: ApplicantListClientProps) {
+  const DEFAULT_VIRTUAL_ROW_HEIGHT = 76;
+  const VIRTUAL_OVERSCAN = 8;
   const [data, setData] = useState<Applicant[]>(initialData);
   const [isRefreshing, setIsRefreshing] = useState(false);
   /** 동시 다발 호출 방지 (모달에서 빠르게 여러 번 트리거되는 케이스) */
@@ -196,6 +198,13 @@ export default function ApplicantListClient({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [tableScrollTop, setTableScrollTop] = useState(0);
+  const tableScrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [tableViewportHeight, setTableViewportHeight] = useState(560);
+  const [virtualRowHeight, setVirtualRowHeight] = useState(
+    DEFAULT_VIRTUAL_ROW_HEIGHT,
+  );
+  const sampleRowRef = useRef<HTMLTableRowElement | null>(null);
 
   useEffect(() => {
     setData(initialData);
@@ -233,6 +242,30 @@ export default function ApplicantListClient({
       ),
     [data],
   );
+
+  const duplicateFlagByCandidateId = useMemo(() => {
+    const map = new Map<number, boolean>();
+    for (const item of data) {
+      const isDup = duplicateIdentityKeys.has(
+        buildDuplicateIdentityKey({
+          name: item.name,
+          birth: item.date_of_birth,
+          phone: item.phone,
+          email: item.email,
+        }),
+      );
+      map.set(item.candidate_id, isDup);
+    }
+    return map;
+  }, [data, duplicateIdentityKeys]);
+
+  const issueByCandidateId = useMemo(() => {
+    const map = new Map<number, ApplicantIssue>();
+    for (const item of data) {
+      map.set(item.candidate_id, getApplicantIssue(item));
+    }
+    return map;
+  }, [data]);
 
   const positionOptions = useMemo(() => {
     const names = new Set<string>();
@@ -291,27 +324,23 @@ export default function ApplicantListClient({
     }
 
     if (showDuplicatesOnly) {
-      result = result.filter((item) =>
-        duplicateIdentityKeys.has(
-          buildDuplicateIdentityKey({
-            name: item.name,
-            birth: item.date_of_birth,
-            phone: item.phone,
-            email: item.email,
-          }),
-        ),
+      result = result.filter(
+        (item) => duplicateFlagByCandidateId.get(item.candidate_id) === true,
       );
     }
 
     if (showProblemOnly) {
-      result = result.filter((item) => getApplicantIssue(item).hasIssue);
+      result = result.filter(
+        (item) => issueByCandidateId.get(item.candidate_id)?.hasIssue === true,
+      );
     }
 
     return result;
   }, [
     criteriaFilter,
     data,
-    duplicateIdentityKeys,
+    duplicateFlagByCandidateId,
+    issueByCandidateId,
     positionFilter,
     searchKeyword,
     showDuplicatesOnly,
@@ -319,23 +348,13 @@ export default function ApplicantListClient({
   ]);
 
   const totalProblemCount = useMemo(
-    () => data.filter((item) => getApplicantIssue(item).hasIssue).length,
-    [data],
+    () => Array.from(issueByCandidateId.values()).filter((item) => item.hasIssue).length,
+    [issueByCandidateId],
   );
 
   const totalDuplicateCount = useMemo(
-    () =>
-      data.filter((item) =>
-        duplicateIdentityKeys.has(
-          buildDuplicateIdentityKey({
-            name: item.name,
-            birth: item.date_of_birth,
-            phone: item.phone,
-            email: item.email,
-          }),
-        ),
-      ).length,
-    [data, duplicateIdentityKeys],
+    () => Array.from(duplicateFlagByCandidateId.values()).filter(Boolean).length,
+    [duplicateFlagByCandidateId],
   );
 
   const columns = useMemo(
@@ -469,6 +488,80 @@ export default function ApplicantListClient({
   });
 
   const visibleCount = table.getRowModel().rows.length;
+  const tableRows = table.getRowModel().rows;
+
+  useEffect(() => {
+    const container = tableScrollContainerRef.current;
+    if (!container) return;
+
+    const syncViewport = () => {
+      setTableViewportHeight(container.clientHeight || 560);
+    };
+
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    return () => {
+      window.removeEventListener("resize", syncViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (tableRows.length === 0) return;
+    const sample = sampleRowRef.current;
+    if (!sample) return;
+
+    const updateHeight = () => {
+      const measured = Math.ceil(sample.getBoundingClientRect().height);
+      if (measured > 0 && measured !== virtualRowHeight) {
+        setVirtualRowHeight(measured);
+      }
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(() => updateHeight());
+    observer.observe(sample);
+    return () => {
+      observer.disconnect();
+    };
+  }, [tableRows.length, virtualRowHeight]);
+
+  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } =
+    useMemo(() => {
+      const total = tableRows.length;
+      if (total === 0) {
+        return {
+          startIndex: 0,
+          endIndex: 0,
+          topSpacerHeight: 0,
+          bottomSpacerHeight: 0,
+        };
+      }
+
+      const rowsPerViewport = Math.max(
+        1,
+        Math.ceil(tableViewportHeight / virtualRowHeight),
+      );
+      const baseStart = Math.floor(tableScrollTop / virtualRowHeight);
+      const safeStart = Math.max(0, baseStart - VIRTUAL_OVERSCAN);
+      const safeEnd = Math.min(
+        total,
+        safeStart + rowsPerViewport + VIRTUAL_OVERSCAN * 2,
+      );
+      const topHeight = safeStart * virtualRowHeight;
+      const bottomHeight = Math.max(0, (total - safeEnd) * virtualRowHeight);
+
+      return {
+        startIndex: safeStart,
+        endIndex: safeEnd,
+        topSpacerHeight: topHeight,
+        bottomSpacerHeight: bottomHeight,
+      };
+    }, [tableRows.length, tableScrollTop, tableViewportHeight, VIRTUAL_OVERSCAN, virtualRowHeight]);
+
+  const virtualRows = useMemo(
+    () => tableRows.slice(startIndex, endIndex),
+    [endIndex, startIndex, tableRows],
+  );
 
   const handleSaveApplicant = async (
     candidateId: number,
@@ -647,7 +740,13 @@ export default function ApplicantListClient({
           </p>
         </div>
 
-        <div className="overflow-x-auto">
+        <div
+          ref={tableScrollContainerRef}
+          onScroll={(event) => {
+            setTableScrollTop(event.currentTarget.scrollTop);
+          }}
+          className="max-h-[560px] overflow-x-auto overflow-y-auto"
+        >
           <table className="w-full min-w-[1180px] border-collapse text-left">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -684,7 +783,7 @@ export default function ApplicantListClient({
               ))}
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {table.getRowModel().rows.length === 0 ? (
+              {tableRows.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
@@ -694,13 +793,24 @@ export default function ApplicantListClient({
                   </td>
                 </tr>
               ) : (
-                table.getRowModel().rows.map((row) => {
-                  const issue = getApplicantIssue(row.original);
+                <>
+                  {topSpacerHeight > 0 ? (
+                    <tr aria-hidden="true">
+                      <td colSpan={7} style={{ height: topSpacerHeight }} />
+                    </tr>
+                  ) : null}
+                  {virtualRows.map((row, idx) => {
+                  const issue =
+                    issueByCandidateId.get(row.original.candidate_id) ?? {
+                      hasIssue: false,
+                      reasons: [],
+                    };
                   const issueTitle = issue.hasIssue
                     ? `확인 필요: ${issue.reasons.join(", ")}`
                     : undefined;
                   return (
                     <tr
+                      ref={idx === 0 ? sampleRowRef : null}
                       key={row.original.candidate_id}
                       title={issueTitle}
                       className={`group transition-colors hover:bg-slate-50/60 ${issue.hasIssue
@@ -721,7 +831,13 @@ export default function ApplicantListClient({
                       ))}
                     </tr>
                   );
-                })
+                  })}
+                  {bottomSpacerHeight > 0 ? (
+                    <tr aria-hidden="true">
+                      <td colSpan={7} style={{ height: bottomSpacerHeight }} />
+                    </tr>
+                  ) : null}
+                </>
               )}
             </tbody>
           </table>

@@ -28,6 +28,35 @@ export const api = axios.create({
   },
 });
 
+let cachedAuthStorageRaw: string | undefined;
+let cachedBearerToken: string | null = null;
+
+function resolveBearerTokenFromCookie(): string | null {
+  const authData = Cookies.get("auth-storage");
+  if (!authData) {
+    cachedAuthStorageRaw = undefined;
+    cachedBearerToken = null;
+    return null;
+  }
+
+  if (authData === cachedAuthStorageRaw) {
+    return cachedBearerToken;
+  }
+
+  cachedAuthStorageRaw = authData;
+
+  let parsedData: unknown = null;
+  try {
+    parsedData = JSON.parse(authData);
+  } catch {
+    parsedData = JSON.parse(decodeURIComponent(authData));
+  }
+
+  cachedBearerToken =
+    (parsedData as { state?: { token?: string } })?.state?.token ?? null;
+  return cachedBearerToken;
+}
+
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (config.data instanceof FormData) {
@@ -36,22 +65,9 @@ api.interceptors.request.use(
 
     if (typeof window !== "undefined") {
       try {
-        const authData = Cookies.get("auth-storage");
-
-        if (authData) {
-          let parsedData: unknown = null;
-          try {
-            parsedData = JSON.parse(authData);
-          } catch {
-            parsedData = JSON.parse(decodeURIComponent(authData));
-          }
-
-          const token =
-            (parsedData as { state?: { token?: string } })?.state?.token;
-
-          if (token) {
-            config.headers.set("Authorization", `Bearer ${token}`);
-          }
+        const token = resolveBearerTokenFromCookie();
+        if (token) {
+          config.headers.set("Authorization", `Bearer ${token}`);
         }
       } catch (error) {
         console.error("쿠키 토큰 파싱 중 오류 발생:", error);

@@ -41,8 +41,19 @@ function mapToUiQuestions(
   if (!items?.length) return [];
   return items.map((q, idx) => ({
     ...q,
-    id: `gen-q-${Date.now()}-${idx}`,
+    id: `gen-q-${q.questionType}-${q.questionText.trim()}-${idx}`,
   }));
+}
+
+function mergeQuestionsById(
+  prev: UIGeneratedQuestion[],
+  next: UIGeneratedQuestion[],
+): UIGeneratedQuestion[] {
+  if (next.length === 0) return prev;
+  const seen = new Set(prev.map((item) => item.id));
+  const deduped = next.filter((item) => !seen.has(item.id));
+  if (deduped.length === 0) return prev;
+  return [...prev, ...deduped];
 }
 
 function toToastProgress(
@@ -113,10 +124,7 @@ function QuestionGenerationJobToastHost({
     );
   }, [
     isJobActive,
-    progress.status,
-    progress.percent,
-    progress.label,
-    progress.resultCount,
+    progress,
     isMinimized,
     onToggleMinimize,
   ]);
@@ -148,13 +156,13 @@ export function QuestionGenerationJobProvider({
 
   const appendGeneratedQuestions = useCallback((items: UIGeneratedQuestion[]) => {
     if (items.length === 0) return;
-    setGeneratedQuestions((prev) => [...prev, ...items]);
+    setGeneratedQuestions((prev) => mergeQuestionsById(prev, items));
   }, []);
 
   const applySucceeded = useCallback(
     (items: UIGeneratedQuestion[]) => {
       if (items.length > 0) {
-        setGeneratedQuestions((prev) => [...prev, ...items]);
+        setGeneratedQuestions((prev) => mergeQuestionsById(prev, items));
       }
 
       listenersRef.current.forEach((listener) => {
@@ -221,7 +229,9 @@ export function QuestionGenerationJobProvider({
 
     if (job.status === "succeeded") {
       const uiItems = mapToUiQuestions(job.resultQuestions);
-      applySucceeded(uiItems);
+      setTimeout(() => {
+        applySucceeded(uiItems);
+      }, 0);
 
       toast.dismiss(QUESTION_GENERATION_TOAST_ID);
       toast.success(

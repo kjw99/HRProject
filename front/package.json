@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "analyze": "next build --turbo --experimental-analyze",
     "start": "next start",
     "lint": "eslint"
   },

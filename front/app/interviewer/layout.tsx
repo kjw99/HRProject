@@ -1,12 +1,13 @@
 // app/interviewer/layout.tsx
 import Header from "@/components/interviewer/layout/Header";
 import { Metadata } from "next";
-import { requireRole } from "../server/auth/require-role.server";
 
 export const metadata: Metadata = {
   title: "AI 면접 질문 생성기 | HR Portal",
   description: "지원자의 이력서를 분석하여 맞춤형 면접 질문을 생성합니다.",
 };
+
+export const dynamic = "force-dynamic";
 
 export default function InterviewerLayout({
   children,

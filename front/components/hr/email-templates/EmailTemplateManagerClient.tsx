@@ -1,11 +1,25 @@
 "use client";
 
-import EmailTemplateEditorPanel from "./EmailTemplateEditorPanel";
-import EmailTemplateListPanel from "./EmailTemplateListPanel";
-import EmailTemplatePreviewPanel from "./EmailTemplatePreviewPanel";
-import EmailTemplateVariablesPanel from "./EmailTemplateVariablesPanel";
+import dynamic from "next/dynamic";
 import { useEmailTemplateManager } from "./useEmailTemplateManager";
 import type { EmailTemplateManagerClientProps } from "@/types/email-template-ui";
+
+const EmailTemplateEditorPanel = dynamic(
+  () => import("./EmailTemplateEditorPanel"),
+  { loading: () => <div className="h-72 animate-pulse rounded-2xl bg-slate-100" /> },
+);
+const EmailTemplateListPanel = dynamic(
+  () => import("./EmailTemplateListPanel"),
+  { loading: () => <div className="h-80 animate-pulse rounded-2xl bg-slate-100" /> },
+);
+const EmailTemplatePreviewPanel = dynamic(
+  () => import("./EmailTemplatePreviewPanel"),
+  { loading: () => <div className="h-60 animate-pulse rounded-2xl bg-slate-100" /> },
+);
+const EmailTemplateVariablesPanel = dynamic(
+  () => import("./EmailTemplateVariablesPanel"),
+  { loading: () => <div className="h-60 animate-pulse rounded-2xl bg-slate-100" /> },
+);
 
 export default function EmailTemplateManagerClient(
   props: EmailTemplateManagerClientProps,

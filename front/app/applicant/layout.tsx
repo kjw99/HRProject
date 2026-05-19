@@ -6,6 +6,8 @@ export const metadata = {
   title: "지원자",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ApplicantLayout({
   children,
 }: {

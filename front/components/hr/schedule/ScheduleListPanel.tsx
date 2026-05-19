@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { useIncrementalList } from "@/hooks/useIncrementalList";
 import { getSlotStatusMeta } from "./scheduleMeta";
 import type { InterviewSlotListItem } from "@/types/interviewSlotWrite";
 import type { SlotInteractionHandlers } from "./types";
@@ -45,41 +44,96 @@ export function ScheduleListPanel({
   onStartCreate,
   pageSize = 10,
 }: ScheduleListPanelProps) {
+  const DEFAULT_VIRTUAL_ROW_HEIGHT = 186;
+  const VIRTUAL_OVERSCAN = 4;
   const selectedCount = selectedSlotIds.length;
   const titleDate = format(selectedDate, "M월 d일 (EEE)", { locale: ko });
   const resetKey = format(selectedDate, "yyyy-MM-dd");
   const isEmpty = selectedDaySlots.length === 0;
-
-  const { visible, total, visibleCount, hasMore, loadMore } = useIncrementalList(
-    selectedDaySlots,
-    { pageSize, resetKey },
+  const total = selectedDaySlots.length;
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(560);
+  const [virtualRowHeight, setVirtualRowHeight] = useState(
+    DEFAULT_VIRTUAL_ROW_HEIGHT,
   );
+  const visibleCount = total;
 
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const sampleItemRef = useRef<HTMLLIElement | null>(null);
 
   useEffect(() => {
     scrollAreaRef.current?.scrollTo({ top: 0, behavior: "instant" });
   }, [resetKey]);
 
   useEffect(() => {
-    if (!hasMore) return;
-    const target = sentinelRef.current;
     const root = scrollAreaRef.current;
-    if (!target || !root) return;
+    if (!root) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          loadMore();
-        }
-      },
-      { root, rootMargin: "160px 0px", threshold: 0 },
-    );
+    const updateViewport = () => {
+      setViewportHeight(root.clientHeight || 560);
+    };
 
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore, visibleCount]);
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => {
+      window.removeEventListener("resize", updateViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isEmpty) return;
+    const sample = sampleItemRef.current;
+    if (!sample) return;
+
+    const updateHeight = () => {
+      const measured = Math.ceil(sample.getBoundingClientRect().height + 10);
+      if (measured > 0 && measured !== virtualRowHeight) {
+        setVirtualRowHeight(measured);
+      }
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(() => updateHeight());
+    observer.observe(sample);
+    return () => {
+      observer.disconnect();
+    };
+  }, [isEmpty, resetKey, virtualRowHeight]);
+
+  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } =
+    useMemo(() => {
+      if (total === 0) {
+        return {
+          startIndex: 0,
+          endIndex: 0,
+          topSpacerHeight: 0,
+          bottomSpacerHeight: 0,
+        };
+      }
+
+      const rowsPerViewport = Math.max(
+        1,
+        Math.ceil(viewportHeight / virtualRowHeight),
+      );
+      const baseStart = Math.floor(scrollTop / virtualRowHeight);
+      const safeStart = Math.max(0, baseStart - VIRTUAL_OVERSCAN);
+      const safeEnd = Math.min(
+        total,
+        safeStart + rowsPerViewport + VIRTUAL_OVERSCAN * 2,
+      );
+
+      return {
+        startIndex: safeStart,
+        endIndex: safeEnd,
+        topSpacerHeight: safeStart * virtualRowHeight,
+        bottomSpacerHeight: Math.max(0, (total - safeEnd) * virtualRowHeight),
+      };
+    }, [scrollTop, total, viewportHeight, virtualRowHeight]);
+
+  const virtualSlots = useMemo(
+    () => selectedDaySlots.slice(startIndex, endIndex),
+    [endIndex, selectedDaySlots, startIndex],
+  );
 
   return (
     <motion.aside
@@ -99,7 +153,7 @@ export function ScheduleListPanel({
           </h2>
           <p className="mt-0.5 flex flex-wrap items-center gap-1 text-xs font-bold text-slate-500">
             <span>
-              총 <span className="text-slate-900">{total}</span>건
+              총 <span className="text-slate-900">{selectedDaySlots.length}</span>건
             </span>
             <span className="text-slate-300">·</span>
             <span>
@@ -137,6 +191,7 @@ export function ScheduleListPanel({
 
       <div
         ref={scrollAreaRef}
+        onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
         className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4"
       >
         {isEmpty ? (
@@ -170,12 +225,20 @@ export function ScheduleListPanel({
               className="space-y-2.5"
             >
               <AnimatePresence initial={false}>
-                {visible.map((slot) => {
+                {topSpacerHeight > 0 ? (
+                  <li
+                    aria-hidden="true"
+                    style={{ height: topSpacerHeight }}
+                    className="pointer-events-none"
+                  />
+                ) : null}
+                {virtualSlots.map((slot, idx) => {
                   const checked = selectedSlotIds.includes(slot.slotId);
                   const status = getSlotStatusMeta(slot.slotStatus);
                   return (
                     <motion.li
                       key={slot.slotId}
+                      ref={startIndex === 0 && idx === 0 ? sampleItemRef : null}
                       variants={itemVariants}
                       layout
                       className={`relative overflow-hidden rounded-2xl border transition ${
@@ -289,35 +352,20 @@ export function ScheduleListPanel({
                     </motion.li>
                   );
                 })}
+                {bottomSpacerHeight > 0 ? (
+                  <li
+                    aria-hidden="true"
+                    style={{ height: bottomSpacerHeight }}
+                    className="pointer-events-none"
+                  />
+                ) : null}
               </AnimatePresence>
             </motion.ol>
 
-            {hasMore ? (
-              <div
-                ref={sentinelRef}
-                className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 py-3 text-[11px] font-black text-slate-500"
-                aria-live="polite"
-              >
-                <motion.i
-                  className="bx bx-loader-alt text-base"
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1.1, ease: "linear" }}
-                />
-                <span>
-                  다음 {Math.min(pageSize, total - visibleCount)}건 불러오는 중…
-                </span>
-                <button
-                  type="button"
-                  onClick={loadMore}
-                  className="ml-1 rounded-md bg-slate-900 px-2 py-0.5 text-[10px] font-black text-white transition hover:bg-slate-800"
-                >
-                  더 보기
-                </button>
-              </div>
-            ) : visibleCount > pageSize ? (
+            {visibleCount > pageSize ? (
               <p className="mt-3 flex items-center justify-center gap-1 text-[11px] font-black text-slate-400">
                 <i className="bx bx-check-circle text-sm text-emerald-500" />
-                모든 일정({total}건)을 확인했어요
+                모든 일정({selectedDaySlots.length}건)을 확인했어요
               </p>
             ) : null}
           </>

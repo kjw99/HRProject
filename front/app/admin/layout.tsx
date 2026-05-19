@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: "시스템 관리 및 사용자 모니터링을 위한 관리자 전용 포털입니다.",
 };
 
+export const dynamic = "force-dynamic";
+
 // 💡 [SSR 핵심 2] Props에 대한 엄격한 타입 지정
 export interface AdminLayoutProps {
   children: React.ReactNode;
