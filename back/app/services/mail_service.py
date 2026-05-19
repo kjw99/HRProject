@@ -43,11 +43,26 @@ class MailService:
         msg.set_content(content)
 
         try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp_timeout_seconds = self._get_smtp_timeout_seconds()
+            with smtplib.SMTP_SSL(
+                "smtp.gmail.com",
+                465,
+                timeout=smtp_timeout_seconds,
+            ) as smtp:
                 smtp.login(user_email, user_password)
                 smtp.send_message(msg)
         except (smtplib.SMTPException, OSError) as exc:
             raise ExternalServiceException("Failed to send email.") from exc
+
+    def _get_smtp_timeout_seconds(self) -> float:
+        raw = os.getenv("SMTP_TIMEOUT_SECONDS")
+        if raw is None:
+            return 20.0
+        try:
+            parsed = float(raw)
+        except ValueError:
+            return 20.0
+        return max(5.0, parsed)
 
 
 mail_service = MailService()
