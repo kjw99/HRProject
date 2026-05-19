@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useQuestionGenerationJob } from "@/components/hr/question-generation/QuestionGenerationJobProvider";
 import ControlPanel from "./ControlPanel";
@@ -37,6 +37,24 @@ export default function AgentClient({
     isCreating,
     isJobActive,
   } = useQuestionGenerationJob();
+  const candidateNameById = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const candidate of initialCandidates) {
+      if (candidate.name?.trim()) {
+        map[candidate.candidate_id] = candidate.name.trim();
+      }
+    }
+    return map;
+  }, [initialCandidates]);
+  const positionNameById = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const position of initialPositions) {
+      if (position.positionName?.trim()) {
+        map[position.positionId] = position.positionName.trim();
+      }
+    }
+    return map;
+  }, [initialPositions]);
 
   const handleGenerate = useCallback(
     async (additionalRequest?: string) => {
@@ -100,13 +118,14 @@ export default function AgentClient({
     setIsSaving(true);
     try {
       const payload: QuestionSavePayload = {
-        positionId: selectedPositionId || undefined,
-        candidateId: selectedCandidateId || undefined,
         questions: selectedQuestions.map((q) => ({
           questionText: q.questionText,
           questionType: q.questionType,
           evaluationIntent: q.evaluationIntent,
           generationBasis: q.generationBasis,
+          candidateId: q.sourceCandidateId,
+          positionId: q.sourcePositionId ?? undefined,
+          generationJobId: q.sourceJobId,
         })),
       };
 
@@ -146,6 +165,8 @@ export default function AgentClient({
         onToggleQuestionSelect={toggleQuestionSelection}
         onToggleSelectAll={toggleSelectAllQuestions}
         onClearSelection={clearQuestionSelection}
+        candidateNameById={candidateNameById}
+        positionNameById={positionNameById}
       />
     </div>
   );
