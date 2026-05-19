@@ -20,7 +20,7 @@ export default function DeptStatusFilterBar({
   hasActiveFilters,
 }: DeptStatusFilterBarProps) {
   return (
-    <div className="flex flex-col gap-2.5 border-b border-slate-100 bg-gradient-to-b from-white to-slate-50/40 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-5 sm:py-3.5">
+    <div className="flex flex-col gap-2.5 border-b border-slate-100 bg-linear-to-b from-white to-slate-50/40 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-5 sm:py-3.5">
       <div className="relative min-w-0 flex-1 sm:max-w-[220px] md:max-w-xs">
         <i className="bx bx-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
@@ -45,7 +45,7 @@ export default function DeptStatusFilterBar({
       </div>
 
       <div className="relative min-w-0 flex-1 sm:max-w-[200px]">
-        <i className="bx bx-filter-alt pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-slate-400" />
+        <i className="bx bx-filter-alt pointer-events-none absolute left-3 top-1/2 z-1 -translate-y-1/2 text-slate-400" />
         <i className="bx bx-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <select
           value={progressFilter}

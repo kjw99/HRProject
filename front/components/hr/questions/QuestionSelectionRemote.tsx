@@ -34,7 +34,7 @@ export default function QuestionSelectionRemote({
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0, y: 16, x: "-50%" }}
           transition={{ type: "spring", stiffness: 420, damping: 32 }}
-          className="pointer-events-none fixed bottom-6 left-1/2 z-[80] w-[min(100vw-2rem,420px)]"
+          className="pointer-events-none fixed bottom-6 left-1/2 z-80 w-[min(100vw-2rem,420px)]"
           role="toolbar"
           aria-label="선택한 질문 작업"
         >

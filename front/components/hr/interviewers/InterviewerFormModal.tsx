@@ -163,7 +163,7 @@ export default function InterviewerFormModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -233,7 +233,7 @@ export default function InterviewerFormModal({
               />
               <p
                 id="interviewer-email-hint"
-                className="mt-1.5 min-h-[1.25rem] text-[11px] font-semibold leading-snug"
+                className="mt-1.5 min-h-5 text-[11px] font-semibold leading-snug"
               >
                 {emailCheckPending ? (
                   <span className="inline-flex items-center gap-1.5 text-indigo-600">

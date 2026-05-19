@@ -28,6 +28,13 @@ interface ApplicantDetailModalProps {
   applicant: Applicant | null;
   onApplicantUpdated?: (applicant: Applicant) => void;
   onApplicantDeleted?: (candidateId: number) => void;
+  /**
+   * 수정/삭제 같은 mutation 성공 직후 호출됨.
+   * 부모(리스트)에서 서버 데이터를 다시 불러와 정합성을 맞추는 용도.
+   * - local state 패치(onApplicantUpdated/Deleted)는 즉시 반영용,
+   *   이 콜백은 서버 truth 와 sync 하기 위한 백그라운드 트리거.
+   */
+  onListRefreshRequested?: () => void;
 }
 
 const formatDateTime = (value?: string | null) => {
@@ -62,6 +69,7 @@ export default function ApplicantDetailModal({
   applicant,
   onApplicantUpdated,
   onApplicantDeleted,
+  onListRefreshRequested,
 }: ApplicantDetailModalProps) {
   const [detail, setDetail] = useState<ApplicantDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -147,6 +155,9 @@ export default function ApplicantDetailModal({
       setIsEditModalOpen(false);
       toast.success("지원자 정보가 수정되었습니다.");
 
+      // 부모 리스트를 서버 truth 와 sync (background, 화면 깜빡임 없음)
+      onListRefreshRequested?.();
+
       try {
         const fresh = await fetchApplicantDetail(applicant.candidate_id);
         setDetail(fresh);
@@ -167,6 +178,9 @@ export default function ApplicantDetailModal({
       toast.success(response.message);
       setIsDeleteModalOpen(false);
       onClose();
+
+      // 삭제는 다른 row 들(중복 표시/통계)에도 영향을 주므로 리스트 전체를 sync
+      onListRefreshRequested?.();
     } catch (error) {
       toast.error(getErrorMessage(error, "지원자 삭제 중 오류가 발생했습니다."));
     } finally {
@@ -232,7 +246,7 @@ export default function ApplicantDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-[115] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-115 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div

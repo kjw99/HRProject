@@ -38,7 +38,7 @@ export default function QuestionDeleteConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-90 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={() => {
         if (!isDeleting) onClose();
       }}

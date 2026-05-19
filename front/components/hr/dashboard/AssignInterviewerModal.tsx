@@ -116,7 +116,7 @@ export default function AssignInterviewerModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-100 flex items-center justify-center p-4 animate-in fade-in duration-200">
       {/* 💡 모달 너비 확장 (max-w-md -> max-w-lg) 한 행에 Input 2개가 예쁘게 들어가도록 조절 */}
       <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* 상단 헤더 */}

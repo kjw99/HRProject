@@ -238,7 +238,7 @@ export default function InterviewerClient({
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-[24px]">
-      <div className="shrink-0 space-y-3 border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white p-4 sm:p-5 lg:p-6">
+      <div className="shrink-0 space-y-3 border-b border-slate-100 bg-linear-to-b from-slate-50/90 to-white p-4 sm:p-5 lg:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-bold text-slate-500 sm:text-[13px]">
             <i className="bx bx-filter-alt text-indigo-500" />
@@ -267,7 +267,7 @@ export default function InterviewerClient({
             </div>
 
             <div className="relative min-w-0">
-              <i className="bx bx-briefcase-alt pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-slate-400" />
+              <i className="bx bx-briefcase-alt pointer-events-none absolute left-3 top-1/2 z-1 -translate-y-1/2 text-slate-400" />
               <select
                 value={positionFilter}
                 onChange={(e) =>
@@ -288,7 +288,7 @@ export default function InterviewerClient({
             </div>
 
             <div className="relative min-w-0 sm:col-span-2 lg:col-span-1">
-              <i className="bx bx-layer pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-slate-400" />
+              <i className="bx bx-layer pointer-events-none absolute left-3 top-1/2 z-1 -translate-y-1/2 text-slate-400" />
               <select
                 value={roundFilter}
                 onChange={(e) =>
@@ -308,7 +308,7 @@ export default function InterviewerClient({
           {/* 모바일·태블릿 전용 정렬 컨트롤 (데스크탑은 테이블 헤더 사용) */}
           <div className="flex items-stretch gap-2 lg:hidden">
             <div className="relative flex-1">
-              <i className="bx bx-sort pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-slate-400" />
+              <i className="bx bx-sort pointer-events-none absolute left-3 top-1/2 z-1 -translate-y-1/2 text-slate-400" />
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as InterviewerSortKey)}

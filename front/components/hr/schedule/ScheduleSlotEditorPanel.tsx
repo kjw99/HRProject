@@ -58,7 +58,7 @@ export function ScheduleSlotEditorPanel({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/45 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-[2px] sm:items-center sm:p-6"
+      className="fixed inset-0 z-90 flex items-end justify-center bg-slate-900/45 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-[2px] sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="slot-editor-title"

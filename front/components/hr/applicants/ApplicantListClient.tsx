@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createColumnHelper,
   flexRender,
@@ -10,7 +10,11 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
-import { deleteApplicant, updateApplicant } from "@/lib/hr/interview.client";
+import {
+  deleteApplicant,
+  fetchApplicants,
+  updateApplicant,
+} from "@/lib/hr/interview.client";
 import { getApiErrorMessage } from "@/lib/hr/api-error";
 import {
   buildDuplicateIdentityKey,
@@ -171,6 +175,9 @@ export default function ApplicantListClient({
   initialData,
 }: ApplicantListClientProps) {
   const [data, setData] = useState<Applicant[]>(initialData);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  /** 동시 다발 호출 방지 (모달에서 빠르게 여러 번 트리거되는 케이스) */
+  const refreshInflightRef = useRef(false);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [criteriaFilter, setCriteriaFilter] = useState<CriteriaFilter>("ALL");
   const [positionFilter, setPositionFilter] =
@@ -193,6 +200,26 @@ export default function ApplicantListClient({
   useEffect(() => {
     setData(initialData);
   }, [initialData]);
+
+  /**
+   * 서버에서 지원자 목록을 다시 불러와 local state 를 갱신.
+   * - 수정/삭제 후 백그라운드 sync 용도. 중복 호출은 ref 로 방지.
+   * - 실패 시 조용히 무시 (즉시 반영된 local patch 가 이미 화면에 떠 있으므로).
+   */
+  const refreshList = useCallback(async () => {
+    if (refreshInflightRef.current) return;
+    refreshInflightRef.current = true;
+    setIsRefreshing(true);
+    try {
+      const fresh = await fetchApplicants();
+      setData(fresh);
+    } catch {
+      /* 백그라운드 동기화 실패는 사용자 흐름을 막지 않는다 */
+    } finally {
+      refreshInflightRef.current = false;
+      setIsRefreshing(false);
+    }
+  }, []);
 
   const duplicateIdentityKeys = useMemo(
     () =>
@@ -558,6 +585,17 @@ export default function ApplicantListClient({
               현재 {visibleCount}명 표시 중
             </p>
 
+            {isRefreshing ? (
+              <span
+                role="status"
+                aria-live="polite"
+                className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-black text-indigo-600"
+              >
+                <i className="bx bx-loader-alt animate-spin" />
+                목록 동기화 중
+              </span>
+            ) : null}
+
             {totalProblemCount > 0 ? (
               <button
                 type="button"
@@ -726,6 +764,9 @@ export default function ApplicantListClient({
           );
           setIsDetailModalOpen(false);
           setDetailTarget(null);
+        }}
+        onListRefreshRequested={() => {
+          void refreshList();
         }}
       />
 
