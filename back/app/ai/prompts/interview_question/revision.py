@@ -41,18 +41,9 @@ def build_question_revision_messages(
 - 보호 대상 개인정보나 직무 무관 정보는 포함하지 마세요.
 
 각 항목은 다음 필드만 포함하세요:
-- question_text: "질문 내용"
-- evaluation_intent: "질문 유형: ... / 난이도: ... / 질문의도: ... / 평가포인트: ..."
-- generation_basis: "질문 생성의 근거에 대한 내용"
-
-예시:
-
-question_text, evaluation_intent, generation_basis 답변:
-
-question_text: "[질문 유형 내용] 질문 내용"
-evaluation_intent: "질문 유형: 질문 유형 내용 / 난이도: 하, 중, 중상, 상과 같은 난이도 / 질문의도: 질문의도에 대한 내용 / 평가포인트: 평가포인트에 대한 내용"
-generation_basis: "근거에 대한 내용"
-
+- question_text
+- evaluation_intent
+- generation_basis
 """.strip()
 
     return [
