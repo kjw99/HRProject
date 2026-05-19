@@ -27,7 +27,7 @@ export interface ApplicantListResponse {
 }
 
 export interface ApplicantUpdatePayload {
-  position_id?: number;
+  position_id?: number | null;
   name?: string;
   date_of_birth?: string;
   gender?: string | null;

@@ -1,7 +1,9 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import HrModal from "@/components/hr/shared/HrModal";
+import { positionApi } from "@/lib/hr/positions.client";
 import type { Applicant, ApplicantUpdatePayload } from "@/types/applicant";
 
 interface ApplicantEditModalProps {
@@ -20,11 +22,14 @@ type ApplicantFormState = {
   address: string;
   date_of_birth: string;
   gender: string;
+  position_id: number | null;
   experience_level: Applicant["experience_level"];
   application_status: Applicant["application_status"];
   final_status: Applicant["final_status"];
   meets_preferred_criteria_text: string;
 };
+
+const POSITION_UNASSIGNED_VALUE = "__UNASSIGNED__";
 
 const createInitialState = (applicant: Applicant | null): ApplicantFormState => ({
   name: applicant?.name ?? "",
@@ -33,6 +38,10 @@ const createInitialState = (applicant: Applicant | null): ApplicantFormState => 
   address: applicant?.address ?? "",
   date_of_birth: applicant?.date_of_birth ?? "",
   gender: applicant?.gender ?? "",
+  position_id:
+    applicant?.position_id != null && applicant.position_id > 0
+      ? applicant.position_id
+      : null,
   experience_level: applicant?.experience_level ?? "무관",
   application_status: applicant?.application_status ?? "서류",
   final_status: applicant?.final_status ?? "진행중",
@@ -50,6 +59,13 @@ export default function ApplicantEditModal({
   const [form, setForm] = useState<ApplicantFormState>(createInitialState(applicant));
   const [isSaving, setIsSaving] = useState(false);
 
+  const positionsQuery = useQuery({
+    queryKey: ["positions"],
+    queryFn: positionApi.fetchPositions,
+    enabled: isOpen,
+    staleTime: 60_000,
+  });
+
   useEffect(() => {
     if (!isOpen) return;
     setForm(createInitialState(applicant));
@@ -63,6 +79,21 @@ export default function ApplicantEditModal({
         .filter(Boolean),
     [form.meets_preferred_criteria_text],
   );
+
+  const positionOptions = useMemo(() => {
+    const list = positionsQuery.data ?? [];
+    return [...list].sort((a, b) =>
+      a.positionName.localeCompare(b.positionName, "ko", { numeric: true }),
+    );
+  }, [positionsQuery.data]);
+
+  const hasUnknownCurrentPosition = useMemo(() => {
+    if (form.position_id == null) return false;
+    if (positionsQuery.isLoading) return false;
+    return !positionOptions.some(
+      (item) => item.positionId === form.position_id,
+    );
+  }, [form.position_id, positionOptions, positionsQuery.isLoading]);
 
   if (!applicant) return null;
 
@@ -79,6 +110,7 @@ export default function ApplicantEditModal({
     setIsSaving(true);
     try {
       await onSave({
+        position_id: form.position_id,
         name: form.name.trim(),
         email: form.email.trim() || null,
         phone: form.phone.trim(),
@@ -199,6 +231,69 @@ export default function ApplicantEditModal({
               <option value="경력">경력</option>
               <option value="무관">무관</option>
             </select>
+          </label>
+
+          <label className="grid gap-2 text-sm font-black text-slate-600 md:col-span-2">
+            <span className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5">
+                <i className="bx bx-briefcase-alt-2 text-base text-emerald-600" />
+                지원 공고 (직무)
+                {hasUnknownCurrentPosition ? (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-black text-amber-700">
+                    <i className="bx bx-error-circle" />
+                    알 수 없는 공고 ID {form.position_id}
+                  </span>
+                ) : null}
+              </span>
+              {positionsQuery.isFetching ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                  <i className="bx bx-loader-alt animate-spin" />
+                  공고 불러오는 중
+                </span>
+              ) : null}
+            </span>
+            <select
+              value={
+                form.position_id == null
+                  ? POSITION_UNASSIGNED_VALUE
+                  : String(form.position_id)
+              }
+              onChange={(event) => {
+                const raw = event.target.value;
+                updateField(
+                  "position_id",
+                  raw === POSITION_UNASSIGNED_VALUE ? null : Number(raw),
+                );
+              }}
+              disabled={positionsQuery.isLoading}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-60"
+            >
+              <option value={POSITION_UNASSIGNED_VALUE}>지원 공고 미지정</option>
+              {hasUnknownCurrentPosition && form.position_id != null ? (
+                <option value={String(form.position_id)}>
+                  (현재) 알 수 없는 공고 ID {form.position_id}
+                </option>
+              ) : null}
+              {positionOptions.map((position) => (
+                <option key={position.positionId} value={String(position.positionId)}>
+                  {position.positionName} (#{position.positionId})
+                </option>
+              ))}
+            </select>
+            {positionsQuery.isError ? (
+              <span className="text-xs font-bold text-rose-600">
+                <i className="bx bx-error mr-1" />
+                공고 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+              </span>
+            ) : positionOptions.length === 0 && !positionsQuery.isLoading ? (
+              <span className="text-xs font-semibold text-slate-400">
+                등록된 공고가 없습니다. 직무 관리에서 먼저 공고를 생성해 주세요.
+              </span>
+            ) : (
+              <span className="text-[11px] font-semibold text-slate-400">
+                지원자의 지원 공고를 변경할 수 있습니다. &quot;미지정&quot;을 선택하면 공고 연결이 해제됩니다.
+              </span>
+            )}
           </label>
 
           <label className="grid gap-2 text-sm font-black text-slate-600">

@@ -93,17 +93,15 @@ function ApplicantPositionCell({ applicant }: { applicant: Applicant }) {
 
   return (
     <div
-      className={`flex max-w-[240px] flex-col gap-1 rounded-xl px-3 py-2 ${
-        isMissing
+      className={`flex max-w-[240px] flex-col gap-1 rounded-xl px-3 py-2 ${isMissing
           ? "border border-dashed border-rose-200 bg-rose-50/80 ring-1 ring-rose-100"
           : ""
-      }`}
+        }`}
     >
       {positionId != null ? (
         <span
-          className={`text-[10px] font-bold tabular-nums ${
-            isMissing ? "text-rose-500" : "text-slate-400"
-          }`}
+          className={`text-[10px] font-bold tabular-nums ${isMissing ? "text-rose-500" : "text-slate-400"
+            }`}
         >
           공고 ID: {positionId}
         </span>
@@ -114,9 +112,8 @@ function ApplicantPositionCell({ applicant }: { applicant: Applicant }) {
         </span>
       )}
       <span
-        className={`truncate text-sm font-bold leading-snug ${
-          isMissing ? "text-rose-800" : "text-slate-700"
-        }`}
+        className={`truncate text-sm font-bold leading-snug ${isMissing ? "text-rose-800" : "text-slate-700"
+          }`}
         title={label}
       >
         {isMissing ? (
@@ -143,13 +140,41 @@ const isApplicantNameNormalized = (rawName: string): boolean => {
   return getDisplayApplicantName(rawName) !== rawName.trim();
 };
 
+const POSITION_FILTER_ALL = "__ALL__";
+const POSITION_FILTER_MISSING = "__MISSING__";
+
+interface ApplicantIssue {
+  hasIssue: boolean;
+  reasons: string[];
+}
+
+function getApplicantIssue(applicant: Applicant): ApplicantIssue {
+  const reasons: string[] = [];
+
+  if (isApplicantNameNormalized(applicant.name)) {
+    reasons.push("이름 정제 필요");
+  }
+  if (getApplicantPositionDisplay(applicant).isMissing) {
+    reasons.push("지원 공고 미지정");
+  }
+  const phone = (applicant.phone || "").trim();
+  const email = (applicant.email || "").trim();
+  if (!phone && !email) {
+    reasons.push("연락처 누락");
+  }
+
+  return { hasIssue: reasons.length > 0, reasons };
+}
+
 export default function ApplicantListClient({
   initialData,
 }: ApplicantListClientProps) {
   const [data, setData] = useState<Applicant[]>(initialData);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [criteriaFilter, setCriteriaFilter] = useState<CriteriaFilter>("ALL");
+  const [positionFilter, setPositionFilter] = useState<string>(POSITION_FILTER_ALL);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+  const [showProblemOnly, setShowProblemOnly] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(
     null,
@@ -180,6 +205,27 @@ export default function ApplicantListClient({
     [data],
   );
 
+  const positionOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const item of data) {
+      const name = item.position_name?.trim();
+      if (name) names.add(name);
+    }
+    return Array.from(names).sort((a, b) =>
+      a.localeCompare(b, "ko", { numeric: true }),
+    );
+  }, [data]);
+
+  useEffect(() => {
+    if (
+      positionFilter !== POSITION_FILTER_ALL &&
+      positionFilter !== POSITION_FILTER_MISSING &&
+      !positionOptions.includes(positionFilter)
+    ) {
+      setPositionFilter(POSITION_FILTER_ALL);
+    }
+  }, [positionFilter, positionOptions]);
+
   const filteredData = useMemo(() => {
     let result = [...data];
 
@@ -203,6 +249,16 @@ export default function ApplicantListClient({
       );
     }
 
+    if (positionFilter === POSITION_FILTER_MISSING) {
+      result = result.filter(
+        (item) => getApplicantPositionDisplay(item).isMissing,
+      );
+    } else if (positionFilter !== POSITION_FILTER_ALL) {
+      result = result.filter(
+        (item) => (item.position_name?.trim() || "") === positionFilter,
+      );
+    }
+
     if (showDuplicatesOnly) {
       result = result.filter((item) =>
         duplicateIdentityKeys.has(
@@ -216,8 +272,40 @@ export default function ApplicantListClient({
       );
     }
 
+    if (showProblemOnly) {
+      result = result.filter((item) => getApplicantIssue(item).hasIssue);
+    }
+
     return result;
-  }, [criteriaFilter, data, duplicateIdentityKeys, searchKeyword, showDuplicatesOnly]);
+  }, [
+    criteriaFilter,
+    data,
+    duplicateIdentityKeys,
+    positionFilter,
+    searchKeyword,
+    showDuplicatesOnly,
+    showProblemOnly,
+  ]);
+
+  const totalProblemCount = useMemo(
+    () => data.filter((item) => getApplicantIssue(item).hasIssue).length,
+    [data],
+  );
+
+  const totalDuplicateCount = useMemo(
+    () =>
+      data.filter((item) =>
+        duplicateIdentityKeys.has(
+          buildDuplicateIdentityKey({
+            name: item.name,
+            birth: item.date_of_birth,
+            phone: item.phone,
+            email: item.email,
+          }),
+        ),
+      ).length,
+    [data, duplicateIdentityKeys],
+  );
 
   const columns = useMemo(
     () => [
@@ -390,39 +478,36 @@ export default function ApplicantListClient({
   };
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-5 rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-            <i className="bx bx-group text-2xl" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-600">
-              <i className="bx bx-filter-alt mr-1 text-indigo-500" />
-              필터 · 검색
-            </p>
-          </div>
+    <div className="w-full space-y-4 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:gap-3">
+        <div className="flex items-center gap-2 lg:shrink-0">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+            <i className="bx bx-filter-alt text-lg" />
+          </span>
+          <p className="hidden text-[11px] font-black uppercase tracking-widest text-slate-500 lg:block">
+            필터 · 검색
+          </p>
         </div>
 
-        <div className="flex w-full flex-col items-stretch gap-3 lg:flex-row lg:items-center xl:w-auto">
-          <div className="relative w-full shrink-0 lg:w-72">
-            <i className="bx bx-search absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400" />
+        <div className="flex w-full flex-1 flex-col items-stretch gap-2 lg:flex-row lg:items-center">
+          <div className="relative w-full shrink-0 lg:w-64">
+            <i className="bx bx-search absolute left-3.5 top-1/2 -translate-y-1/2 text-base text-slate-400" />
             <input
               type="text"
               placeholder="이름, 전화번호, 이메일 검색"
               value={searchKeyword}
               onChange={(event) => setSearchKeyword(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-3 text-xs font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
 
-          <div className="flex h-11 rounded-xl border border-slate-200 bg-slate-100 p-1">
+          <div className="flex h-10 rounded-xl border border-slate-200 bg-slate-100 p-1">
             {(["ALL", "HAS", "NONE"] as const).map((filter) => (
               <button
                 key={filter}
                 type="button"
                 onClick={() => setCriteriaFilter(filter)}
-                className={`flex-1 whitespace-nowrap rounded-lg px-4 py-1.5 text-[11px] font-black tracking-widest transition-all ${
+                className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1 text-[11px] font-black tracking-widest transition-all ${
                   criteriaFilter === filter
                     ? "bg-white text-indigo-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
@@ -437,26 +522,82 @@ export default function ApplicantListClient({
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowDuplicatesOnly((prev) => !prev)}
-            className={`h-11 rounded-xl border px-4 text-[11px] font-black tracking-widest transition-all ${
-              showDuplicatesOnly
-                ? "border-rose-200 bg-rose-50 text-rose-700"
-                : "border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-700"
-            }`}
-            title="이름 + 전화번호 기준 중복만 보기"
-          >
-            중복만
-          </button>
+          <div className="relative h-10 lg:w-52">
+            <i className="bx bx-briefcase-alt-2 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-indigo-500" />
+            <select
+              value={positionFilter}
+              onChange={(event) => setPositionFilter(event.target.value)}
+              className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-8 text-[11px] font-black tracking-widest text-slate-600 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+              title="지원 공고(직무)별로 필터링"
+            >
+              <option value={POSITION_FILTER_ALL}>지원 공고: 전체</option>
+              <option value={POSITION_FILTER_MISSING}>지원 공고: 미지정</option>
+              {positionOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <i className="bx bx-chevron-down pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-base text-slate-400" />
+          </div>
         </div>
       </div>
 
       <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <p className="text-sm font-bold text-slate-500">
-            현재 {visibleCount}명 표시 중
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-6 py-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-bold text-slate-500">
+              현재 {visibleCount}명 표시 중
+            </p>
+
+            {totalProblemCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowProblemOnly((prev) => !prev)}
+                aria-pressed={showProblemOnly}
+                title={
+                  showProblemOnly
+                    ? "필터 해제: 모든 row 보기"
+                    : "이름 정제 필요, 공고 미지정, 연락처 누락 등 문제 있는 row만 보기"
+                }
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-black tracking-widest transition ${
+                  showProblemOnly
+                    ? "bg-amber-200 text-amber-800 ring-1 ring-amber-300 shadow-inner"
+                    : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                }`}
+              >
+                <i className="bx bx-error" />
+                문제 row {totalProblemCount}건
+                {showProblemOnly ? (
+                  <i className="bx bx-filter-alt ml-0.5" />
+                ) : null}
+              </button>
+            ) : null}
+
+            {totalDuplicateCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowDuplicatesOnly((prev) => !prev)}
+                aria-pressed={showDuplicatesOnly}
+                title={
+                  showDuplicatesOnly
+                    ? "필터 해제: 모든 row 보기"
+                    : "이름·생년월일·전화·이메일 기준 중복 의심 row만 보기"
+                }
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-black tracking-widest transition ${
+                  showDuplicatesOnly
+                    ? "bg-rose-200 text-rose-800 ring-1 ring-rose-300 shadow-inner"
+                    : "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                }`}
+              >
+                <i className="bx bx-copy" />
+                중복 {totalDuplicateCount}건
+                {showDuplicatesOnly ? (
+                  <i className="bx bx-filter-alt ml-0.5" />
+                ) : null}
+              </button>
+            ) : null}
+          </div>
           <p className="text-xs font-black uppercase tracking-wider text-slate-400">
             테이블 헤더 클릭으로 정렬
           </p>
@@ -474,11 +615,10 @@ export default function ApplicantListClient({
                     <th
                       key={header.id}
                       onClick={header.column.getToggleSortingHandler()}
-                      className={`px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400 ${
-                        header.column.getCanSort()
+                      className={`px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400 ${header.column.getCanSort()
                           ? "cursor-pointer select-none hover:text-indigo-600"
                           : ""
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-1.5">
                         {flexRender(
@@ -487,11 +627,10 @@ export default function ApplicantListClient({
                         )}
                         {header.column.getIsSorted() && (
                           <i
-                            className={`bx bx-sort-${
-                              header.column.getIsSorted() === "asc"
+                            className={`bx bx-sort-${header.column.getIsSorted() === "asc"
                                 ? "up"
                                 : "down"
-                            } text-indigo-600`}
+                              } text-indigo-600`}
                           />
                         )}
                       </div>
@@ -511,22 +650,34 @@ export default function ApplicantListClient({
                   </td>
                 </tr>
               ) : (
-                table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.original.candidate_id}
-                    className={`group transition-colors hover:bg-slate-50/60 ${
-                      isApplicantNameNormalized(row.original.name)
-                        ? "bg-amber-50/70"
-                        : ""
-                    }`}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="whitespace-nowrap px-6 py-5">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                table.getRowModel().rows.map((row) => {
+                  const issue = getApplicantIssue(row.original);
+                  const issueTitle = issue.hasIssue
+                    ? `확인 필요: ${issue.reasons.join(", ")}`
+                    : undefined;
+                  return (
+                    <tr
+                      key={row.original.candidate_id}
+                      title={issueTitle}
+                      className={`group transition-colors hover:bg-slate-50/60 ${issue.hasIssue
+                          ? "bg-amber-50/70 ring-1 ring-inset ring-amber-100"
+                          : ""
+                        }`}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          className="whitespace-nowrap px-6 py-5"
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
