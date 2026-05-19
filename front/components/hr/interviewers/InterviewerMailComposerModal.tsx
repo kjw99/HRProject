@@ -61,7 +61,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
 </style></head>
 <body><div class="wrap">
 <h1>면접관 메일 미리보기</h1>
-<div class="meta">수신자: ${escapeHtml(interviewer.interviewerEmail)}</div>
+<div class="meta">수신자: ${escapeHtml(interviewer?.interviewerEmail ?? "")}</div>
 <div class="meta">초대 링크: ${escapeHtml(inviteUrl ?? "(발송 시 생성/반영)")}</div>
 <div class="subject">제목: ${escapeHtml(subject)}</div>
 <pre>${escapeHtml(content)}</pre>
