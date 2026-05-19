@@ -285,6 +285,10 @@ class InterviewSlotService:
         slot = await self._get_slot_or_raise(db, slot_id)
         await self._ensure_no_active_bookings(db, slot_id, action="삭제")
 
+        # interview_bookings.slot_id 는 ON DELETE RESTRICT → 취소된 예약 row 도 선삭제 필요
+        await interview_booking_repository.delete_all_by_slot_id(db, slot_id)
+        await interview_slot_interviewer_repository.delete_by_slot_id(db, slot_id)
+
         await interview_slot_repository.delete(db, slot)
         await db.commit()
 

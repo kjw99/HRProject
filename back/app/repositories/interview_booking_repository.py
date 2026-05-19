@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -107,6 +107,18 @@ class InterviewBookingRepository:
             .order_by(InterviewBooking.candidate_id, InterviewBooking.booking_id)
         )
         return list(result.all())
+
+    async def delete_all_by_slot_id(
+        self,
+        db: AsyncSession,
+        slot_id: int,
+    ) -> int:
+        """슬롯에 연결된 모든 예약(취소 포함)을 삭제. slot FK RESTRICT 해제용."""
+        result = await db.execute(
+            delete(InterviewBooking).where(InterviewBooking.slot_id == slot_id)
+        )
+        await db.flush()
+        return int(result.rowcount or 0)
 
     async def count_active_by_slot_id(
         self,

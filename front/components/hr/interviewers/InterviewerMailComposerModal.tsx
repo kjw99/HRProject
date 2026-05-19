@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import HrModal from "@/components/hr/shared/HrModal";
 import HrModalFooter from "@/components/hr/shared/HrModalFooter";
@@ -22,6 +22,18 @@ import {
   resolveMailVariableAutoValue,
 } from "@/lib/hr/mail-template-variable-meta";
 import type { InterviewerMailComposerModalProps } from "@/types/interviewer";
+
+function normalizeInviteUrlOrigin(url: string): string {
+  if (typeof window === "undefined") return url;
+  try {
+    const parsed = new URL(url);
+    const currentOrigin = window.location.origin;
+    if (parsed.origin === currentOrigin) return url;
+    return `${currentOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return url;
+  }
+}
 
 export default function InterviewerMailComposerModal({
   isOpen,
@@ -133,9 +145,10 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
     setExpiresInDays(initialExpiresInDays);
 
     if (initialInviteUrl) {
-      setInviteUrl(initialInviteUrl);
+      const normalizedInviteUrl = normalizeInviteUrlOrigin(initialInviteUrl);
+      setInviteUrl(normalizedInviteUrl);
       setCustomVariablesText((prev) =>
-        mergeInviteUrlIntoVariablesJson(prev, initialInviteUrl),
+        mergeInviteUrlIntoVariablesJson(prev, normalizedInviteUrl),
       );
     } else {
       setInviteUrl(null);
@@ -155,14 +168,14 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
     [selectedTemplate],
   );
 
-  const buildVariables = () => {
+  const buildVariables = useCallback(() => {
     if (!interviewer) return {};
     return buildInterviewerMailVariables({
       interviewer,
       inviteUrl,
       customVariablesText,
     });
-  };
+  }, [interviewer, inviteUrl, customVariablesText]);
 
   const resolvedVariables = useMemo(() => {
     if (!interviewer) return {};
@@ -260,7 +273,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
     toast.success(`${filled}개 변수를 자동으로 채웠습니다.`);
   };
 
-  const applyTemplateWithVariables = async () => {
+  const applyTemplateWithVariables = useCallback(async () => {
     if (!selectedTemplateId || !interviewer) return;
 
     const rendered = await emailTemplateApi.renderEmailTemplate(
@@ -269,7 +282,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
     );
     setSubject(rendered.subject);
     setContent(rendered.body);
-  };
+  }, [selectedTemplateId, interviewer, buildVariables]);
 
   useEffect(() => {
     if (
@@ -308,6 +321,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
     isLoadingTemplates,
     interviewer,
     inviteReused,
+    applyTemplateWithVariables,
   ]);
 
   if (!interviewer) return null;

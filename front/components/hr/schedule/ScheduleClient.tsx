@@ -29,7 +29,9 @@ import type {
   ScheduleSlotFormMode,
   ScheduleSlotFormState,
 } from "@/components/hr/schedule/types";
+import { getApiErrorMessage } from "@/lib/hr/api-error";
 import { interviewSlotsApi } from "@/lib/hr/interview-slots.client";
+import { showToastConfirm } from "@/lib/ui/show-toast-confirm";
 import type {
   InterviewRoundWrite,
   InterviewSlotCreatePayload,
@@ -97,6 +99,7 @@ export default function ScheduleClient({
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [modalInterviewDateSeed, setModalInterviewDateSeed] = useState<string | undefined>(undefined);
   const [isRemoteMinimized, setIsRemoteMinimized] = useState(false);
+  const [isDeletingSlots, setIsDeletingSlots] = useState(false);
 
   const makeSlotsQueryKey = useCallback(
     (targetMonth: Date) => [SCHEDULE_SLOTS_QUERY_KEY, targetMonth.getFullYear(), targetMonth.getMonth() + 1],
@@ -189,12 +192,17 @@ export default function ScheduleClient({
   const refreshSlots = useCallback(
     async (targetMonth = activeMonth) => {
       try {
+        await queryClient.invalidateQueries({
+          queryKey: [SCHEDULE_SLOTS_QUERY_KEY],
+        });
         await queryClient.refetchQueries({
           queryKey: makeSlotsQueryKey(targetMonth),
-          exact: true,
+          type: "active",
         });
       } catch (error) {
-        toast.error(getErrorMessage(error, "면접 일정을 다시 불러오지 못했습니다."));
+        toast.error(
+          getApiErrorMessage(error, "면접 일정을 다시 불러오지 못했습니다."),
+        );
       }
     },
     [activeMonth, makeSlotsQueryKey, queryClient],
@@ -215,14 +223,10 @@ export default function ScheduleClient({
     }) => interviewSlotsApi.updateSlot(slotId, payload),
   });
 
-  const deleteSlotMutation = useMutation({
-    mutationFn: (slotId: number) => interviewSlotsApi.deleteSlot(slotId),
-  });
-
   const isSaving =
     createSlotMutation.isPending ||
     updateSlotMutation.isPending ||
-    deleteSlotMutation.isPending;
+    isDeletingSlots;
 
   const handleViewModeChange = (mode: ScheduleCalendarViewMode) => {
     setViewMode(mode);
@@ -426,23 +430,124 @@ export default function ScheduleClient({
   };
 
   const deleteSelectedSlots = async () => {
-    if (selectedSlotIds.length === 0) return;
+    if (selectedSlotIds.length === 0 || isDeletingSlots) return;
+
+    const idsToDelete = [...selectedSlotIds];
+
+    const slotsWithActiveBookings = idsToDelete
+      .map((id) => slots.find((s) => s.slotId === id))
+      .filter(
+        (s): s is InterviewSlotListItem =>
+          !!s && s.bookedCandidateNames.length > 0,
+      );
+
+    if (slotsWithActiveBookings.length > 0) {
+      const bookingHint =
+        slotsWithActiveBookings.length === 1
+          ? `예약: ${slotsWithActiveBookings[0].bookedCandidateNames.join(", ")}`
+          : `${slotsWithActiveBookings.length}건에 지원자 예약이 있습니다`;
+
+      toast.error("지원자 예약이 있는 일정은 삭제할 수 없습니다", {
+        description: `면접관을 제거해도 삭제되지 않습니다. 일정 상세에서 예약을 먼저 취소한 뒤 다시 시도해 주세요. (${bookingHint})`,
+        duration: 8000,
+      });
+
+      if (idsToDelete.length === 1) {
+        void openSlotDetail(slotsWithActiveBookings[0]);
+      }
+      return;
+    }
+
+    const confirmed = await showToastConfirm({
+      toastId: "schedule-delete-slots",
+      title:
+        idsToDelete.length > 1
+          ? `선택한 ${idsToDelete.length}건을 삭제할까요?`
+          : "면접 일정을 삭제할까요?",
+      message:
+        "지원자 예약이 없는 일정만 삭제됩니다. 면접관만 제거해도 예약이 남아 있으면 삭제되지 않습니다.",
+      confirmLabel: "삭제",
+      cancelLabel: "취소",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+
+    setIsDeletingSlots(true);
     try {
-      await Promise.all(
-        selectedSlotIds.map((id) => deleteSlotMutation.mutateAsync(id)),
+      /**
+       * 동일 useMutation 인스턴스에 mutateAsync 를 병렬 호출하면
+       * TanStack Query 상태가 꼬여 일부 요청이 무시되거나 refresh 가 누락될 수 있다.
+       * API 를 직접 호출하고 allSettled 로 건별 성공/실패를 처리한다.
+       */
+      const results = await Promise.allSettled(
+        idsToDelete.map((slotId) => interviewSlotsApi.deleteSlot(slotId)),
       );
-      toast.success(
-        selectedSlotIds.length > 1
-          ? `${selectedSlotIds.length}건의 면접 일정이 삭제되었습니다.`
-          : "면접 일정이 삭제되었습니다.",
-      );
-      setSelectedSlotIds([]);
-      setSlotEditorOpen(false);
-      setFormMode("create");
-      setForm(defaultForm(selectedDate));
-      await refreshSlots();
+
+      const succeededIds: number[] = [];
+      const failedMessages: string[] = [];
+
+      results.forEach((result, index) => {
+        const slotId = idsToDelete[index];
+        if (result.status === "fulfilled") {
+          succeededIds.push(slotId);
+          return;
+        }
+        failedMessages.push(
+          getApiErrorMessage(
+            result.reason,
+            `일정 #${slotId} 삭제에 실패했습니다.`,
+          ),
+        );
+      });
+
+      if (succeededIds.length > 0) {
+        const succeededSet = new Set(succeededIds);
+
+        queryClient.setQueriesData<InterviewSlotListItem[]>(
+          { queryKey: [SCHEDULE_SLOTS_QUERY_KEY] },
+          (old) => old?.filter((slot) => !succeededSet.has(slot.slotId)) ?? [],
+        );
+
+        for (const slotId of succeededIds) {
+          queryClient.removeQueries({
+            queryKey: [SCHEDULE_SLOT_DETAIL_QUERY_KEY, slotId],
+            exact: true,
+          });
+        }
+
+        setSelectedSlotIds((prev) => prev.filter((id) => !succeededSet.has(id)));
+        setSlotEditorOpen(false);
+        setFormMode("create");
+        setForm(defaultForm(selectedDate));
+
+        if (detailModalSlot && succeededSet.has(detailModalSlot.slotId)) {
+          setDetailModalOpen(false);
+          setDetailModalSlot(null);
+        }
+
+        await refreshSlots();
+
+        toast.success(
+          succeededIds.length > 1
+            ? `${succeededIds.length}건의 면접 일정이 삭제되었습니다.`
+            : "면접 일정이 삭제되었습니다.",
+        );
+      }
+
+      if (failedMessages.length > 0) {
+        const detail = failedMessages[0];
+        toast.error(
+          failedMessages.length > 1
+            ? `${failedMessages.length}건 삭제에 실패했습니다. ${detail}`
+            : detail,
+        );
+      }
     } catch (error) {
-      toast.error(getErrorMessage(error, "면접 일정 삭제 중 오류가 발생했습니다."));
+      toast.error(
+        getApiErrorMessage(error, "면접 일정 삭제 중 오류가 발생했습니다."),
+      );
+    } finally {
+      setIsDeletingSlots(false);
     }
   };
 
