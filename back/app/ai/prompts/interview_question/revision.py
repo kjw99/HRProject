@@ -35,15 +35,24 @@ def build_question_revision_messages(
 
 수정 규칙:
 - 최종 질문은 정확히 {data.question_count}개여야 합니다.
-- 질문은 반드시 "[ ] 질문 내용" 형식을 유지하세요.
+- 질문은 반드시 "[질문 유형] 질문 내용" 형식을 유지하세요.
 - 리뷰에서 지적한 중복, 근거 부족, 모호함, 부적절함을 해결하세요.
 - 이력서나 직무기술서에 없는 내용을 단정하지 마세요.
 - 보호 대상 개인정보나 직무 무관 정보는 포함하지 마세요.
 
 각 항목은 다음 필드만 포함하세요:
-- question_text
-- evaluation_intent
-- generation_basis
+- question_text: "질문 내용"
+- evaluation_intent: "질문 유형: ... / 난이도: ... / 질문의도: ... / 평가포인트: ..."
+- generation_basis: "질문 생성의 근거에 대한 내용"
+
+예시:
+
+question_text, evaluation_intent, generation_basis 답변:
+
+question_text: "[질문 유형 내용] 질문 내용"
+evaluation_intent: "질문 유형: 질문 유형 내용 / 난이도: 하, 중, 중상, 상과 같은 난이도 / 질문의도: 질문의도에 대한 내용 / 평가포인트: 평가포인트에 대한 내용"
+generation_basis: "근거에 대한 내용"
+
 """.strip()
 
     return [
