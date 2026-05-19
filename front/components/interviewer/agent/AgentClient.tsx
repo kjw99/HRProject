@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useQuestionGenerationJob } from "@/components/hr/question-generation/QuestionGenerationJobProvider";
 import ControlPanel from "./ControlPanel";
@@ -29,6 +29,7 @@ export default function AgentClient({
     null,
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
 
   const {
     generatedQuestions,
@@ -55,13 +56,53 @@ export default function AgentClient({
     [selectedCandidateId, selectedPositionId, startGeneration],
   );
 
+  useEffect(() => {
+    const generatedQuestionIds = new Set(generatedQuestions.map((q) => q.id));
+    setSelectedQuestionIds((prev) =>
+      prev.filter((id) => generatedQuestionIds.has(id)),
+    );
+  }, [generatedQuestions]);
+
+  const toggleQuestionSelection = useCallback((questionId: string) => {
+    setSelectedQuestionIds((prev) =>
+      prev.includes(questionId)
+        ? prev.filter((id) => id !== questionId)
+        : [...prev, questionId],
+    );
+  }, []);
+
+  const toggleSelectAllQuestions = useCallback(() => {
+    if (generatedQuestions.length === 0) {
+      setSelectedQuestionIds([]);
+      return;
+    }
+
+    setSelectedQuestionIds((prev) => {
+      const allSelected = generatedQuestions.every((q) => prev.includes(q.id));
+      if (allSelected) return [];
+      return generatedQuestions.map((q) => q.id);
+    });
+  }, [generatedQuestions]);
+
+  const clearQuestionSelection = useCallback(() => {
+    setSelectedQuestionIds([]);
+  }, []);
+
   const handleSave = async () => {
+    const selectedQuestions = generatedQuestions.filter((q) =>
+      selectedQuestionIds.includes(q.id),
+    );
+    if (selectedQuestions.length === 0) {
+      toast.error("저장할 질문을 1개 이상 선택해 주세요.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const payload: QuestionSavePayload = {
         positionId: selectedPositionId || undefined,
         candidateId: selectedCandidateId || undefined,
-        questions: generatedQuestions.map((q) => ({
+        questions: selectedQuestions.map((q) => ({
           questionText: q.questionText,
           questionType: q.questionType,
           evaluationIntent: q.evaluationIntent,
@@ -101,6 +142,10 @@ export default function AgentClient({
         onSave={() => void handleSave()}
         isSaving={isSaving}
         onAdditionalChat={(msg) => void handleGenerate(msg)}
+        selectedQuestionIds={selectedQuestionIds}
+        onToggleQuestionSelect={toggleQuestionSelection}
+        onToggleSelectAll={toggleSelectAllQuestions}
+        onClearSelection={clearQuestionSelection}
       />
     </div>
   );

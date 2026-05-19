@@ -9,6 +9,10 @@ interface ResultsPanelProps {
   onSave: () => void;
   isSaving: boolean;
   onAdditionalChat: (msg: string) => void;
+  selectedQuestionIds: string[];
+  onToggleQuestionSelect: (questionId: string) => void;
+  onToggleSelectAll: () => void;
+  onClearSelection: () => void;
 }
 
 const TYPE_MAP: Record<
@@ -33,6 +37,10 @@ export default function ResultsPanel({
   onSave,
   isSaving,
   onAdditionalChat,
+  selectedQuestionIds,
+  onToggleQuestionSelect,
+  onToggleSelectAll,
+  onClearSelection,
 }: ResultsPanelProps) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editedTexts, setEditedTexts] = useState<Record<number, string>>({});
@@ -49,6 +57,9 @@ export default function ResultsPanel({
   const isEmpty = questions.length === 0 && !isGenerating;
   const showFullScreenLoading = isGenerating && questions.length === 0;
   const showFooter = questions.length > 0 || isGenerating;
+  const selectedCount = selectedQuestionIds.length;
+  const allSelected =
+    questions.length > 0 && questions.every((q) => selectedQuestionIds.includes(q.id));
 
   useEffect(() => {
     const prev = prevQuestionCountRef.current;
@@ -108,6 +119,31 @@ export default function ResultsPanel({
 
         {!isEmpty && !showFullScreenLoading ? (
           <div className="space-y-5">
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  선택 질문
+                </p>
+                <p className="text-lg font-black text-slate-900">저장할 질문 선택</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onToggleSelectAll}
+                  className="text-xs font-bold text-indigo-600 transition hover:text-indigo-800"
+                >
+                  {allSelected ? "전체 해제" : "전체 선택"}
+                </button>
+                <p className="text-sm font-bold text-slate-500">
+                  총{" "}
+                  <span className="tabular-nums text-indigo-600">{questions.length}</span>건
+                  {selectedCount > 0 ? (
+                    <span className="ml-2 text-indigo-600">· {selectedCount}개 선택</span>
+                  ) : null}
+                </p>
+              </div>
+            </div>
+
             {isGenerating && questions.length > 0 ? (
               <div className="rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3">
                 <p className="flex items-center gap-2 text-sm font-bold text-violet-800">
@@ -128,22 +164,43 @@ export default function ResultsPanel({
               };
               const isEditing = editingIdx === idx;
               const displayText = editedTexts[idx] ?? q.questionText;
+              const isSelected = selectedQuestionIds.includes(q.id);
 
               return (
                 <div
                   key={q.id}
-                  className="rounded-[16px] border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md"
+                  className={`cursor-pointer rounded-[16px] border p-5 shadow-sm transition-all ${
+                    isSelected
+                      ? "border-indigo-400 bg-indigo-50/50 ring-2 ring-indigo-500/25"
+                      : "border-slate-200 bg-white hover:shadow-md"
+                  }`}
+                  onClick={() => onToggleQuestionSelect(q.id)}
                 >
                   <div className="mb-4 flex items-center justify-between">
-                    <span
-                      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-black tracking-wider ${typeInfo.className}`}
-                    >
-                      <i className={`bx ${typeInfo.icon} text-sm`} />
-                      {typeInfo.label}
-                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition ${
+                          isSelected
+                            ? "border-indigo-600 bg-indigo-600 text-white"
+                            : "border-slate-300 bg-white text-transparent"
+                        }`}
+                        aria-hidden
+                      >
+                        <i className="bx bx-check text-sm font-bold" />
+                      </span>
+                      <span
+                        className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-black tracking-wider ${typeInfo.className}`}
+                      >
+                        <i className={`bx ${typeInfo.icon} text-sm`} />
+                        {typeInfo.label}
+                      </span>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setEditingIdx(isEditing ? null : idx)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingIdx(isEditing ? null : idx);
+                      }}
                       className="text-slate-400 hover:text-indigo-600"
                       aria-label={isEditing ? "편집 완료" : "질문 편집"}
                     >
@@ -156,6 +213,7 @@ export default function ResultsPanel({
                   {isEditing ? (
                     <textarea
                       value={displayText}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) =>
                         setEditedTexts((prev) => ({
                           ...prev,
@@ -225,22 +283,32 @@ export default function ResultsPanel({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={isSaving || questions.length === 0}
-            className="flex w-full justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-[13px] font-black text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {isSaving ? (
-              <>
-                <i className="bx bx-loader-alt bx-spin text-lg" /> 저장 중...
-              </>
-            ) : (
-              <>
-                <i className="bx bx-save text-lg" /> 확정 및 저장하기
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClearSelection}
+              disabled={selectedCount === 0 || isSaving}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              선택 해제
+            </button>
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={isSaving || selectedCount === 0}
+              className="flex w-full justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-[13px] font-black text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {isSaving ? (
+                <>
+                  <i className="bx bx-loader-alt bx-spin text-lg" /> 저장 중...
+                </>
+              ) : (
+                <>
+                  <i className="bx bx-save text-lg" /> 선택한 질문 저장하기
+                </>
+              )}
+            </button>
+          </div>
         </div>
       ) : null}
     </div>
