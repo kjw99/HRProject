@@ -33,6 +33,24 @@ function replaceInviteTokens(content: string, inviteUrl: string): string {
     .replaceAll("{access_link}", inviteUrl);
 }
 
+function getBearerFromAuthStorage(raw: string | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { state?: { token?: string | null } };
+    const token = parsed?.state?.token?.trim();
+    return token ? `Bearer ${token}` : null;
+  } catch {
+    try {
+      const decoded = decodeURIComponent(raw);
+      const parsed = JSON.parse(decoded) as { state?: { token?: string | null } };
+      const token = parsed?.state?.token?.trim();
+      return token ? `Bearer ${token}` : null;
+    } catch {
+      return null;
+    }
+  }
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ interviewerId: string }> },
@@ -67,7 +85,14 @@ export async function POST(
       );
     }
 
-    const authHeader = request.headers.get("authorization");
+    const authHeader =
+      request.headers.get("authorization") ??
+      (() => {
+        const accessToken = request.cookies.get("accessToken")?.value?.trim();
+        if (accessToken) return `Bearer ${accessToken}`;
+        const authStorage = request.cookies.get("auth-storage")?.value;
+        return getBearerFromAuthStorage(authStorage);
+      })();
     if (!authHeader) {
       return NextResponse.json(
         { message: "Authorization header is required." },
