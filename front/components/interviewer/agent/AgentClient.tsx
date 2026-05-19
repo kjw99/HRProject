@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useQuestionGenerationJob } from "@/components/hr/question-generation/QuestionGenerationJobProvider";
 import ControlPanel from "./ControlPanel";
@@ -22,6 +23,7 @@ export default function AgentClient({
   initialPositions,
   initialCandidates,
 }: AgentClientProps) {
+  const queryClient = useQueryClient();
   const [selectedPositionId, setSelectedPositionId] = useState<number | null>(
     null,
   );
@@ -130,6 +132,16 @@ export default function AgentClient({
       };
 
       const result = await questionAPI.saveQuestions(payload);
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["hr-questions-counts"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["hr-questions-by-position"],
+        }),
+      ]);
+
       toast.success(result.message ?? "저장이 완료되었습니다.");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "저장에 실패했습니다."));
