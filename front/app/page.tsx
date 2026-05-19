@@ -14,14 +14,14 @@ import LandingWorkflow from "@/components/landing/LandingWorkflow";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "HR LAB — AI 채용 운영 플랫폼",
+  title: "HR LAB | AI 채용 운영 플랫폼",
   description:
-    "이력서 파싱, AI 면접 질문, 일정·면접관 관리, 지원자 예약까지 채용 전 과정을 연결합니다.",
+    "이력서 파싱, 지원자 관리, AI 면접 질문, 일정·면접관 배정, 예약 링크까지 채용 전 과정을 연결합니다.",
 };
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-slate-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
       <LandingHeader />
       <main>
         <LandingHero />

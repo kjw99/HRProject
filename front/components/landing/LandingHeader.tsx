@@ -2,7 +2,9 @@ import Link from "next/link";
 
 const navLinks = [
   { href: "#features", label: "기능" },
+  { href: "#workflow", label: "흐름" },
   { href: "#showcase", label: "화면" },
+  { href: "#roles", label: "포털" },
   { href: "#faq", label: "FAQ" },
   { href: "#contact", label: "문의" },
 ] as const;
@@ -12,7 +14,7 @@ export default function LandingHeader() {
     <header className="fixed top-0 z-50 w-full border-b border-slate-200/80 bg-white/75 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:h-[4.25rem] sm:px-6 lg:px-8">
         <Link href="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-300/40 ring-2 ring-white/60">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-300/40 ring-2 ring-white/60">
             <i className="bx bxs-layer text-lg leading-none" aria-hidden />
           </span>
           <span className="truncate text-lg font-black tracking-tight text-slate-900">

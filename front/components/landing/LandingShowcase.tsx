@@ -13,7 +13,7 @@ function MockDashboard() {
           </div>
         ))}
       </div>
-      <div className="h-24 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 ring-1 ring-indigo-100" />
+      <div className="h-24 rounded-xl bg-linear-to-br from-indigo-50 to-violet-50 ring-1 ring-indigo-100" />
     </div>
   );
 }
@@ -60,7 +60,35 @@ function MockSchedule() {
   );
 }
 
+function MockApplicants() {
+  return (
+    <div className="space-y-2 p-4">
+      <div className="flex gap-2">
+        <div className="h-8 flex-1 rounded-lg bg-slate-100" />
+        <div className="h-8 w-16 rounded-lg bg-indigo-100" />
+      </div>
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-100">
+          <div className="h-9 w-9 rounded-full bg-linear-to-br from-indigo-100 to-cyan-100" />
+          <div className="min-w-0 flex-1">
+            <div className="h-2 w-24 rounded bg-slate-300" />
+            <div className="mt-2 h-2 w-32 rounded bg-slate-100" />
+          </div>
+          <div className="h-6 w-14 rounded-full bg-emerald-100" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const screens = [
+  {
+    label: "지원자 관리",
+    icon: "bx-id-card",
+    description: "파싱된 지원자 정보와 우대조건, 메일 액션을 관리합니다.",
+    accent: "from-cyan-500/20 to-blue-500/10",
+    Mock: MockApplicants,
+  },
   {
     label: "HR 대시보드",
     icon: "bx-grid-alt",
@@ -79,7 +107,7 @@ const screens = [
     label: "면접 일정",
     icon: "bx-calendar",
     description: "슬롯·면접관·지원자 예약을 캘린더로 통합 관리합니다.",
-    accent: "from-cyan-500/20 to-blue-500/10",
+    accent: "from-emerald-500/20 to-teal-500/10",
     Mock: MockSchedule,
   },
 ] as const;
@@ -88,7 +116,7 @@ export default function LandingShowcase() {
   return (
     <section
       id="showcase"
-      className="scroll-mt-24 border-t border-slate-200/80 bg-gradient-to-b from-white to-slate-50 py-20 sm:py-24"
+      className="scroll-mt-24 border-t border-slate-200/80 bg-linear-to-b from-white to-slate-50 py-20 sm:py-24"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
@@ -99,19 +127,19 @@ export default function LandingShowcase() {
             실제 포털 화면 구성
           </h2>
           <p className="mt-4 text-base font-medium leading-relaxed text-slate-500">
-            HR LAB에 구현된 주요 화면입니다. 로그인 후 동일한 흐름으로 이용할 수
-            있습니다.
+            HR LAB에 구현된 주요 화면입니다. 지원자 데이터부터 질문, 일정까지
+            로그인 후 같은 흐름으로 이용할 수 있습니다.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {screens.map(({ label, icon, description, accent, Mock }) => (
             <article
               key={label}
               className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-lg shadow-slate-200/50 ring-1 ring-slate-900/[0.03]"
             >
               <div
-                className={`border-b border-slate-100 bg-gradient-to-br ${accent} px-5 py-4`}
+                className={`border-b border-slate-100 bg-linear-to-br ${accent} px-5 py-4`}
               >
                 <div className="flex items-center gap-2">
                   <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm">
@@ -130,7 +158,7 @@ export default function LandingShowcase() {
                   <span className="h-2 w-2 rounded-full bg-emerald-400" />
                   <span className="ml-2 h-2 flex-1 max-w-[120px] rounded bg-white/80" />
                 </div>
-                <div className="mx-3 mb-3 min-h-[180px] rounded-b-xl bg-white ring-1 ring-slate-200/80">
+                <div className="mx-3 mb-3 min-h-[190px] rounded-b-xl bg-white ring-1 ring-slate-200/80">
                   <Mock />
                 </div>
               </div>

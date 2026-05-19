@@ -6,7 +6,7 @@ const roles = [
     badge: "HR · Admin",
     title: "인사·채용 담당자",
     description:
-      "대시보드, 부서·면접관 관리, AI 질문, 일정·초대, 지원자 현황을 운영합니다.",
+      "대시보드, 지원자 관리, 부서·면접관 설정, AI 질문, 일정·초대를 운영합니다.",
     href: "/login",
     cta: "HR 포털 로그인",
     accent: "from-indigo-600 to-violet-600",
@@ -16,7 +16,7 @@ const roles = [
     badge: "Interviewer",
     title: "면접관",
     description:
-      "담당 직무·차수에 맞는 질문 생성·저장, 지원자 맥락 기반 면접 준비를 지원합니다.",
+      "담당 직무·차수에 맞는 질문 생성·저장과 참여 가능 일정 응답을 지원합니다.",
     href: "/login",
     cta: "면접관 로그인",
     accent: "from-violet-600 to-fuchsia-600",
@@ -55,7 +55,7 @@ export default function LandingRoles() {
               key={role.title}
               className="flex flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/50 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:-translate-y-1 hover:border-indigo-100 hover:bg-white hover:shadow-lg"
             >
-              <div className={`bg-gradient-to-r ${role.accent} px-6 py-5 text-white`}>
+              <div className={`bg-linear-to-r ${role.accent} px-6 py-5 text-white`}>
                 <span className="text-[10px] font-black uppercase tracking-wider text-white/80">
                   {role.badge}
                 </span>

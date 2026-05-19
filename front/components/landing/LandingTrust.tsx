@@ -1,6 +1,6 @@
 const metrics = [
-  { value: "70%", label: "질문 작성 시간 절감", hint: "파일럿 기준 목표치" },
-  { value: "1곳", label: "채용 데이터 통합", hint: "파싱·질문·일정" },
+  { value: "7개", label: "채용 운영 모듈", hint: "파싱·지원자·일정" },
+  { value: "1곳", label: "채용 데이터 통합", hint: "질문·예약·메일" },
   { value: "3", label: "역할 기반 접근", hint: "HR · 면접관 · 지원자" },
 ] as const;
 
@@ -38,11 +38,11 @@ export default function LandingTrust() {
               반복 업무는 자동화하고, 민감한 채용 데이터는 역할·권한으로
               보호합니다.
             </p>
-            <dl className="mt-8 grid grid-cols-3 gap-3">
+            <dl className="mt-8 grid gap-3 sm:grid-cols-3">
               {metrics.map((m) => (
                 <div
                   key={m.label}
-                  className="rounded-2xl border border-slate-200/90 bg-slate-50/80 p-3 text-center sm:p-4"
+                  className="rounded-2xl border border-slate-200/90 bg-slate-50/80 p-4 text-center"
                 >
                   <dd className="text-xl font-black text-indigo-600 sm:text-2xl">
                     {m.value}

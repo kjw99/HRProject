@@ -2,16 +2,16 @@ import Link from "next/link";
 
 const steps = [
   {
-    time: "1분",
-    title: "부서·면접관 설정",
-    text: "직무(부서)를 등록하고 면접관을 배정합니다.",
-    href: "/hr/positions",
-    icon: "bx-buildings",
+    time: "2분",
+    title: "이력서 파싱",
+    text: "지원자 이력서를 업로드해 기본 정보를 빠르게 등록합니다.",
+    href: "/hr/parsing",
+    icon: "bx-upload",
   },
   {
     time: "1분",
-    title: "AI 질문 생성·저장",
-    text: "지원자를 선택해 질문을 만들고 라이브러리에 저장합니다.",
+    title: "AI 질문 생성",
+    text: "지원자와 직무를 선택해 면접 질문을 만들고 저장합니다.",
     href: "/hr/ai-gen",
     icon: "bx-brain",
   },
@@ -21,6 +21,13 @@ const steps = [
     text: "면접 슬롯을 만들고 지원자에게 예약 링크를 보냅니다.",
     href: "/hr/schedule",
     icon: "bx-calendar",
+  },
+  {
+    time: "1분",
+    title: "현황 확인",
+    text: "대시보드와 지원자 목록에서 예약·면접 상태를 확인합니다.",
+    href: "/hr",
+    icon: "bx-grid-alt",
   },
 ] as const;
 
@@ -37,23 +44,23 @@ export default function LandingOnboarding() {
               Quick Start
             </p>
             <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">
-              3분 온보딩 가이드
+              첫 채용 사이클을 빠르게 시작
             </h2>
             <p className="mt-3 text-base font-medium text-slate-500">
-              로그인 후 아래 순서대로 진행하면 첫 채용 사이클을 바로 돌려볼 수
-              있습니다.
+              로그인 후 아래 순서대로 진행하면 파싱, 질문 생성, 일정 예약까지
+              바로 돌려볼 수 있습니다.
             </p>
           </div>
           <Link
             href="/login"
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 sm:w-auto"
           >
             지금 시작하기
             <i className="bx bx-right-arrow-alt text-lg" aria-hidden />
           </Link>
         </div>
 
-        <ol className="mt-10 grid gap-4 sm:grid-cols-3">
+        <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (
             <li key={step.title}>
               <Link
