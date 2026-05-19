@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.concurrency import run_in_threadpool
 
 from app.dependencies.database import get_async_db
 from app.dependencies.dependencies import get_current_user, require_roles
@@ -15,6 +16,26 @@ from app.services.interviewer_mail_service import interviewer_mail_service
 
 
 router = APIRouter(prefix="/api/interviewers", tags=["Interviewer-Email"])
+logger = logging.getLogger(__name__)
+
+
+def _send_interviewer_mail_in_background(
+    *,
+    to_email: str,
+    subject: str,
+    content: str,
+) -> None:
+    try:
+        interviewer_mail_service.send_interviewer_mail(
+            to_email=to_email,
+            subject=subject,
+            content=content,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to send interviewer mail in background. to=%s",
+            to_email,
+        )
 
 
 @router.get(
@@ -43,6 +64,7 @@ async def get_active_interviewer_invite(
 async def send_interviewer_mail(
     interviewer_id: int,
     data: InterviewerMailSendRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -56,14 +78,14 @@ async def send_interviewer_mail(
         expires_in_days=data.expires_in_days,
         created_by_user_id=current_user.user_id,
     )
-    await run_in_threadpool(
-        interviewer_mail_service.send_interviewer_mail,
-        interviewer_mail.to_email,
-        interviewer_mail.subject,
-        interviewer_mail.content,
+    background_tasks.add_task(
+        _send_interviewer_mail_in_background,
+        to_email=interviewer_mail.to_email,
+        subject=interviewer_mail.subject,
+        content=interviewer_mail.content,
     )
     return {
-        "message": "Interviewer mail sent successfully.",
+        "message": "Interviewer mail has been queued for delivery.",
         "invite_url": interviewer_mail.invite.invite_url,
         "expires_at": interviewer_mail.invite.expires_at,
     }
