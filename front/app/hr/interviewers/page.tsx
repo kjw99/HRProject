@@ -15,15 +15,15 @@ export default async function InterviewersPage() {
   return (
     <div className="flex h-full flex-col gap-4 animate-in fade-in duration-500 sm:gap-6">
       <section
-        className="relative shrink-0 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/50 to-violet-50/40 p-5 shadow-sm shadow-indigo-100/40 ring-1 ring-slate-900/[0.04] sm:rounded-3xl sm:p-6 lg:p-8"
+        className="relative shrink-0 overflow-hidden rounded-2xl border border-slate-200/90 bg-linear-to-br from-white via-indigo-50/50 to-violet-50/40 p-5 shadow-sm shadow-indigo-100/40 ring-1 ring-slate-900/4 sm:rounded-3xl sm:p-6 lg:p-8"
         aria-labelledby="interviewers-page-title"
       >
         <div
-          className="pointer-events-none absolute -right-6 -top-10 h-36 w-36 rounded-full bg-indigo-400/[0.12] blur-3xl sm:-right-10 sm:h-44 sm:w-44"
+          className="pointer-events-none absolute -right-6 -top-10 h-36 w-36 rounded-full bg-indigo-400/12 blur-3xl sm:-right-10 sm:h-44 sm:w-44"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute -bottom-14 -left-10 h-40 w-40 rounded-full bg-violet-400/[0.1] blur-3xl"
+          className="pointer-events-none absolute -bottom-14 -left-10 h-40 w-40 rounded-full bg-violet-400/10 blur-3xl"
           aria-hidden
         />
 
@@ -35,7 +35,7 @@ export default async function InterviewersPage() {
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-300/45 ring-2 ring-white/60 sm:h-14 sm:w-14 sm:rounded-[1.125rem]">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-300/45 ring-2 ring-white/60 sm:h-14 sm:w-14 sm:rounded-[1.125rem]">
                 <i className="bx bx-user-voice text-2xl leading-none sm:text-[26px]" />
               </div>
               <div className="min-w-0 space-y-2">
