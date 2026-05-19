@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import InvitationPreviewBackButton from "./InvitationPreviewBackButton";
 
 export interface InvitationPreviewHeaderProps {
   recipientCount: number;
@@ -25,6 +26,9 @@ function InvitationPreviewHeaderImpl({
 }: InvitationPreviewHeaderProps) {
   return (
     <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="mb-3 flex items-center sm:mb-4">
+        <InvitationPreviewBackButton />
+      </div>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">

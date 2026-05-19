@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { fetchEmailTemplatesServer } from "@/app/server/hr/email-template.server";
+import EmailTemplateGuideTrigger from "@/components/hr/email-templates/EmailTemplateGuideTrigger";
 import EmailTemplateManagerClient from "@/components/hr/email-templates/EmailTemplateManagerClient";
 import EmailTemplatePageHero from "@/components/hr/email-templates/EmailTemplatePageHero";
 
@@ -14,6 +15,7 @@ export default async function EmailTemplatesPage() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 animate-in fade-in duration-500 sm:gap-6">
       <EmailTemplatePageHero templateCount={templates.length} />
+      <EmailTemplateGuideTrigger />
       <EmailTemplateManagerClient initialTemplates={templates} />
     </div>
   );

@@ -1,10 +1,13 @@
 "use client";
 
 import {
+  EMAIL_TEMPLATE_AUTOCOMPLETE_VARIABLES,
   EMAIL_TEMPLATE_INPUT_CLASS,
   EMAIL_TEMPLATE_LABEL_CLASS,
   EMAIL_TEMPLATE_UI,
 } from "./email-template.constants";
+import TemplateVariableSuggestionList from "./TemplateVariableSuggestionList";
+import { useTemplateVariableAutocomplete } from "./useTemplateVariableAutocomplete";
 import type { EmailTemplateEditorPanelProps } from "@/types/email-template-ui";
 
 const { editor } = EMAIL_TEMPLATE_UI;
@@ -22,6 +25,22 @@ export default function EmailTemplateEditorPanel({
   onDelete,
   onPreview,
 }: EmailTemplateEditorPanelProps) {
+  /**
+   * subject / body 각각에 대해 `{xxx` 자동완성을 붙인다.
+   * - 분리된 인스턴스를 써야 한 쪽 입력 중 다른 쪽 dropdown이 끼어들지 않는다.
+   */
+  const subjectAutocomplete = useTemplateVariableAutocomplete<HTMLInputElement>({
+    value: form.subject,
+    onChange: (next) => onFormChange({ subject: next }),
+    variables: EMAIL_TEMPLATE_AUTOCOMPLETE_VARIABLES,
+  });
+
+  const bodyAutocomplete = useTemplateVariableAutocomplete<HTMLTextAreaElement>({
+    value: form.body,
+    onChange: (next) => onFormChange({ body: next }),
+    variables: EMAIL_TEMPLATE_AUTOCOMPLETE_VARIABLES,
+  });
+
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -32,6 +51,14 @@ export default function EmailTemplateEditorPanel({
           <h2 className="mt-1 text-lg font-black text-slate-900 sm:text-xl">
             {isNew ? editor.titleNew : editor.titleEdit}
           </h2>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+            <i className="bx bx-info-circle text-sm" />
+            제목·본문에서{" "}
+            <code className="rounded bg-slate-100 px-1 font-mono text-[11px] text-slate-700">
+              {"{"}
+            </code>{" "}
+            를 입력하면 변수 자동완성이 떠요.
+          </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -94,23 +121,39 @@ export default function EmailTemplateEditorPanel({
 
         <label className={EMAIL_TEMPLATE_LABEL_CLASS}>
           {editor.subjectLabel}
-          <input
-            value={form.subject}
-            onChange={(event) => onFormChange({ subject: event.target.value })}
-            placeholder="예: [회사명] 면접 일정 안내"
-            className={EMAIL_TEMPLATE_INPUT_CLASS}
-          />
+          <div className="relative">
+            <input
+              ref={subjectAutocomplete.inputRef}
+              value={form.subject}
+              onChange={subjectAutocomplete.onChange}
+              onKeyDown={subjectAutocomplete.onKeyDown}
+              onBlur={subjectAutocomplete.onBlur}
+              placeholder="예: [회사명] 면접 일정 안내"
+              autoComplete="off"
+              spellCheck={false}
+              className={EMAIL_TEMPLATE_INPUT_CLASS}
+            />
+            <TemplateVariableSuggestionList state={subjectAutocomplete.state} />
+          </div>
         </label>
 
         <label className={EMAIL_TEMPLATE_LABEL_CLASS}>
           {editor.bodyLabel}
-          <textarea
-            value={form.body}
-            onChange={(event) => onFormChange({ body: event.target.value })}
-            rows={12}
-            placeholder="본문에 {candidate_name}, {invitation_url} 등을 넣을 수 있습니다."
-            className={`${EMAIL_TEMPLATE_INPUT_CLASS} resize-y leading-6`}
-          />
+          <div className="relative">
+            <textarea
+              ref={bodyAutocomplete.inputRef}
+              value={form.body}
+              onChange={bodyAutocomplete.onChange}
+              onKeyDown={bodyAutocomplete.onKeyDown}
+              onBlur={bodyAutocomplete.onBlur}
+              rows={12}
+              placeholder="본문에 {candidate_name}, {invitation_url} 등을 넣을 수 있습니다."
+              autoComplete="off"
+              spellCheck={false}
+              className={`${EMAIL_TEMPLATE_INPUT_CLASS} resize-y leading-6`}
+            />
+            <TemplateVariableSuggestionList state={bodyAutocomplete.state} />
+          </div>
         </label>
       </div>
     </section>
