@@ -12,6 +12,7 @@ from app.dependencies.database import AsyncSessionLocal, get_async_db
 from app.dependencies.dependencies import require_roles
 from app.schemas.resume_parse import (
     ResumeParseFileError,
+    ResumeParseJobCancelResponse,
     ResumeParseJobCreateResponse,
     ResumeParseJobResponse,
     ResumeParseItem,
@@ -32,6 +33,7 @@ class ParseJobState(TypedDict):
     processed_files: int
     result: ResumeParseResponse | None
     error: str | None
+    cancel_requested: bool
 
 
 _PARSE_JOBS: dict[str, ParseJobState] = {}
@@ -83,6 +85,7 @@ async def create_parse_job(
         processed_files=0,
         result=None,
         error=None,
+        cancel_requested=False,
     )
 
     background_tasks.add_task(_run_parse_job, job_id, file_payloads)
@@ -117,6 +120,40 @@ async def get_parse_job(job_id: str):
     )
 
 
+@router.post(
+    "/parse/jobs/{job_id}/cancel",
+    response_model=ResumeParseJobCancelResponse,
+    response_model_by_alias=True,
+    dependencies=[Depends(require_roles(("admin", "hr")))],
+)
+async def cancel_parse_job(job_id: str) -> ResumeParseJobCancelResponse:
+    """진행 중 파싱 작업에 취소를 요청합니다.
+
+    실행 중인 단일 파일 파싱은 끝까지 마치고, 다음 파일부터 중단합니다.
+    """
+    job = _PARSE_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="파싱 작업을 찾을 수 없습니다.")
+
+    current_status = job["status"]
+    if current_status in {"succeeded", "failed", "cancelled"}:
+        return ResumeParseJobCancelResponse(
+            job_id=job["job_id"],
+            status=current_status,
+            cancel_requested=job.get("cancel_requested", False),
+            message="이미 종료된 작업입니다.",
+        )
+
+    job["cancel_requested"] = True
+
+    return ResumeParseJobCancelResponse(
+        job_id=job["job_id"],
+        status=job["status"],
+        cancel_requested=True,
+        message="파싱 취소가 요청되었습니다. 현재 파일 처리가 끝나면 중단됩니다.",
+    )
+
+
 async def _run_parse_job(job_id: str, file_payloads: list[tuple[str, bytes]]) -> None:
     job = _PARSE_JOBS.get(job_id)
     if not job:
@@ -125,8 +162,13 @@ async def _run_parse_job(job_id: str, file_payloads: list[tuple[str, bytes]]) ->
     job["status"] = "running"
     items: list[ResumeParseItem] = []
     errors: list[ResumeParseFileError] = []
+    cancelled = False
 
     for filename, file_bytes in file_payloads:
+        if job.get("cancel_requested"):
+            cancelled = True
+            break
+
         try:
             upload = StarletteUploadFile(
                 filename=filename,
@@ -155,4 +197,4 @@ async def _run_parse_job(job_id: str, file_payloads: list[tuple[str, bytes]]) ->
         excel_base64=None,
         excel_file_name=None,
     )
-    job["status"] = "succeeded"
+    job["status"] = "cancelled" if cancelled else "succeeded"

@@ -25,6 +25,7 @@ export const RESUME_PARSE_STATUS_LABEL: Record<ResumeParseJobStatusUi, string> =
   running: "AI 분석 중",
   succeeded: "완료",
   failed: "실패",
+  cancelled: "취소됨",
 };
 
 export const RESUME_PARSE_STATUS_TONE: Record<
@@ -36,6 +37,7 @@ export const RESUME_PARSE_STATUS_TONE: Record<
   running: "indigo",
   succeeded: "emerald",
   failed: "rose",
+  cancelled: "slate",
 };
 
 export const RESUME_PARSE_POSITION_ALL = "ALL";

@@ -177,7 +177,7 @@ export function QuestionGenerationJobProvider({
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, "吏덈Ц ?앹꽦 ?묒뾽???쒖옉?섏? 紐삵뻽?듬땲??"),
+        getApiErrorMessage(error, "질문 생성 작업을 시작하지 못했습니다."),
       );
     },
   });
@@ -226,12 +226,12 @@ export function QuestionGenerationJobProvider({
       toast.dismiss(QUESTION_GENERATION_TOAST_ID);
       toast.success(
         uiItems.length > 0
-          ? `硫댁젒 吏덈Ц ${uiItems.length}媛쒓? ?앹꽦?섏뿀?듬땲??`
-          : "吏덈Ц ?앹꽦???꾨즺?섏뿀?듬땲??",
+          ? `면접 질문 ${uiItems.length}개가 생성되었습니다.`
+          : "질문 생성이 완료되었습니다.",
         {
           position: "bottom-right",
           action: {
-            label: "寃곌낵 蹂닿린",
+            label: "결과 보기",
             onClick: () => router.push("/hr/ai-gen"),
           },
         },
@@ -246,8 +246,8 @@ export function QuestionGenerationJobProvider({
       const message = coerceToErrorString(
         job.errorMessage,
         job.status === "cancelled"
-          ? "吏덈Ц ?앹꽦??痍⑥냼?섏뿀?듬땲??"
-          : "吏덈Ц ?앹꽦???ㅽ뙣?덉뒿?덈떎.",
+          ? "질문 생성이 취소되었습니다."
+          : "질문 생성에 실패했습니다.",
       );
       setJobError(message);
       toast.dismiss(QUESTION_GENERATION_TOAST_ID);
@@ -334,5 +334,3 @@ export function useQuestionGenerationJob(): QuestionGenerationJobContextValue {
 export function useQuestionGenerationJobOptional() {
   return useContext(QuestionGenerationJobContext);
 }
-
-

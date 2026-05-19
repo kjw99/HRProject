@@ -23,6 +23,8 @@ const BAR_CLASS = {
 export default function ResumeParsingJobProgress({
   progress,
   isVisible,
+  isCancelling = false,
+  onCancel,
 }: ResumeParsingJobProgressProps) {
   if (!isVisible) return null;
 
@@ -30,6 +32,7 @@ export default function ResumeParsingJobProgress({
   const label = RESUME_PARSE_STATUS_LABEL[progress.status] ?? progress.status;
   const isSpinning =
     progress.status === "running" || progress.status === "queued";
+  const canCancel = Boolean(onCancel) && isSpinning;
 
   return (
     <section
@@ -49,12 +52,33 @@ export default function ResumeParsingJobProgress({
           </span>
           <div>
             <p className="text-sm font-black">백그라운드 파싱 진행 중</p>
-            <p className="text-xs font-semibold opacity-80">{label}</p>
+            <p className="text-xs font-semibold opacity-80">
+              {isCancelling ? "취소 요청을 처리하는 중…" : label}
+            </p>
           </div>
         </div>
-        <p className="text-sm font-black tabular-nums">
-          {progress.processed}/{progress.total} · {progress.percent}%
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-black tabular-nums">
+            {progress.processed}/{progress.total} · {progress.percent}%
+          </p>
+          {canCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isCancelling}
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50 sm:text-xs"
+            >
+              <i
+                className={`bx ${
+                  isCancelling
+                    ? "bx-loader-alt animate-spin"
+                    : "bx-stop-circle"
+                } text-base`}
+              />
+              {isCancelling ? "취소 중" : "파싱 취소"}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="h-2.5 overflow-hidden rounded-full bg-white/70">

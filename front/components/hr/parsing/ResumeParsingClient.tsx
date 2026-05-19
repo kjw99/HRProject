@@ -37,8 +37,10 @@ export default function ResumeParsingClient({
     updateParsedRow,
     removeParsedRow,
     startParse,
+    cancelParse,
     isCreating,
     isJobActive,
+    isCancelling,
     progress,
     jobError,
     registerOnSucceeded,
@@ -212,7 +214,12 @@ export default function ResumeParsingClient({
         isStarting={isCreating}
       />
 
-      <ResumeParsingJobProgress progress={progress} isVisible={isJobActive} />
+      <ResumeParsingJobProgress
+        progress={progress}
+        isVisible={isJobActive}
+        isCancelling={isCancelling}
+        onCancel={() => void cancelParse()}
+      />
 
       {jobError ? (
         <div

@@ -41,6 +41,8 @@ export interface ResumeParsingUploadZoneProps {
 export interface ResumeParsingJobProgressProps {
   progress: ResumeParseProgress;
   isVisible: boolean;
+  isCancelling?: boolean;
+  onCancel?: () => void;
 }
 
 export interface ResumeParsingResultsSectionProps {

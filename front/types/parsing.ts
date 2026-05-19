@@ -2,7 +2,8 @@ export type ResumeParseJobStatus =
   | "queued"
   | "running"
   | "succeeded"
-  | "failed";
+  | "failed"
+  | "cancelled";
 
 export interface ParsingFileError {
   filename: string;

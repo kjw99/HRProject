@@ -28,6 +28,7 @@ import {
 } from "./ResumeParseJobToastUI";
 import { coerceToErrorString, getApiErrorMessage } from "@/lib/hr/api-error";
 import {
+  cancelParseJob,
   createParseJob,
   getParseJob,
   summarizeParseErrors,
@@ -58,9 +59,11 @@ export interface ParseExcelPayload {
 
 export interface ResumeParseJobContextValue {
   startParse: (files: File[]) => Promise<void>;
+  cancelParse: () => Promise<void>;
   resetJob: () => void;
   isCreating: boolean;
   isJobActive: boolean;
+  isCancelling: boolean;
   progress: ResumeParseProgress;
   lastResult: ParsingResponse | null;
   jobError: string | null;
@@ -84,12 +87,16 @@ function ResumeParseJobToastHost({
   isJobActive,
   progress,
   isMinimized,
+  isCancelling,
   onToggleMinimize,
+  onCancel,
 }: {
   isJobActive: boolean;
   progress: ResumeParseProgress;
   isMinimized: boolean;
+  isCancelling: boolean;
   onToggleMinimize: () => void;
+  onCancel: () => void;
 }) {
   useEffect(() => {
     if (!isJobActive) {
@@ -102,7 +109,9 @@ function ResumeParseJobToastHost({
           toastId={t}
           progress={progress}
           isMinimized={isMinimized}
+          isCancelling={isCancelling}
           onToggleMinimize={onToggleMinimize}
+          onCancel={onCancel}
         />,
       {
         id: RESUME_PARSE_TOAST_ID,
@@ -118,7 +127,9 @@ function ResumeParseJobToastHost({
     progress.percent,
     progress.status,
     isMinimized,
+    isCancelling,
     onToggleMinimize,
+    onCancel,
   ]);
 
   return null;
@@ -139,6 +150,7 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [isToastMinimized, setIsToastMinimized] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const goToParsingPage = useCallback(() => {
     router.push("/hr/parsing");
@@ -287,6 +299,7 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
 
       setJobId(null);
       setIsToastMinimized(false);
+      setIsCancelling(false);
       queryClient.removeQueries({ queryKey: [JOB_QUERY_KEY, job.jobId] });
     }
 
@@ -300,6 +313,30 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
       toast.error(message, { position: "bottom-right" });
       setJobId(null);
       setIsToastMinimized(false);
+      setIsCancelling(false);
+      queryClient.removeQueries({ queryKey: [JOB_QUERY_KEY, job.jobId] });
+    }
+
+    if (job.status === "cancelled") {
+      if (job.result) {
+        applyParseResult(job.result);
+      }
+      const processedCount = job.processedFiles;
+      const successCount = job.result?.items.length ?? 0;
+      setJobError(null);
+      toast.dismiss(RESUME_PARSE_TOAST_ID);
+
+      const detail =
+        successCount > 0
+          ? `${processedCount}개 처리 · ${successCount}건 저장됨`
+          : `${processedCount}개 처리됨`;
+      toast.info(`이력서 파싱이 취소되었습니다. (${detail})`, {
+        position: "bottom-right",
+        duration: 5000,
+      });
+      setJobId(null);
+      setIsToastMinimized(false);
+      setIsCancelling(false);
       queryClient.removeQueries({ queryKey: [JOB_QUERY_KEY, job.jobId] });
     }
   }, [
@@ -339,6 +376,25 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
     [createMutation],
   );
 
+  const cancelParse = useCallback(async () => {
+    if (!jobId || isCancelling) return;
+    setIsCancelling(true);
+    try {
+      const response = await cancelParseJob(jobId);
+      if (response.cancelRequested) {
+        toast.info(response.message, { position: "bottom-right" });
+      } else {
+        toast.message(response.message, { position: "bottom-right" });
+        setIsCancelling(false);
+      }
+    } catch (error) {
+      setIsCancelling(false);
+      toast.error(
+        getApiErrorMessage(error, "파싱 취소 요청 중 오류가 발생했습니다."),
+      );
+    }
+  }, [jobId, isCancelling]);
+
   const resetJob = useCallback(() => {
     if (jobId) {
       queryClient.removeQueries({ queryKey: [JOB_QUERY_KEY, jobId] });
@@ -346,15 +402,18 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
     toast.dismiss(RESUME_PARSE_TOAST_ID);
     setJobId(null);
     setJobError(null);
+    setIsCancelling(false);
     createMutation.reset();
   }, [createMutation, jobId, queryClient]);
 
   const value = useMemo<ResumeParseJobContextValue>(
     () => ({
       startParse,
+      cancelParse,
       resetJob,
       isCreating: createMutation.isPending,
       isJobActive,
+      isCancelling,
       progress,
       lastResult,
       jobError,
@@ -368,9 +427,11 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
     }),
     [
       startParse,
+      cancelParse,
       resetJob,
       createMutation.isPending,
       isJobActive,
+      isCancelling,
       progress,
       lastResult,
       jobError,
@@ -390,7 +451,9 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
         isJobActive={isJobActive}
         progress={progress}
         isMinimized={isToastMinimized}
+        isCancelling={isCancelling}
         onToggleMinimize={() => setIsToastMinimized((prev) => !prev)}
+        onCancel={() => void cancelParse()}
       />
       {children}
     </ResumeParseJobContext.Provider>

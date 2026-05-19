@@ -101,6 +101,38 @@ export async function getParseJob(jobId: string): Promise<ParseJobResponse> {
   return normalizeJobResponse(data);
 }
 
+export interface CancelParseJobResponse {
+  jobId: string;
+  status: string;
+  cancelRequested: boolean;
+  message: string;
+}
+
+type RawCancelPayload = {
+  jobId?: string;
+  job_id?: string;
+  status?: string;
+  cancelRequested?: boolean;
+  cancel_requested?: boolean;
+  message?: string;
+};
+
+export async function cancelParseJob(
+  jobId: string,
+): Promise<CancelParseJobResponse> {
+  const { data } = await api.post<RawCancelPayload>(
+    `/api/parse/jobs/${jobId}/cancel`,
+    null,
+    { timeout: PARSE_REQUEST_TIMEOUT_MS },
+  );
+  return {
+    jobId: String(data.jobId ?? data.job_id ?? jobId),
+    status: data.status ?? "cancelled",
+    cancelRequested: Boolean(data.cancelRequested ?? data.cancel_requested),
+    message: data.message ?? "파싱 취소가 요청되었습니다.",
+  };
+}
+
 export function emptyParsingResponse(): ParsingResponse {
   return {
     items: [],

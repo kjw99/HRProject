@@ -46,3 +46,10 @@ class ResumeParseJobResponse(BaseModel):
     processed_files: int = Field(serialization_alias="processedFiles")
     result: ResumeParseResponse | None = None
     error: str | None = None
+
+
+class ResumeParseJobCancelResponse(BaseModel):
+    job_id: str = Field(serialization_alias="jobId")
+    status: str
+    cancel_requested: bool = Field(serialization_alias="cancelRequested")
+    message: str
