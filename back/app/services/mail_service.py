@@ -1,6 +1,7 @@
 import os
 import smtplib
 import socket
+import logging
 from email.message import EmailMessage
 
 from dotenv import load_dotenv
@@ -15,6 +16,8 @@ from app.repositories.candidate_repository import candidate_repository
 
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class MailService:
@@ -61,7 +64,8 @@ class MailService:
     ) -> None:
         host = os.getenv("SMTP_HOST", "smtp.gmail.com")
         timeout = self._get_smtp_timeout_seconds()
-        prefer_ssl = os.getenv("SMTP_USE_SSL", "true").strip().lower() in {
+        # 587 STARTTLS is usually more reliable in hosted environments than 465 SSL.
+        prefer_ssl = os.getenv("SMTP_USE_SSL", "false").strip().lower() in {
             "1",
             "true",
             "yes",
@@ -74,18 +78,25 @@ class MailService:
         if not ipv4_targets:
             ipv4_targets = [host]
 
-        # Order by preferred mode, with fallback to STARTTLS.
+        # Order by preferred mode.
+        # In production networks, forcing STARTTLS-only is often more reliable.
+        enable_cross_mode_fallback = os.getenv(
+            "SMTP_ENABLE_CROSS_MODE_FALLBACK",
+            "true",
+        ).strip().lower() in {"1", "true", "yes", "on"}
         attempts: list[tuple[str, int, str]] = []
         if prefer_ssl:
             attempts.extend(
                 [("ssl", self._get_smtp_port(default=465), target) for target in ipv4_targets]
             )
-            attempts.extend([("starttls", 587, target) for target in ipv4_targets])
+            if enable_cross_mode_fallback:
+                attempts.extend([("starttls", 587, target) for target in ipv4_targets])
         else:
             attempts.extend(
                 [("starttls", self._get_smtp_port(default=587), target) for target in ipv4_targets]
             )
-            attempts.extend([("ssl", 465, target) for target in ipv4_targets])
+            if enable_cross_mode_fallback:
+                attempts.extend([("ssl", 465, target) for target in ipv4_targets])
 
         last_error: Exception | None = None
         for mode, port, target in attempts:
@@ -104,6 +115,13 @@ class MailService:
                     smtp.send_message(message)
                 return
             except (smtplib.SMTPException, OSError) as exc:
+                logger.warning(
+                    "SMTP send attempt failed. mode=%s host=%s port=%s error=%s",
+                    mode,
+                    target,
+                    port,
+                    exc,
+                )
                 last_error = exc
 
         if last_error is not None:
