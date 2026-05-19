@@ -369,6 +369,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px sol
           subject: subject.trim(),
           content,
           expiresInDays,
+          interviewerEmail: interviewer.interviewerEmail,
         },
       );
       setInviteUrl(response.inviteUrl ?? inviteUrl);

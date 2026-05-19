@@ -156,6 +156,7 @@ export interface InterviewerMailPayload {
   templateId?: number;
   templateVariables?: Record<string, string | number | boolean | null>;
   expiresInDays?: number;
+  interviewerEmail?: string;
 }
 
 export interface InterviewerMailResponse {
