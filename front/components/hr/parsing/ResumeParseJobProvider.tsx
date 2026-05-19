@@ -210,7 +210,7 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, "?뚯떛 ?묒뾽???쒖옉?섏? 紐삵뻽?듬땲??"),
+        getApiErrorMessage(error, "파싱 작업을 시작하지 못했습니다."),
       );
     },
   });
@@ -232,7 +232,7 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
     if (jobQuery.isError) {
       const message = getApiErrorMessage(
         jobQuery.error,
-        "?뚯떛 ?묒뾽 ?곹깭瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲?? 諛깆뿏?쒓? ?ъ떆?묐릺?덉쑝硫??ㅼ떆 ?낅줈?쒗빐 二쇱꽭??",
+        "파싱 작업 상태를 불러오지 못했습니다. 백엔드가 재시작되었으면 다시 업로드해 주세요.",
       );
       setJobError(message);
       toast.dismiss(RESUME_PARSE_TOAST_ID);
@@ -262,11 +262,11 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
       } else if (errorCount > 0) {
         setJobError(null);
         toast.warning(
-          `?뚯떛 ?꾨즺 쨌 ${successCount}嫄??깃났, ${errorCount}嫄??ㅻ쪟`,
+          `파싱 완료 · ${successCount}건 성공, ${errorCount}건 오류`,
           {
             position: "bottom-right",
             action: {
-              label: "寃곌낵 蹂닿린",
+              label: "결과 보기",
               onClick: () => router.push("/hr/parsing"),
             },
           },
@@ -274,11 +274,11 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
       } else {
         setJobError(null);
         toast.success(
-          `${successCount}嫄댁쓽 ?대젰??遺꾩꽍???꾨즺?섏뿀?듬땲??`,
+          `${successCount}건의 이력서 분석이 완료되었습니다.`,
           {
             position: "bottom-right",
             action: {
-              label: "寃곌낵 蹂닿린",
+              label: "결과 보기",
               onClick: () => router.push("/hr/parsing"),
             },
           },
@@ -293,7 +293,7 @@ export function ResumeParseJobProvider({ children }: { children: ReactNode }) {
     if (job.status === "failed") {
       const message = coerceToErrorString(
         job.error,
-        "?대젰???뚯떛 ?묒뾽???ㅽ뙣?덉뒿?덈떎.",
+        "이력서 파싱 작업이 실패했습니다.",
       );
       setJobError(message);
       toast.dismiss(RESUME_PARSE_TOAST_ID);
@@ -406,5 +406,3 @@ export function useResumeParseJobContext(): ResumeParseJobContextValue {
   }
   return ctx;
 }
-
-

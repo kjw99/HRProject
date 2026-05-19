@@ -40,3 +40,28 @@ class InterviewerTokenResponse(CaseModel):
     access_token: str
     token_type: str = "bearer"
     interviewer: InterviewerAuthInfo
+
+
+InterviewerAvailabilityDecision = str
+
+
+class InterviewerAvailabilitySlotSummary(CaseModel):
+    slot_id: int
+    interview_round: str
+    interview_starts_at: datetime
+    interview_ends_at: datetime
+    interview_location: str | None
+
+
+class InterviewerAvailabilityResponse(CaseModel):
+    interviewer: InterviewerAuthInfo
+    expires_at: datetime
+    decision: InterviewerAvailabilityDecision | None = None
+    note: str | None = None
+    decided_at: datetime | None = None
+    slots: list[InterviewerAvailabilitySlotSummary] = Field(default_factory=list)
+
+
+class InterviewerAvailabilitySubmitRequest(CaseModel):
+    decision: InterviewerAvailabilityDecision = Field(..., min_length=1)
+    note: str | None = Field(default=None, max_length=1000)

@@ -1,5 +1,7 @@
 import json
 
+from app.ai.clients.llm_errors import map_llm_exception
+from app.ai.clients.llm_retry import run_with_rate_limit_retry
 from app.ai.clients.openai_client import get_chat_model
 from app.ai.prompts.preferred_criteria_matching import (
     build_preferred_criteria_match_messages,
@@ -41,19 +43,21 @@ class PreferredCriteriaMatcher:
             llm = get_chat_model().with_structured_output(
                 PreferredCriteriaMatchOutput
             )
-            result = await llm.ainvoke(
-                build_preferred_criteria_match_messages(
-                    job_description_context=cleaned_context,
-                    resume_json=resume_json,
-                    position_name=position_name,
-                    resume_summary=resume_summary,
+            result = await run_with_rate_limit_retry(
+                lambda: llm.ainvoke(
+                    build_preferred_criteria_match_messages(
+                        job_description_context=cleaned_context,
+                        resume_json=resume_json,
+                        position_name=position_name,
+                        resume_summary=resume_summary,
+                    )
                 )
             )
         except ExternalServiceException:
             raise
         except Exception as exc:
             raise ExternalServiceException(
-                "AI failed to match preferred criteria."
+                map_llm_exception(exc, "AI failed to match preferred criteria.")
             ) from exc
 
         try:

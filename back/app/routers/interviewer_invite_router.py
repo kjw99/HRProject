@@ -5,6 +5,8 @@ from app.dependencies.database import get_async_db
 from app.dependencies.dependencies import get_current_user, require_roles
 from app.models.user import User
 from app.schemas.interviewer_invite import (
+    InterviewerAvailabilityResponse,
+    InterviewerAvailabilitySubmitRequest,
     InterviewerInviteAcceptRequest,
     InterviewerInviteCreateRequest,
     InterviewerInviteCreateResponse,
@@ -40,3 +42,26 @@ async def accept_interviewer_invite(
     db: AsyncSession = Depends(get_async_db),
 ):
     return await interviewer_invite_service.accept_invite(db, data.token)
+
+
+@router.get(
+    "/{token}/availability",
+    response_model=InterviewerAvailabilityResponse,
+)
+async def get_interviewer_availability(
+    token: str,
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await interviewer_invite_service.get_availability(db, token)
+
+
+@router.post(
+    "/{token}/availability",
+    response_model=InterviewerAvailabilityResponse,
+)
+async def submit_interviewer_availability(
+    token: str,
+    data: InterviewerAvailabilitySubmitRequest,
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await interviewer_invite_service.submit_availability(db, token, data)

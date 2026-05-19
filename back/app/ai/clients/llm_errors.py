@@ -48,6 +48,17 @@ def map_llm_exception(exc: Exception, fallback: str) -> str:
     return fallback
 
 
+def is_rate_limit_exception(exc: Exception) -> bool:
+    message = str(exc).lower()
+    error_type = _extract_error_type(exc)
+    status_code = _extract_status_code(exc)
+    return (
+        "rate_limit" in message
+        or error_type == "rate_limit_exceeded"
+        or status_code == 429
+    )
+
+
 def _extract_error_type(exc: Exception) -> str | None:
     body = getattr(exc, "body", None)
     if isinstance(body, dict):
@@ -68,5 +79,19 @@ def _extract_error_type(exc: Exception) -> str | None:
                     return code.lower()
         except Exception:
             pass
+
+    return None
+
+
+def _extract_status_code(exc: Exception) -> int | None:
+    status_code = getattr(exc, "status_code", None)
+    if isinstance(status_code, int):
+        return status_code
+
+    response = getattr(exc, "response", None)
+    if response is not None:
+        response_status = getattr(response, "status_code", None)
+        if isinstance(response_status, int):
+            return response_status
 
     return None

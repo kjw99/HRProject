@@ -25,6 +25,14 @@ class InterviewerMail:
 
 
 class InterviewerMailService:
+    @staticmethod
+    def _build_availability_url(invite_url: str) -> str:
+        if "token=" not in invite_url:
+            return invite_url
+        token = invite_url.split("token=", 1)[1]
+        base = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
+        return f"{base}/interviewer-availability?token={token}"
+
     async def get_interviewer_email(self, db: AsyncSession, interviewer_id: int) -> str:
         interviewer = await interviewer_repository.get_by_id(db, interviewer_id)
         if not interviewer:
@@ -100,6 +108,8 @@ class InterviewerMailService:
         variables.setdefault("interviewer_email", interviewer_email)
         variables.setdefault("invite_url", invite_url)
         variables.setdefault("access_link", invite_url)
+        variables.setdefault("availability_url", self._build_availability_url(invite_url))
+        variables.setdefault("interviewer_response_url", self._build_availability_url(invite_url))
 
         rendered_template = await email_template_service.render_template(
             db,

@@ -1,6 +1,7 @@
 import os
 
 from app.ai.clients.llm_errors import map_llm_exception
+from app.ai.clients.llm_retry import run_with_rate_limit_retry
 from app.ai.clients.openai_client import get_chat_model
 from app.ai.prompts.resume_parse_prompt import build_resume_parse_messages
 from app.ai.schemas.resume_parsing import ResumeParseAIOutput
@@ -22,10 +23,12 @@ class ResumeParser:
 
         try:
             llm = get_chat_model().with_structured_output(ResumeParseAIOutput)
-            result = await llm.ainvoke(
-                build_resume_parse_messages(
-                    self._truncate(cleaned_text),
-                    filename=filename,
+            result = await run_with_rate_limit_retry(
+                lambda: llm.ainvoke(
+                    build_resume_parse_messages(
+                        self._truncate(cleaned_text),
+                        filename=filename,
+                    )
                 )
             )
         except ExternalServiceException:

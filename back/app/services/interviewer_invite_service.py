@@ -2,6 +2,7 @@ import hashlib
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
+from typing import TypedDict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,13 +12,23 @@ from app.models.interviewer_invite import InterviewerInvite
 from app.repositories.interviewer_invite_repository import interviewer_invite_repository
 from app.repositories.interviewer_repository import interviewer_repository
 from app.schemas.interviewer_invite import (
+    InterviewerAvailabilityResponse,
+    InterviewerAvailabilitySlotSummary,
+    InterviewerAvailabilitySubmitRequest,
     InterviewerInviteCreateRequest,
     InterviewerInviteCreateResponse,
     InterviewerTokenResponse,
 )
+from app.repositories.interview_slot_repository import interview_slot_repository
 
 
 class InterviewerInviteService:
+    class _AvailabilityState(TypedDict):
+        decision: str
+        note: str | None
+        decided_at: datetime
+
+    _availability_by_token_hash: dict[str, _AvailabilityState] = {}
     @staticmethod
     def _hash_token(raw_token: str) -> str:
         return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
@@ -128,6 +139,84 @@ class InterviewerInviteService:
             access_token=access_token,
             interviewer=interviewer,
         )
+
+    async def get_availability(
+        self,
+        db: AsyncSession,
+        raw_token: str,
+    ) -> InterviewerAvailabilityResponse:
+        invite = await self._validate_invite_token(db, raw_token)
+        interviewer = invite.interviewer
+        if interviewer is None:
+            raise UnauthorizedException("유효하지 않은 초대 토큰입니다.")
+
+        now = datetime.now(timezone.utc)
+        all_upcoming = await interview_slot_repository.find_all_with_details(
+            db,
+            starts_at_from=now,
+        )
+        slots = [
+            InterviewerAvailabilitySlotSummary(
+                slot_id=slot.slot_id,
+                interview_round=slot.interview_round,
+                interview_starts_at=slot.interview_starts_at,
+                interview_ends_at=slot.interview_ends_at,
+                interview_location=slot.interview_location,
+            )
+            for slot in all_upcoming
+            if any(iv.interviewer_id == interviewer.interviewer_id for iv in slot.interviewers)
+        ]
+        slots.sort(key=lambda row: row.interview_starts_at)
+
+        state = self._availability_by_token_hash.get(invite.token_hash)
+        return InterviewerAvailabilityResponse(
+            interviewer=interviewer,
+            expires_at=invite.expires_at,
+            decision=state["decision"] if state else None,
+            note=state["note"] if state else None,
+            decided_at=state["decided_at"] if state else None,
+            slots=slots[:20],
+        )
+
+    async def submit_availability(
+        self,
+        db: AsyncSession,
+        raw_token: str,
+        data: InterviewerAvailabilitySubmitRequest,
+    ) -> InterviewerAvailabilityResponse:
+        invite = await self._validate_invite_token(db, raw_token)
+        decision = data.decision.strip().lower()
+        if decision not in {"accepted", "declined"}:
+            raise UnauthorizedException("지원하지 않는 응답 값입니다.")
+
+        now = datetime.now(timezone.utc)
+        self._availability_by_token_hash[invite.token_hash] = self._AvailabilityState(
+            decision=decision,
+            note=(data.note or "").strip() or None,
+            decided_at=now,
+        )
+        invite.last_used_at = now
+        await db.commit()
+
+        return await self.get_availability(db, raw_token)
+
+    async def _validate_invite_token(
+        self,
+        db: AsyncSession,
+        raw_token: str,
+    ) -> InterviewerInvite:
+        token_hash = self._hash_token(raw_token)
+        invite = await interviewer_invite_repository.find_by_token_hash(db, token_hash)
+
+        if not invite:
+            raise UnauthorizedException("유효하지 않은 초대 토큰입니다.")
+
+        now = datetime.now(timezone.utc)
+        if invite.revoked_at is not None:
+            raise UnauthorizedException("폐기된 초대 토큰입니다.")
+        if invite.expires_at < now:
+            raise UnauthorizedException("만료된 초대 토큰입니다.")
+        return invite
 
 
 interviewer_invite_service = InterviewerInviteService()
