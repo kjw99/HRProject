@@ -12,6 +12,7 @@ export type HrDepartmentOption = Position;
 export interface HrSavedQuestion {
   questionId: number;
   candidateId: number | null;
+  candidateName?: string | null;
   positionId: number | null;
   questionText: string;
   questionType: string;

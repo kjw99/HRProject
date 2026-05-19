@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.question import Question
 
@@ -15,7 +16,9 @@ class QuestionRepository:
 
     async def find_all(self, db: AsyncSession) -> list[Question]:
         result = await db.scalars(
-            select(Question).order_by(Question.question_id)
+            select(Question)
+            .options(selectinload(Question.candidate))
+            .order_by(Question.question_id)
         )
         return result.all()
 
@@ -33,6 +36,7 @@ class QuestionRepository:
     ) -> list[Question]:
         result = await db.scalars(
             select(Question)
+            .options(selectinload(Question.candidate))
             .where(Question.position_id == position_id)
             .order_by(Question.question_id)
         )
@@ -45,6 +49,7 @@ class QuestionRepository:
     ) -> list[Question]:
         result = await db.scalars(
             select(Question)
+            .options(selectinload(Question.candidate))
             .where(Question.candidate_id == candidate_id)
             .order_by(Question.question_id)
         )
@@ -56,7 +61,7 @@ class QuestionRepository:
         position_id: int | None = None,
         candidate_id: int | None = None,
     ) -> list[Question]:
-        query = select(Question)
+        query = select(Question).options(selectinload(Question.candidate))
 
         if position_id is not None:
             query = query.where(Question.position_id == position_id)
