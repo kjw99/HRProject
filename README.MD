@@ -72,7 +72,25 @@
 
 ## 🔗 실행 방법
 
-> Back, Front README.MD 참고하기
+### Backend
+```
+back 폴더에서 실행
+uv sync
+.env 생성 및 내용 추가
+사용할 DB 생성 후 .env에 입력.
+uv run alembic upgrade head (기존 테이블들 이미 존재하면 생략)
+uv run fastapi dev
+
+상세 내용은 back 폴더의 readme.md 참고
+```
+
+### Frontend
+```
+front 폴더에서 실행
+npm install
+.env 생성 및 내용 추가
+npm run dev
+```
 
 ## git 커밋 컨벤션
 
