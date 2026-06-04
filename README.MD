@@ -50,9 +50,13 @@
 ---
 
 ## 📱 설계 문서
-- 와이어프레임
-- ERD
-- API 명세서
+### 와이어프레임
+![HRProject 와이어프레임](./img/image1.png)
+
+### ERD
+![HRProject ERD](./img/HRProject_ERD.png)
+
+### API 명세서
 
 
 ---
