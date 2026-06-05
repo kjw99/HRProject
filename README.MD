@@ -57,7 +57,7 @@
 ![HRProject ERD](./img/HRProject_ERD.png)
 
 ### API 명세서
-
+https://certain-canvas-9ee.notion.site/07ddf13d6ea08202a55a01350d360048?v=f92df13d6ea083bdb2f80856ec05c234&source=copy_link
 
 ---
 
