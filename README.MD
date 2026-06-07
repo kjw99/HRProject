@@ -116,3 +116,5 @@ main          ← 배포 (프로덕션)
         ├── feature/frontend-login    ← 프론트 기능
         └── feature/user-api          ← 기능 단위
 ```
+
+## 📂 파일 구조
