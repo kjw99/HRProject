@@ -118,3 +118,158 @@ main          ← 배포 (프로덕션)
 ```
 
 ## 📂 파일 구조
+
+### FrontEnd (Next.js + TypeScript)
+
+```
+📦front
+┣ 📂app
+┃ ┣ 📂(auth)
+┃ ┃ ┣ 📂login
+┃ ┃ ┗ 📂signup
+┃ ┣ 📂admin
+┃ ┃ ┣ 📂routes
+┃ ┃ ┗ 📂users
+┃ ┣ 📂api
+┃ ┃ ┣ 📂auth
+┃ ┃ ┗ 📂interviewers
+┃ ┣ 📂applicant
+┃ ┣ 📂hr
+┃ ┃ ┣ 📂ai-gen
+┃ ┃ ┣ 📂applicants
+┃ ┃ ┣ 📂email-templates
+┃ ┃ ┣ 📂interviewers
+┃ ┃ ┃ ┗ 📂communication
+┃ ┃ ┣ 📂parsing
+┃ ┃ ┣ 📂positions
+┃ ┃ ┣ 📂profile
+┃ ┃ ┣ 📂questions
+┃ ┃ ┗ 📂schedule
+┃ ┃   ┗ 📂invitation-preview
+┃ ┣ 📂interview-booking
+┃ ┣ 📂interviewer
+┃ ┃ ┗ 📂invite
+┃ ┣ 📂interviewer-availability
+┃ ┣ 📂interviewer-invite
+┃ ┣ 📂invitation-preview
+┃ ┣ 📂maintenance
+┃ ┣ 📂server
+┃ ┃ ┣ 📂admin
+┃ ┃ ┣ 📂auth
+┃ ┃ ┣ 📂common
+┃ ┃ ┣ 📂hr
+┃ ┃ ┣ 📂http
+┃ ┃ ┗ 📂interviewer
+┃ ┣ 📜favicon.ico
+┃ ┣ 📜globals.css
+┃ ┣ 📜layout.tsx
+┃ ┣ 📜not-found.tsx
+┃ ┣ 📜page.tsx
+┃ ┗ 📜providers.tsx
+┣ 📂components
+┃ ┣ 📂admin
+┃ ┃ ┗ 📂usertable
+┃ ┣ 📂auth
+┃ ┣ 📂common
+┃ ┣ 📂hr
+┃ ┃ ┣ 📂applicants
+┃ ┃ ┣ 📂dashboard
+┃ ┃ ┃ ┗ 📂dept-status
+┃ ┃ ┣ 📂email-templates
+┃ ┃ ┣ 📂interviewers
+┃ ┃ ┃ ┗ 📂mail-composer
+┃ ┃ ┣ 📂parsing
+┃ ┃ ┣ 📂positions
+┃ ┃ ┣ 📂profile
+┃ ┃ ┣ 📂question-generation
+┃ ┃ ┣ 📂questions
+┃ ┃ ┣ 📂schedule
+┃ ┃ ┣ 📂shared
+┃ ┃ ┗ 📂wrapper
+┃ ┣ 📂interview-booking
+┃ ┣ 📂interviewer
+┃ ┃ ┣ 📂agent
+┃ ┃ ┣ 📂availability
+┃ ┃ ┣ 📂invite
+┃ ┃ ┗ 📂layout
+┃ ┣ 📂landing
+┃ ┗ 📂ui
+┣ 📂css
+┃ ┗ 📂background
+┣ 📂hooks
+┣ 📂lib
+┃ ┣ 📂admin
+┃ ┣ 📂auth
+┃ ┣ 📂common
+┃ ┣ 📂hr
+┃ ┣ 📂interviewer
+┃ ┣ 📂stores
+┃ ┣ 📂ui
+┃ ┗ 📂utils
+┣ 📂public
+┣ 📂types
+┣ 📜.dockerignore
+┣ 📜.env
+┣ 📜.gitignore
+┣ 📜AGENTS.md
+┣ 📜CLAUDE.md
+┣ 📜Dockerfile
+┣ 📜eslint.config.mjs
+┣ 📜next-env.d.ts
+┣ 📜next.config.ts
+┣ 📜package-lock.json
+┣ 📜package.json
+┣ 📜postcss.config.mjs
+┣ 📜proxy.ts
+┣ 📜README.md
+┗ 📜tsconfig.json
+```
+
+### BackEnd (FastAPI + Python)
+
+```
+📦back
+┣ 📂alembic
+┃ ┣ 📂versions
+┃ ┣ 📜env.py
+┃ ┣ 📜README
+┃ ┗ 📜script.py.mako
+┣ 📂app
+┃ ┣ 📂ai
+┃ ┃ ┣ 📂agents
+┃ ┃ ┣ 📂clients
+┃ ┃ ┣ 📂generators
+┃ ┃ ┣ 📂graphs
+┃ ┃ ┃ ┗ 📂interview_question
+┃ ┃ ┃   ┗ 📂nodes
+┃ ┃ ┣ 📂jd
+┃ ┃ ┣ 📂prompts
+┃ ┃ ┃ ┗ 📂interview_question
+┃ ┃ ┗ 📂schemas
+┃ ┣ 📂core
+┃ ┣ 📂dependencies
+┃ ┣ 📂models
+┃ ┣ 📂repositories
+┃ ┣ 📂routers
+┃ ┣ 📂schemas
+┃ ┣ 📂services
+┃ ┣ 📜__init__.py
+┃ ┗ 📜main.py
+┣ 📂scripts
+┃ ┗ 📜create_initial_admin.py
+┣ 📂tests
+┣ 📜.dockerignore
+┣ 📜.env
+┣ 📜.gitignore
+┣ 📜.python-version
+┣ 📜alembic.ini
+┣ 📜Dockerfile
+┣ 📜graph.py
+┣ 📜init_vectordb.py
+┣ 📜mailsend.py
+┣ 📜ParsingToExcel.py
+┣ 📜Procfile
+┣ 📜pyproject.toml
+┣ 📜README.md
+┗ 📜uv.lock
+```
