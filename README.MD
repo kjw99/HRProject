@@ -87,6 +87,21 @@ npm install
 npm run dev
 ```
 
+### Docker
+- 도커 설정은 프론트 + 백엔드 + nginx만 되어 있는 상태.
+- 현재 도커 설정은 개발용, 테스트용임.
+- 도커 사용하려면 .env의 port가 달라질 수 있음.
+- 별도 DB 필요.
+```
+root 폴더에서 docker compose up --build 실행.
+
+## DB에 alembic 마이그레이션 필요한 경우
+docker compose exec back uv run alembic upgrade head
+
+## 초기 관리자 세팅이 필요한 경우
+docker compose exec back uv run python scripts/create_initial_admin.py
+```
+
 ## git 커밋 컨벤션
 
 ### 커밋 메시지
