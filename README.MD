@@ -90,7 +90,7 @@ npm run dev
 ### Docker
 - 도커 설정은 프론트 + 백엔드 + nginx만 되어 있는 상태.
 - 현재 도커 설정은 개발용, 테스트용임.
-- 도커 사용하려면 .env의 port가 달라질 수 있음.
+- 도커 사용하려면 .env의 port가 달라질 수 있음. (docker의 경우 백엔드의 .env에 있는 프론트 주소의 포트 번호가 3000이 아니게 됨.)
 - 별도 DB 필요.
 ```
 root 폴더에서 docker compose up --build 실행.
