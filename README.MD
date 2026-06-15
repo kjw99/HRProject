@@ -92,6 +92,7 @@ npm run dev
 - 현재 도커 설정은 개발용, 테스트용임.
 - 도커 사용하려면 .env의 port가 달라질 수 있음. (docker의 경우 백엔드의 .env에 있는 프론트 주소의 포트 번호가 3000이 아니게 됨.)
 - 프로젝트 실행에 사용할 DB(postgreSQL) 필요.
+- 개선하면서 추가로 변경될 수 있음.
 ```
 root 폴더에서 docker compose up --build 실행.
 
