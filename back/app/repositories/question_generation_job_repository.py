@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.question_generation_job import (
     ACTIVE_QUESTION_GENERATION_STATUSES,
+    QUESTION_GENERATION_STATUS_SUCCEEDED,
     QuestionGenerationJob,
 )
 
@@ -54,6 +55,23 @@ class QuestionGenerationJobRepository:
             .limit(1)
         )
         return result.one_or_none()
+
+    async def find_recent_succeeded_by_position_id(
+        self,
+        db: AsyncSession,
+        position_id: int,
+        limit: int = 20,
+    ) -> list[QuestionGenerationJob]:
+        result = await db.scalars(
+            select(QuestionGenerationJob)
+            .where(
+                QuestionGenerationJob.position_id == position_id,
+                QuestionGenerationJob.status == QUESTION_GENERATION_STATUS_SUCCEEDED,
+            )
+            .order_by(QuestionGenerationJob.job_id.desc())
+            .limit(limit)
+        )
+        return list(result.all())
 
 
 question_generation_job_repository = QuestionGenerationJobRepository()

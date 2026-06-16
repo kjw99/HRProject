@@ -59,6 +59,11 @@ class Resume(Base):
         nullable=True,
         comment="AI profile for interview question generation",
     )
+    question_keywords: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Keywords for interview question generation and reuse",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

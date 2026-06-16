@@ -154,7 +154,11 @@ class QuestionGenerationJobService:
             generated_questions = await question_service.generate_questions_from_input(
                 generation_input,
             )
-            await self._mark_succeeded(job_id, generated_questions)
+            await self._mark_succeeded(
+                job_id,
+                generated_questions,
+                generation_input.generation_keywords,
+            )
         except Exception as exc:
             await self._mark_failed(job_id, exc)
 
@@ -253,6 +257,7 @@ class QuestionGenerationJobService:
         self,
         job_id: int,
         generated_questions: list[GeneratedQuestionResponse],
+        generation_keywords: dict | None,
     ) -> None:
         async with AsyncSessionLocal() as db:
             job = await question_generation_job_repository.find_by_id(db, job_id)
@@ -260,6 +265,7 @@ class QuestionGenerationJobService:
                 return
 
             job.status = QUESTION_GENERATION_STATUS_SUCCEEDED
+            job.generation_keywords = generation_keywords
             job.result_questions = [
                 question.model_dump(mode="json")
                 for question in generated_questions

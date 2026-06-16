@@ -45,6 +45,7 @@ from app.services.resume_file_storage_service import (
     StoredResumeFile,
     resume_file_storage_service,
 )
+from app.services.question_keyword_service import question_keyword_service
 from app.services.resume_text_extractor_service import (
     resume_text_extractor_service,
 )
@@ -344,6 +345,11 @@ class ResumeParseService:
         file_path: str,
     ) -> Resume:
         parsed = ai_output.parsed_json
+        question_keywords = question_keyword_service.build_keywords(
+            parsed_json=parsed,
+            summary=ai_output.summary,
+            ai_profile=ai_output.ai_profile,
+        )
         return Resume(
             candidate_id=candidate.candidate_id,
             desired_location=self._normalizer.limit(
@@ -358,6 +364,7 @@ class ResumeParseService:
             parsed_json=self._normalizer.model_json(parsed),
             summary=self._normalizer.clean(ai_output.summary),
             ai_profile=self._normalizer.model_json(ai_output.ai_profile),
+            question_keywords=question_keywords,
         )
 
     def _build_response_record(

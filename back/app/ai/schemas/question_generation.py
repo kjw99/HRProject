@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -8,6 +10,12 @@ class InterviewQuestionGenerationInput(BaseModel):
     generation_mode: str = Field(default="candidate_job_fit_based", max_length=50)
     job_description_context: str | None = Field(default=None, max_length=12000)
     resume_context: str | None = Field(default=None, max_length=12000)
+    resume_keywords: list[str] = Field(default_factory=list)
+    resume_highlights: list[str] = Field(default_factory=list)
+    generation_keywords: dict[str, Any] | None = Field(default=None)
+    reused_questions: list["GeneratedQuestionResponsePayload"] = Field(
+        default_factory=list
+    )
 
     @field_validator("position_name")
     @classmethod
@@ -48,6 +56,26 @@ class InterviewQuestionGenerationInput(BaseModel):
         stripped_value = value.strip()
         return stripped_value or None
 
+    @field_validator("resume_keywords", "resume_highlights")
+    @classmethod
+    def normalize_string_list(cls, value: list[str]) -> list[str]:
+        normalized_values = []
+        seen_values = set()
+
+        for item in value:
+            stripped_item = str(item).strip()
+            if not stripped_item:
+                continue
+
+            key = stripped_item.casefold()
+            if key in seen_values:
+                continue
+
+            seen_values.add(key)
+            normalized_values.append(stripped_item)
+
+        return normalized_values
+
 
 class GeneratedQuestion(BaseModel):
     question_text: str = Field(..., min_length=1)
@@ -70,6 +98,12 @@ class GeneratedQuestion(BaseModel):
 
 class InterviewQuestionGenerationOutput(BaseModel):
     questions: list[GeneratedQuestion] = Field(..., min_length=1)
+
+
+class GeneratedQuestionResponsePayload(BaseModel):
+    question_text: str = Field(..., min_length=1)
+    evaluation_intent: str = Field(..., min_length=1)
+    generation_basis: str = Field(..., min_length=1)
 
 
 class QuestionSelectionOutput(BaseModel):
@@ -171,3 +205,6 @@ class QuestionReviewOutput(BaseModel):
             raise ValueError("summary는 비어 있을 수 없습니다.")
 
         return stripped_value
+
+
+InterviewQuestionGenerationInput.model_rebuild()

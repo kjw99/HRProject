@@ -73,6 +73,7 @@ class QuestionGenerationJob(Base):
         index=True,
     )
     request_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    generation_keywords: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     result_questions: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

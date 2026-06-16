@@ -1,7 +1,11 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.ai.prompts.interview_question.system import SYSTEM_PROMPT
-from app.ai.prompts.interview_question.utils import model_to_json, optional_text
+from app.ai.prompts.interview_question.utils import (
+    model_to_json,
+    optional_list,
+    optional_text,
+)
 from app.ai.schemas.question_generation import (
     InterviewQuestionGenerationInput,
     QuestionFitAnalysis,
@@ -30,14 +34,20 @@ Fit analysis:
 Job description context:
 {optional_text(data.job_description_context)}
 
-Resume context:
+Resume keywords:
+{optional_list(data.resume_keywords)}
+
+Resume highlights:
+{optional_list(data.resume_highlights)}
+
+Resume evidence:
 {optional_text(data.resume_context)}
 
 Rules:
 - The sum of all item counts must equal {data.question_count}.
-- Include job-fit questions based on both the job description and resume evidence.
-- Include risk/gap verification questions when the analysis has unclear points.
-- Include practical communication/collaboration questions only when relevant.
+- Build the plan from the candidate's actual keywords, highlights, and job-fit evidence.
+- Include practical verification questions for highlighted projects, outcomes, and problem solving.
+- Include risk or gap verification questions when the analysis has unclear points.
 - Do not include protected personal information topics.
 - Each item must include category, count, and focus.
 """.strip()
