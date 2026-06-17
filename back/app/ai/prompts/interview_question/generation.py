@@ -24,7 +24,8 @@ Create exactly {data.question_count} interview questions based on the candidate 
 
 Position: {data.position_name}
 Generation mode: {data.generation_mode}
-Question count: {data.question_count}
+Question count to generate now: {data.question_count}
+Final requested question count: {data.final_question_count}
 Additional request: {additional_request}
 
 ## Fit analysis
@@ -42,13 +43,18 @@ Additional request: {additional_request}
 ## Resume evidence
 {optional_text(data.resume_context)}
 
+## Already reused questions
+{model_to_json(data.reused_questions)}
+
 Rules:
 - Use the candidate's actual keywords and highlights as evidence.
 - Ask concrete questions about projects, outcomes, decisions, trade-offs, and problem solving.
+- Do not repeat or closely paraphrase any already reused question.
 - If evidence is weak, ask a verification question instead of assuming experience.
 - Do not ask about protected or irrelevant personal information.
 - Every question_text must start with "[ ]".
-- Each item must include only question_text, evaluation_intent, and generation_basis.
+- Each item must include only question_text, evaluation_intent, generation_basis, and question_keywords.
+- question_keywords should contain the core resume/job keywords that directly support that question.
 """.strip()
 
     return [
@@ -72,7 +78,8 @@ Generate exactly {candidate_count} candidate interview questions to later select
 
 Position: {data.position_name}
 Generation mode: {data.generation_mode}
-Final question count: {data.question_count}
+Final question count after new generation: {data.question_count}
+Overall requested question count: {data.final_question_count}
 Candidate question count: {candidate_count}
 Additional request: {additional_request}
 
@@ -94,16 +101,21 @@ Additional request: {additional_request}
 ## Resume evidence
 {optional_text(data.resume_context)}
 
+## Already reused questions
+{model_to_json(data.reused_questions)}
+
 Rules:
 - Follow the question plan categories and counts.
 - Build question pairs with different phrasing or evidence angles when possible.
 - Use keywords and highlights to make questions specific rather than generic.
+- Do not repeat or closely paraphrase any already reused question.
 - Prefer questions that verify real work, outcomes, technical decisions, and risk handling.
 - If the resume evidence is incomplete, ask a neutral verification question.
 - Do not ask about protected or irrelevant personal information.
 - Every question_text must start with "[ ]".
 - Return exactly {candidate_count} items.
-- Each item must include only question_text, evaluation_intent, and generation_basis.
+- Each item must include only question_text, evaluation_intent, generation_basis, and question_keywords.
+- question_keywords should contain only the direct supporting keywords for that specific question.
 """.strip()
 
     return [

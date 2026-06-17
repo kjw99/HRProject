@@ -23,33 +23,30 @@ def build_question_selection_messages(
         for index in range(data.question_count)
     ]
     human_prompt = f"""
-아래 면접 질문 후보는 최종 질문 {data.question_count}개를 만들기 위해 각 질문 슬롯마다 A/B 후보로 생성된 것입니다.
-각 pair에서 더 좋은 질문 1개를 선택하여 최종 질문을 정확히 {data.question_count}개 반환하세요.
+Select exactly {data.question_count} final questions from the candidate question pairs below.
 
-지원 직무: {data.position_name}
-최종 질문 개수: {data.question_count}
-추가 요청: {optional_text(data.additional_request)}
+Position: {data.position_name}
+Question count to select now: {data.question_count}
+Overall requested question count: {data.final_question_count}
+Additional request: {optional_text(data.additional_request)}
 
-## 핵심 분석 결과
+## Fit analysis
 {model_to_json(analysis)}
 
-## 질문 후보 pair
+## Candidate question pairs
 {model_to_json(question_pairs)}
 
-선택 기준:
-- 직무기술서 요구 역량과 이력서 근거가 더 구체적으로 연결되는 질문을 선택하세요.
-- 지원자의 실제 경험, 판단, 성과, 문제 해결 방식을 더 잘 끌어내는 질문을 선택하세요.
-- 너무 일반적인 질문보다 맥락과 평가 포인트가 분명한 질문을 선택하세요.
-- 보호 대상 개인정보, 차별 소지, 직무와 무관한 사적 정보를 묻는 질문은 선택하지 마세요.
-- 전체 최종 질문 세트가 직무경험, 기술역량, 프로젝트 심화, 협업, 리스크 확인, 실무 스타일을 균형 있게 포함하도록 선택하세요.
-- 같은 내용이 반복될 경우 더 구체적이고 근거가 명확한 질문을 남기세요.
+## Already reused questions
+{model_to_json(data.reused_questions)}
 
-반환 규칙:
-- 각 pair에서 반드시 1개만 선택하세요.
-- selected_questions는 정확히 {data.question_count}개여야 합니다.
-- selected_questions의 각 항목은 question_text, evaluation_intent, generation_basis만 포함하세요.
-- selection_reasons에는 pair별 선택 이유를 간단히 작성하세요.
-- 선택한 질문의 핵심 의미를 바꾸지 마세요.
+Selection rules:
+- Pick exactly one question from each pair.
+- Prefer questions that are concrete, evidence-based, and job relevant.
+- Prefer questions that verify real projects, outcomes, decisions, and risk handling.
+- Do not select any question that duplicates or closely paraphrases an already reused question.
+- Avoid protected or irrelevant personal information.
+- Return exactly {data.question_count} selected questions.
+- Each selected question must include question_text, evaluation_intent, generation_basis, and question_keywords.
 """.strip()
 
     return [

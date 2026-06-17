@@ -37,8 +37,6 @@ from app.services.resume_context_service import resume_context_service
 POSITION_BASED_QUESTION_TYPE = "position_based"
 CANDIDATE_RESUME_BASED_QUESTION_TYPE = "candidate_resume_based"
 CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE = "candidate_job_fit_based"
-MIN_REUSE_SKILL_MATCHES = 3
-MIN_REUSE_EXPERIENCE_MATCHES = 1
 
 
 @dataclass(frozen=True)
@@ -47,6 +45,7 @@ class SaveQuestionItemContext:
     question_type: str
     evaluation_intent: str | None
     generation_basis: str | None
+    question_keywords: list[str]
     candidate_id: int | None
     position_id: int | None
     generation_job_id: int | None
@@ -87,6 +86,7 @@ class QuestionService:
         return InterviewQuestionGenerationInput(
             position_name=resume_context.position.position_name,
             question_count=data.question_count,
+            final_question_count=data.question_count,
             additional_request=data.additional_request,
             generation_mode=CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE,
             job_description_context=job_description_context,
@@ -104,7 +104,9 @@ class QuestionService:
         self,
         generation_input: InterviewQuestionGenerationInput,
     ) -> list[GeneratedQuestionResponse]:
-        if generation_input.reused_questions:
+        reused_questions = list(generation_input.reused_questions)
+        final_question_count = generation_input.final_question_count
+        if len(reused_questions) >= final_question_count:
             return self.to_generated_question_responses(
                 [
                     GeneratedQuestion(
@@ -112,12 +114,30 @@ class QuestionService:
                         evaluation_intent=item.evaluation_intent,
                         generation_basis=item.generation_basis,
                     )
-                    for item in generation_input.reused_questions
+                    for item in reused_questions[:final_question_count]
                 ]
             )
 
-        generation_result = await interview_question_graph.generate(generation_input)
-        return self.to_generated_question_responses(generation_result.questions)
+        remaining_question_count = max(
+            final_question_count - len(reused_questions),
+            0,
+        )
+        graph_input = generation_input.model_copy(
+            update={"question_count": remaining_question_count}
+        )
+        generation_result = await interview_question_graph.generate(graph_input)
+        generated_questions = [
+            GeneratedQuestion(
+                question_text=item.question_text,
+                evaluation_intent=item.evaluation_intent,
+                generation_basis=item.generation_basis,
+            )
+            for item in reused_questions
+        ]
+        generated_questions.extend(generation_result.questions)
+        return self.to_generated_question_responses(
+            generated_questions[:final_question_count]
+        )
 
     def to_generated_question_responses(
         self,
@@ -129,6 +149,7 @@ class QuestionService:
                 question_type=CANDIDATE_JOB_FIT_BASED_QUESTION_TYPE,
                 evaluation_intent=generated_question.evaluation_intent,
                 generation_basis=generated_question.generation_basis,
+                question_keywords=generated_question.question_keywords,
             )
             for generated_question in generated_questions
         ]
@@ -197,6 +218,7 @@ class QuestionService:
                 question_type=item.question_type,
                 evaluation_intent=item.evaluation_intent,
                 generation_basis=item.generation_basis,
+                question_keywords=item.question_keywords,
                 created_by_user_id=created_by_user_id,
                 created_by_interviewer_id=created_by_interviewer_id,
             )
@@ -347,6 +369,7 @@ class QuestionService:
                     question_type=question_type,
                     evaluation_intent=question.evaluation_intent,
                     generation_basis=question.generation_basis,
+                    question_keywords=question.question_keywords,
                     candidate_id=candidate_id,
                     position_id=resolved_position_id,
                     generation_job_id=generation_job_id,
@@ -563,63 +586,58 @@ class QuestionService:
             db,
             position_id=position_id,
         )
-        normalized_request = self._normalize_request_text(request_data.additional_request)
-        normalized_section = self._normalize_request_text(
-            request_data.job_description_section
+        current_keyword_pool = self._keyword_set(
+            question_keyword_service.flatten_keywords(question_keywords)
         )
-        current_skills = self._keyword_set(question_keywords.get("skills"))
-        current_experiences = self._keyword_set(question_keywords.get("experiences"))
-        if not current_skills:
+        if not current_keyword_pool:
             return []
 
+        matched_questions: list[
+            tuple[int, int, GeneratedQuestionResponsePayload]
+        ] = []
         for job in jobs:
             if job.candidate_id == current_candidate_id:
                 continue
             if not job.result_questions or not job.generation_keywords:
                 continue
-            if self._normalize_request_text(
-                job.request_payload.get("additional_request")
-            ) != normalized_request:
-                continue
-            if self._normalize_request_text(
-                job.request_payload.get("job_description_section")
-            ) != normalized_section:
-                continue
-            if int(job.request_payload.get("question_count") or 0) != request_data.question_count:
-                continue
 
-            stored_skills = self._keyword_set(job.generation_keywords.get("skills"))
-            stored_experiences = self._keyword_set(
-                job.generation_keywords.get("experiences")
+            job_keyword_pool = self._keyword_set(
+                question_keyword_service.flatten_keywords(job.generation_keywords)
             )
-            if len(current_skills & stored_skills) < MIN_REUSE_SKILL_MATCHES:
-                continue
-            if len(current_experiences & stored_experiences) < MIN_REUSE_EXPERIENCE_MATCHES:
-                continue
-
-            reusable_questions: list[GeneratedQuestionResponsePayload] = []
             for question in job.result_questions:
-                try:
-                    reusable_questions.append(
-                        GeneratedQuestionResponsePayload.model_validate(
-                            {
-                                "question_text": question.get("question_text")
-                                or question.get("questionText"),
-                                "evaluation_intent": question.get("evaluation_intent")
-                                or question.get("evaluationIntent"),
-                                "generation_basis": question.get("generation_basis")
-                                or question.get("generationBasis"),
-                            }
-                        )
-                    )
-                except Exception:
-                    reusable_questions = []
-                    break
+                reusable_question = self._build_reusable_question_payload(
+                    question=question,
+                    fallback_keywords=job_keyword_pool,
+                )
+                if reusable_question is None:
+                    continue
 
-            if reusable_questions:
-                return reusable_questions[: request_data.question_count]
+                question_keyword_pool = self._keyword_set(
+                    reusable_question.question_keywords
+                )
+                if not question_keyword_pool:
+                    continue
+                if not question_keyword_pool.issubset(current_keyword_pool):
+                    continue
 
-        return []
+                score = len(question_keyword_pool)
+                matched_questions.append((score, job.job_id, reusable_question))
+
+        matched_questions.sort(key=lambda item: (item[0], item[1]), reverse=True)
+
+        reusable_questions: list[GeneratedQuestionResponsePayload] = []
+        seen_question_texts: set[str] = set()
+        for _, _, reusable_question in matched_questions:
+            normalized_question_text = reusable_question.question_text.strip().casefold()
+            if normalized_question_text in seen_question_texts:
+                continue
+
+            seen_question_texts.add(normalized_question_text)
+            reusable_questions.append(reusable_question)
+            if len(reusable_questions) >= request_data.question_count:
+                return reusable_questions
+
+        return reusable_questions
 
     def _get_keyword_highlights(
         self,
@@ -687,6 +705,63 @@ class QuestionService:
             for value in values
             if (normalized := self._normalize_request_text(value)) is not None
         }
+
+    def _build_reusable_question_payload(
+        self,
+        question: dict[str, Any],
+        fallback_keywords: set[str],
+    ) -> GeneratedQuestionResponsePayload | None:
+        try:
+            payload = GeneratedQuestionResponsePayload.model_validate(
+                {
+                    "question_text": question.get("question_text")
+                    or question.get("questionText"),
+                    "evaluation_intent": question.get("evaluation_intent")
+                    or question.get("evaluationIntent"),
+                    "generation_basis": question.get("generation_basis")
+                    or question.get("generationBasis"),
+                    "question_keywords": question.get("question_keywords")
+                    or question.get("questionKeywords")
+                    or [],
+                }
+            )
+        except Exception:
+            return None
+
+        if payload.question_keywords:
+            return payload
+
+        inferred_keywords = self._infer_question_keywords(
+            question_text=payload.question_text,
+            evaluation_intent=payload.evaluation_intent,
+            generation_basis=payload.generation_basis,
+            fallback_keywords=fallback_keywords,
+        )
+        if not inferred_keywords:
+            return None
+
+        return payload.model_copy(update={"question_keywords": inferred_keywords})
+
+    def _infer_question_keywords(
+        self,
+        question_text: str,
+        evaluation_intent: str,
+        generation_basis: str,
+        fallback_keywords: set[str],
+    ) -> list[str]:
+        source_text = " ".join(
+            [
+                question_text.casefold(),
+                evaluation_intent.casefold(),
+                generation_basis.casefold(),
+            ]
+        )
+        matched_keywords: list[str] = []
+        for keyword in sorted(fallback_keywords):
+            if keyword in source_text:
+                matched_keywords.append(keyword)
+
+        return matched_keywords
 
 
 question_service = QuestionService()

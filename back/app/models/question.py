@@ -1,7 +1,8 @@
-﻿from datetime import datetime
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.dependencies.database import Base
@@ -29,6 +30,12 @@ class Question(Base):
     question_type: Mapped[str] = mapped_column(String(30), nullable=False)
     evaluation_intent: Mapped[str | None] = mapped_column(Text, nullable=True)
     generation_basis: Mapped[str | None] = mapped_column(Text, nullable=True)
+    question_keywords: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

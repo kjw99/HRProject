@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 class InterviewQuestionGenerationInput(BaseModel):
     position_name: str = Field(..., min_length=1, max_length=100)
     question_count: int = Field(default=10, ge=1, le=20)
+    final_question_count: int = Field(default=10, ge=1, le=20)
     additional_request: str | None = Field(default=None, max_length=1000)
     generation_mode: str = Field(default="candidate_job_fit_based", max_length=50)
     job_description_context: str | None = Field(default=None, max_length=12000)
@@ -56,6 +57,11 @@ class InterviewQuestionGenerationInput(BaseModel):
         stripped_value = value.strip()
         return stripped_value or None
 
+    @field_validator("final_question_count")
+    @classmethod
+    def normalize_final_question_count(cls, value: int) -> int:
+        return value
+
     @field_validator("resume_keywords", "resume_highlights")
     @classmethod
     def normalize_string_list(cls, value: list[str]) -> list[str]:
@@ -81,6 +87,7 @@ class GeneratedQuestion(BaseModel):
     question_text: str = Field(..., min_length=1)
     evaluation_intent: str = Field(..., min_length=1)
     generation_basis: str = Field(..., min_length=1)
+    question_keywords: list[str] = Field(default_factory=list)
 
     @field_validator(
         "question_text",
@@ -95,6 +102,26 @@ class GeneratedQuestion(BaseModel):
 
         return stripped_value
 
+    @field_validator("question_keywords")
+    @classmethod
+    def normalize_question_keywords(cls, value: list[str]) -> list[str]:
+        normalized_values = []
+        seen_values = set()
+
+        for item in value:
+            stripped_item = str(item).strip()
+            if not stripped_item:
+                continue
+
+            key = stripped_item.casefold()
+            if key in seen_values:
+                continue
+
+            seen_values.add(key)
+            normalized_values.append(stripped_item)
+
+        return normalized_values
+
 
 class InterviewQuestionGenerationOutput(BaseModel):
     questions: list[GeneratedQuestion] = Field(..., min_length=1)
@@ -104,6 +131,27 @@ class GeneratedQuestionResponsePayload(BaseModel):
     question_text: str = Field(..., min_length=1)
     evaluation_intent: str = Field(..., min_length=1)
     generation_basis: str = Field(..., min_length=1)
+    question_keywords: list[str] = Field(default_factory=list)
+
+    @field_validator("question_keywords")
+    @classmethod
+    def normalize_response_question_keywords(cls, value: list[str]) -> list[str]:
+        normalized_values = []
+        seen_values = set()
+
+        for item in value:
+            stripped_item = str(item).strip()
+            if not stripped_item:
+                continue
+
+            key = stripped_item.casefold()
+            if key in seen_values:
+                continue
+
+            seen_values.add(key)
+            normalized_values.append(stripped_item)
+
+        return normalized_values
 
 
 class QuestionSelectionOutput(BaseModel):

@@ -43,6 +43,7 @@ class GeneratedQuestionResponse(CaseModel):
     question_type: str
     evaluation_intent: str
     generation_basis: str
+    question_keywords: list[str] = Field(default_factory=list)
 
 
 class QuestionSaveItem(CaseModel):
@@ -50,6 +51,7 @@ class QuestionSaveItem(CaseModel):
     question_type: str | None = Field(default=None, max_length=30)
     evaluation_intent: str | None = Field(default=None, max_length=2000)
     generation_basis: str | None = Field(default=None, max_length=2000)
+    question_keywords: list[str] = Field(default_factory=list, max_length=30)
     candidate_id: int | None = Field(default=None, gt=0)
     position_id: int | None = Field(default=None, gt=0)
     generation_job_id: int | None = Field(default=None, gt=0)
@@ -80,6 +82,26 @@ class QuestionSaveItem(CaseModel):
 
         stripped_value = value.strip()
         return stripped_value or None
+
+    @field_validator("question_keywords")
+    @classmethod
+    def normalize_question_keywords(cls, value: list[str]) -> list[str]:
+        normalized_values = []
+        seen_values = set()
+
+        for item in value:
+            stripped_item = str(item).strip()
+            if not stripped_item:
+                continue
+
+            key = stripped_item.casefold()
+            if key in seen_values:
+                continue
+
+            seen_values.add(key)
+            normalized_values.append(stripped_item)
+
+        return normalized_values
 
 
 class QuestionSaveRequest(CaseModel):
@@ -122,4 +144,5 @@ class QuestionResponse(CaseModel):
     question_type: str
     evaluation_intent: str | None
     generation_basis: str | None
+    question_keywords: list[str] = Field(default_factory=list)
     created_at: datetime

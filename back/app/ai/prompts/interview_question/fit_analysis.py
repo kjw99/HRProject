@@ -14,6 +14,7 @@ def build_fit_analysis_messages(
 
 지원 직무: {data.position_name}
 질문 개수: {data.question_count}
+전체 요청 질문 개수: {data.final_question_count}
 추가 요청: {additional_request}
 
 ## 직무기술서 정보
@@ -27,6 +28,9 @@ def build_fit_analysis_messages(
 
 ## 이력서 보조 정보
 {optional_text(data.resume_context)}
+
+## 이미 재사용된 질문
+{optional_text(str(len(data.reused_questions)) + " questions selected" if data.reused_questions else None)}
 
 분석 기준:
 - 직무기술서에서 반드시 검증해야 할 핵심 요구 역량을 찾으세요.

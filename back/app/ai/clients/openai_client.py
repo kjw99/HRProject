@@ -7,7 +7,7 @@ from langchain_openai import ChatOpenAI
 from app.core.exceptions import ExternalServiceException
 
 
-DEFAULT_MODEL = "gpt-5.4-mini"
+DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_TEMPERATURE = 0.2
 
 
