@@ -1,7 +1,7 @@
 from typing import Any
 
 from app.ai.clients.llm_errors import map_llm_exception
-from app.ai.clients.openai_client import get_chat_model
+from app.ai.clients.llm_client import get_chat_model
 from app.ai.graphs.interview_question.validators import normalize_questions
 from app.ai.schemas.question_generation import InterviewQuestionGenerationOutput
 from app.core.exceptions import ExternalServiceException

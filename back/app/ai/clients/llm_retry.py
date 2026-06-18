@@ -47,7 +47,7 @@ async def run_with_rate_limit_retry(
                 delay += random.uniform(0, jitter)
 
             logger.warning(
-                "OpenAI rate limit hit. Retrying in %.2fs (%d/%d).",
+                "LLM rate limit hit. Retrying in %.2fs (%d/%d).",
                 delay,
                 attempt + 1,
                 max_retries,

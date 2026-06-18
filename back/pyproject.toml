@@ -28,5 +28,6 @@ dependencies = [
     "pyhwp>=0.1b15",
     "pymupdf>=1.27.2.2",
     "python-docx>=1.2.0",
-    "python-multipart>=0.0.26"
+    "python-multipart>=0.0.26",
+    "langchain-google-genai>=4.2.5",
 ]

@@ -2,7 +2,7 @@ import json
 
 from app.ai.clients.llm_errors import map_llm_exception
 from app.ai.clients.llm_retry import run_with_rate_limit_retry
-from app.ai.clients.openai_client import get_chat_model
+from app.ai.clients.llm_client import get_chat_model
 from app.ai.prompts.preferred_criteria_matching import (
     build_preferred_criteria_match_messages,
 )
