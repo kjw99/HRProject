@@ -25,6 +25,7 @@ from app.routers.candidate_router import router as candidate_router
 from app.routers.email_template_router import router as email_template_router
 from app.routers.candidate_mail_router import router as candidate_mail_router
 from app.routers.interviewer_mail_router import router as interviewer_mail_router
+from app.routers.mail_delivery_log_router import router as mail_delivery_log_router
 from app.routers.interviewer_router import router as interviewer_router
 from app.routers.interviewer_invite_router import router as interviewer_invite_router
 from app.routers.interviewer_question_router import (
@@ -56,6 +57,7 @@ app.include_router(mail_router)
 app.include_router(email_template_router)
 app.include_router(candidate_mail_router)
 app.include_router(interviewer_mail_router)
+app.include_router(mail_delivery_log_router)
 
 
 raw_cors_origins = os.getenv("CORS_ORIGINS", "").strip()

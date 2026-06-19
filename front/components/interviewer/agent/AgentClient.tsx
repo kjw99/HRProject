@@ -66,7 +66,7 @@ export default function AgentClient({
         await startGeneration({
           positionId: selectedPositionId,
           candidateId: selectedCandidateId,
-          questionCount: 10,
+          questionCount: 2,
           additionalRequest: additionalRequest || "",
         });
       } catch {

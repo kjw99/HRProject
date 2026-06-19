@@ -1,10 +1,10 @@
-import logging
-
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ExternalServiceException
 from app.dependencies.database import get_async_db
 from app.dependencies.dependencies import get_current_user, require_roles
+from app.models.mail_delivery_log import MAIL_TYPE_INTERVIEWER
 from app.models.user import User
 from app.schemas.interviewer_invite import InterviewerInviteCreateResponse
 from app.schemas.interviewer_mail import (
@@ -13,29 +13,11 @@ from app.schemas.interviewer_mail import (
 )
 from app.services.interviewer_invite_service import interviewer_invite_service
 from app.services.interviewer_mail_service import interviewer_mail_service
+from app.services.mail_delivery_service import mail_delivery_service
+from app.tasks.mail_tasks import send_mail_delivery
 
 
 router = APIRouter(prefix="/api/interviewers", tags=["Interviewer-Email"])
-logger = logging.getLogger(__name__)
-
-
-def _send_interviewer_mail_in_background(
-    *,
-    to_email: str,
-    subject: str,
-    content: str,
-) -> None:
-    try:
-        interviewer_mail_service.send_interviewer_mail(
-            to_email=to_email,
-            subject=subject,
-            content=content,
-        )
-    except Exception:
-        logger.exception(
-            "Failed to send interviewer mail in background. to=%s",
-            to_email,
-        )
 
 
 @router.get(
@@ -64,7 +46,6 @@ async def get_active_interviewer_invite(
 async def send_interviewer_mail(
     interviewer_id: int,
     data: InterviewerMailSendRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -78,14 +59,27 @@ async def send_interviewer_mail(
         expires_in_days=data.expires_in_days,
         created_by_user_id=current_user.user_id,
     )
-    background_tasks.add_task(
-        _send_interviewer_mail_in_background,
-        to_email=interviewer_mail.to_email,
+    mail_log = await mail_delivery_service.create_pending_log(
+        db,
+        mail_type=MAIL_TYPE_INTERVIEWER,
+        related_entity_id=interviewer_id,
+        recipient_email=interviewer_mail.to_email,
         subject=interviewer_mail.subject,
-        content=interviewer_mail.content,
+        body=interviewer_mail.content,
     )
+    try:
+        send_mail_delivery.delay(mail_log.mail_log_id)
+    except Exception as exc:
+        await mail_delivery_service.mark_failed(
+            db,
+            mail_log.mail_log_id,
+            attempt_count=0,
+            exc=exc,
+        )
+        raise ExternalServiceException("Failed to queue email delivery.") from exc
     return {
         "message": "Interviewer mail has been queued for delivery.",
+        "mail_log_id": mail_log.mail_log_id,
         "invite_url": interviewer_mail.invite.invite_url,
         "expires_at": interviewer_mail.invite.expires_at,
     }

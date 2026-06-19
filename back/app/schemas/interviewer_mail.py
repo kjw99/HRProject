@@ -23,5 +23,6 @@ class InterviewerMailSendRequest(BaseModel):
 
 class InterviewerMailSendResponse(BaseModel):
     message: str
+    mail_log_id: int
     invite_url: str
     expires_at: datetime

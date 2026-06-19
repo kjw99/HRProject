@@ -5,17 +5,18 @@ import { cookies } from 'next/headers';
 
 const isDev = process.env.NODE_ENV === 'development';
 const rawApiBaseUrl = (
-  isDev
+  process.env.BACKEND_URL ||
+  (isDev
     ? process.env.NEXT_PUBLIC_API_URL_DEV || 'http://localhost:8000'
-    : process.env.NEXT_PUBLIC_API_URL
+    : process.env.NEXT_PUBLIC_API_URL)
 )?.trim();
 
 if (!rawApiBaseUrl) {
-  throw new Error('NEXT_PUBLIC_API_URL is required in production.');
+  throw new Error('BACKEND_URL or NEXT_PUBLIC_API_URL is required.');
 }
 
 if (!/^https?:\/\//i.test(rawApiBaseUrl)) {
-  throw new Error('NEXT_PUBLIC_API_URL must start with http:// or https://.');
+  throw new Error('BACKEND_URL must start with http:// or https://.');
 }
 
 const API_BASE_URL = rawApiBaseUrl.replace(/\/+$/, '');

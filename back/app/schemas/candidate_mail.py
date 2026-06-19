@@ -31,5 +31,6 @@ class CandidateMailSendRequest(BaseModel):
 
 class CandidateMailSendResponse(BaseModel):
     message: str
+    mail_log_id: int
     invitation_url: str
     expires_at: datetime

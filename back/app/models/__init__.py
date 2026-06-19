@@ -12,6 +12,7 @@ from app.models.interview_booking import InterviewBooking
 from app.models.interview_booking_invitation import InterviewBookingInvitation
 from app.models.interview_slot_interviewer import InterviewSlotInterviewer
 from app.models.email_template import EmailTemplate
+from app.models.mail_delivery_log import MailDeliveryLog
 
 __all__ = [
     "Base", 
@@ -28,4 +29,5 @@ __all__ = [
     "InterviewBookingInvitation",
     "InterviewSlotInterviewer",
     "EmailTemplate",
+    "MailDeliveryLog",
     ]

@@ -6,6 +6,7 @@ function resolveBackendBaseUrl(): string {
   const isDev = process.env.NODE_ENV === "development";
   const raw = (
     process.env.NEXTAUTH_BACKEND_URL ||
+    process.env.BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
     (isDev
       ? process.env.NEXT_PUBLIC_API_URL_DEV || "http://localhost:8000"

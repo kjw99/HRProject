@@ -9,7 +9,28 @@
       - "8000:8000"
     volumes:
       - ./back:/app
+      - back_venv:/app/.venv
     command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - redis
+
+  celery_worker:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    env_file:
+      - ./back/.env
+    volumes:
+      - ./back:/app
+      - back_venv:/app/.venv
+    command: uv run celery -A app.core.celery_app:celery_app worker --loglevel=info
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 
   front:
     build:
@@ -17,6 +38,8 @@
       dockerfile: Dockerfile
     env_file:
       - ./front/.env
+    environment:
+      BACKEND_URL: http://back:8000
     ports:
       - "3000:3000"
     volumes:
@@ -34,3 +57,6 @@
     depends_on:
       - front
       - back
+
+volumes:
+  back_venv:
