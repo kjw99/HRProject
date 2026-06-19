@@ -19,7 +19,7 @@ from app.ai.schemas.question_generation import (
 from app.core.exceptions import ExternalServiceException
 
 
-MAX_REVISION_COUNT = 3
+MAX_REVISION_COUNT = 2
 
 
 class InterviewQuestionGraph:

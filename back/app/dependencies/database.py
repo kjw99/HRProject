@@ -1,29 +1,41 @@
-# async_database.py
 import os
+
 from dotenv import load_dotenv
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 load_dotenv()
 
-# 드라이버 변경: postgresql:// → postgresql+asyncpg://
-SYNC_DATABASE_URL = os.getenv("DATABASE_URL")
-ASYNC_DATABASE_URL = SYNC_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+SYNC_DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-# Async 엔진 생성
+if SYNC_DATABASE_URL.startswith("postgresql+psycopg://"):
+    ASYNC_DATABASE_URL = SYNC_DATABASE_URL.replace(
+        "postgresql+psycopg://",
+        "postgresql+asyncpg://",
+        1,
+    )
+elif SYNC_DATABASE_URL.startswith("postgresql://"):
+    ASYNC_DATABASE_URL = SYNC_DATABASE_URL.replace(
+        "postgresql://",
+        "postgresql+asyncpg://",
+        1,
+    )
+else:
+    ASYNC_DATABASE_URL = SYNC_DATABASE_URL
+
 async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=True)
 
-# Async 세션 생성기
 AsyncSessionLocal = async_sessionmaker(
-    bind=async_engine, 
-    class_=AsyncSession, 
-    expire_on_commit=False # async에서는 필수
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )
+
 
 class Base(DeclarativeBase):
     pass
 
-# Async DB 세션 의존성 주입 함수
+
 async def get_async_db():
     async with AsyncSessionLocal() as session:
         try:
