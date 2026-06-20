@@ -52,17 +52,6 @@ def apply_deterministic_review_checks(
             )
         seen_texts.add(question_text)
 
-        if not question_text.startswith("[ ]"):
-            needs_revision = True
-            issues.append(
-                QuestionReviewIssue(
-                    question_number=index,
-                    severity="minor",
-                    reason='질문이 "[ ]" 형식으로 시작하지 않습니다.',
-                    suggestion='질문 문두를 "[ ]" 형식으로 맞추세요.',
-                )
-            )
-
     passed = (
         review.passed
         and review.score >= MIN_REVIEW_SCORE

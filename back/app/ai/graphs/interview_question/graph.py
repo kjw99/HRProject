@@ -9,7 +9,8 @@ from app.ai.graphs.interview_question.nodes import (
     select_questions,
     review_questions,
     revise_questions,
-    finalize_questions,  
+    annotate_question_keywords,
+    finalize_questions,
 )
 from app.ai.graphs.interview_question.state import InterviewQuestionGraphState
 from app.ai.schemas.question_generation import (
@@ -62,6 +63,7 @@ class InterviewQuestionGraph:
         workflow.add_node("select_questions", select_questions)
         workflow.add_node("review_questions", review_questions)
         workflow.add_node("revise_questions", revise_questions)
+        workflow.add_node("annotate_question_keywords", annotate_question_keywords)
         workflow.add_node("finalize_questions", finalize_questions)
 
         workflow.set_entry_point("analyze_fit")
@@ -74,10 +76,11 @@ class InterviewQuestionGraph:
             self._route_after_review,
             {
                 "revise": "revise_questions",
-                "finalize": "finalize_questions",
+                "finalize": "annotate_question_keywords",
             },
         )
         workflow.add_edge("revise_questions", "review_questions")
+        workflow.add_edge("annotate_question_keywords", "finalize_questions")
         workflow.add_edge("finalize_questions", END)
 
         return workflow.compile()

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, NotFoundException
@@ -56,6 +57,16 @@ class MailDeliveryService:
             await self.get_log(db, mail_log_id)
         )
 
+    def get_log_sync(
+        self,
+        db: Session,
+        mail_log_id: int,
+    ) -> MailDeliveryLog:
+        mail_log = mail_delivery_log_repository.find_by_id_sync(db, mail_log_id)
+        if not mail_log:
+            raise NotFoundException("Mail delivery log not found.")
+        return mail_log
+
     async def mark_sent(
         self,
         db: AsyncSession,
@@ -73,6 +84,23 @@ class MailDeliveryService:
         mail_log.sent_at = self._now()
         await db.commit()
 
+    def mark_sent_sync(
+        self,
+        db: Session,
+        mail_log_id: int,
+        *,
+        attempt_count: int,
+    ) -> None:
+        mail_log = mail_delivery_log_repository.find_by_id_sync(db, mail_log_id)
+        if not mail_log:
+            return
+
+        mail_log.status = MAIL_DELIVERY_STATUS_SENT
+        mail_log.attempt_count = attempt_count
+        mail_log.error_message = None
+        mail_log.sent_at = self._now()
+        db.commit()
+
     async def mark_failed(
         self,
         db: AsyncSession,
@@ -89,6 +117,23 @@ class MailDeliveryService:
         mail_log.attempt_count = attempt_count
         mail_log.error_message = self._get_error_message(exc)
         await db.commit()
+
+    def mark_failed_sync(
+        self,
+        db: Session,
+        mail_log_id: int,
+        *,
+        attempt_count: int,
+        exc: Exception,
+    ) -> None:
+        mail_log = mail_delivery_log_repository.find_by_id_sync(db, mail_log_id)
+        if not mail_log:
+            return
+
+        mail_log.status = MAIL_DELIVERY_STATUS_FAILED
+        mail_log.attempt_count = attempt_count
+        mail_log.error_message = self._get_error_message(exc)
+        db.commit()
 
     def _get_error_message(self, exc: Exception) -> str:
         if isinstance(exc, AppException):

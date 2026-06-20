@@ -16,6 +16,9 @@ from app.ai.graphs.interview_question.nodes.review_questions import (
 from app.ai.graphs.interview_question.nodes.revise_questions import (
     revise_questions,
 )
+from app.ai.graphs.interview_question.nodes.annotate_question_keywords import (
+    annotate_question_keywords,
+)
 from app.ai.graphs.interview_question.nodes.finalize_questions import (
     finalize_questions,
 )
@@ -29,6 +32,7 @@ __all__ = [
     "select_questions",
     "review_questions",
     "revise_questions",
+    "annotate_question_keywords",
     "finalize_questions",
     
 ]

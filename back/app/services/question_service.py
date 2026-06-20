@@ -113,6 +113,7 @@ class QuestionService:
                         question_text=item.question_text,
                         evaluation_intent=item.evaluation_intent,
                         generation_basis=item.generation_basis,
+                        question_keywords=item.question_keywords,
                     )
                     for item in reused_questions[:final_question_count]
                 ]
@@ -131,6 +132,7 @@ class QuestionService:
                 question_text=item.question_text,
                 evaluation_intent=item.evaluation_intent,
                 generation_basis=item.generation_basis,
+                question_keywords=item.question_keywords,
             )
             for item in reused_questions
         ]
@@ -593,17 +595,16 @@ class QuestionService:
             return []
 
         matched_questions: list[
-            tuple[int, int, GeneratedQuestionResponsePayload]
+            tuple[int, int, int, GeneratedQuestionResponsePayload]
         ] = []
         for job in jobs:
-            if job.candidate_id == current_candidate_id:
-                continue
             if not job.result_questions or not job.generation_keywords:
                 continue
 
             job_keyword_pool = self._keyword_set(
                 question_keyword_service.flatten_keywords(job.generation_keywords)
             )
+            same_candidate_score = 1 if job.candidate_id == current_candidate_id else 0
             for question in job.result_questions:
                 reusable_question = self._build_reusable_question_payload(
                     question=question,
@@ -621,13 +622,23 @@ class QuestionService:
                     continue
 
                 score = len(question_keyword_pool)
-                matched_questions.append((score, job.job_id, reusable_question))
+                matched_questions.append(
+                    (
+                        same_candidate_score,
+                        score,
+                        job.job_id,
+                        reusable_question,
+                    )
+                )
 
-        matched_questions.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        matched_questions.sort(
+            key=lambda item: (item[0], item[1], item[2]),
+            reverse=True,
+        )
 
         reusable_questions: list[GeneratedQuestionResponsePayload] = []
         seen_question_texts: set[str] = set()
-        for _, _, reusable_question in matched_questions:
+        for _, _, _, reusable_question in matched_questions:
             normalized_question_text = reusable_question.question_text.strip().casefold()
             if normalized_question_text in seen_question_texts:
                 continue

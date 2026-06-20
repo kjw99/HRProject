@@ -18,6 +18,9 @@ from app.ai.prompts.interview_question.revision import (
 from app.ai.prompts.interview_question.selection import (
     build_question_selection_messages,
 )
+from app.ai.prompts.interview_question.keyword_annotation import (
+    build_question_keyword_annotation_messages,
+)
 
 __all__ = [
     "build_fit_analysis_messages",
@@ -27,4 +30,5 @@ __all__ = [
     "build_question_review_messages",
     "build_question_revision_messages",
     "build_question_selection_messages",
+    "build_question_keyword_annotation_messages",
 ]

@@ -57,7 +57,6 @@ async def invoke_question_output(
                     f"You returned {len(questions)} questions, but exactly "
                     f"{question_count} questions are required. Return the full "
                     "list again. Do not summarize. Do not reduce the count. "
-                    'Every question_text must start with "[ ]".'
                 )
             ),
         ]

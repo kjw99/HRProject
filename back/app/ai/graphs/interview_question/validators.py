@@ -18,6 +18,7 @@ def normalize_questions(
                 question_text=question_text,
                 evaluation_intent=question.evaluation_intent.strip(),
                 generation_basis=question.generation_basis.strip(),
+                question_keywords=list(question.question_keywords),
             )
         )
 

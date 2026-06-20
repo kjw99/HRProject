@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.mail_delivery_log import MailDeliveryLog
@@ -19,6 +20,13 @@ class MailDeliveryLogRepository:
         mail_log_id: int,
     ) -> MailDeliveryLog | None:
         return await db.get(MailDeliveryLog, mail_log_id)
+
+    def find_by_id_sync(
+        self,
+        db: Session,
+        mail_log_id: int,
+    ) -> MailDeliveryLog | None:
+        return db.get(MailDeliveryLog, mail_log_id)
 
     async def find_by_related_entity(
         self,
