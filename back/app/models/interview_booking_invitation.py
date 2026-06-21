@@ -32,6 +32,11 @@ class InterviewBookingInvitation(Base):
         nullable=False,
         comment="초대 링크 토큰 SHA-256 해시",
     )
+    raw_token: Mapped[str | None] = mapped_column(
+        String(256),
+        nullable=True,
+        comment="Original invitation token",
+    )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

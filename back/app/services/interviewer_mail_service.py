@@ -1,9 +1,12 @@
 import os
 from dataclasses import dataclass
+from urllib.parse import parse_qs, urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestException, NotFoundException
+from app.models.mail_delivery_log import MailDeliveryLog
+from app.repositories.interviewer_invite_repository import interviewer_invite_repository
 from app.repositories.interviewer_repository import interviewer_repository
 from app.schemas.interviewer_invite import (
     InterviewerInviteCreateRequest,
@@ -131,6 +134,54 @@ class InterviewerMailService:
             text.replace("{invite_url}", invite_url)
             .replace("{access_link}", invite_url)
         )
+
+    async def get_existing_invite_response(
+        self,
+        db: AsyncSession,
+        *,
+        interviewer_id: int,
+        mail_log: MailDeliveryLog,
+    ) -> InterviewerInviteCreateResponse:
+        invite_url = self._extract_tokenized_url(mail_log.body)
+        if invite_url is None:
+            raise NotFoundException("Invite URL not found in the existing mail log.")
+
+        token = self._extract_token(invite_url)
+        if token is None:
+            raise NotFoundException("Invite token not found in the existing mail log.")
+
+        invite = await interviewer_invite_repository.find_by_token_hash(
+            db,
+            interviewer_invite_service.hash_token(token),
+        )
+        if invite is None:
+            raise NotFoundException("Invite metadata not found for the existing mail log.")
+
+        return InterviewerInviteCreateResponse(
+            invite_id=invite.invite_id,
+            interviewer_id=interviewer_id,
+            expires_at=invite.expires_at,
+            invite_url=invite_url,
+            reused=True,
+        )
+
+    def _extract_tokenized_url(self, text: str) -> str | None:
+        for chunk in text.split():
+            if "token=" not in chunk:
+                continue
+            cleaned = chunk.strip("()[]{}<>,.;\"'")
+            if self._extract_token(cleaned):
+                return cleaned
+        return None
+
+    def _extract_token(self, url: str) -> str | None:
+        parsed = urlparse(url)
+        token_values = parse_qs(parsed.query).get("token")
+        if not token_values:
+            return None
+
+        token = token_values[0].strip()
+        return token or None
 
 
 interviewer_mail_service = InterviewerMailService()

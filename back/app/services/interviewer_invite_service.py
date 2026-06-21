@@ -33,6 +33,10 @@ class InterviewerInviteService:
     def _hash_token(raw_token: str) -> str:
         return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
+    @classmethod
+    def hash_token(cls, raw_token: str) -> str:
+        return cls._hash_token(raw_token)
+
     @staticmethod
     def _frontend_base_url() -> str:
         return os.getenv("FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")

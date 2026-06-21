@@ -1,10 +1,15 @@
 from dataclasses import dataclass
 from datetime import datetime
+from urllib.parse import parse_qs, urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestException, NotFoundException
+from app.models.mail_delivery_log import MailDeliveryLog
 from app.repositories.candidate_repository import candidate_repository
+from app.repositories.interview_booking_invitation_repository import (
+    interview_booking_invitation_repository,
+)
 from app.schemas.interview_booking_invitation import (
     InterviewBookingInvitationCreateResponse,
 )
@@ -118,6 +123,55 @@ class CandidateMailService:
             text.replace("{invitation_url}", invitation_url)
             .replace("{access_link}", invitation_url)
         )
+
+    async def get_existing_invitation_response(
+        self,
+        db: AsyncSession,
+        *,
+        candidate_id: int,
+        mail_log: MailDeliveryLog,
+    ) -> InterviewBookingInvitationCreateResponse:
+        invitation_url = self._extract_tokenized_url(mail_log.body)
+        if invitation_url is None:
+            raise NotFoundException("Invitation URL not found in the existing mail log.")
+
+        token = self._extract_token(invitation_url)
+        if token is None:
+            raise NotFoundException("Invitation token not found in the existing mail log.")
+
+        invitation = await interview_booking_invitation_repository.find_by_token_hash(
+            db,
+            interview_booking_invitation_service.hash_token(token),
+        )
+        if invitation is None:
+            raise NotFoundException("Invitation metadata not found for the existing mail log.")
+
+        return InterviewBookingInvitationCreateResponse(
+            invitation_id=invitation.invitation_id,
+            candidate_id=candidate_id,
+            slot_ids=invitation.allowed_slot_ids or [],
+            invitation_url=invitation_url,
+            expires_at=invitation.expires_at,
+            created_at=invitation.created_at,
+        )
+
+    def _extract_tokenized_url(self, text: str) -> str | None:
+        for chunk in text.split():
+            if "token=" not in chunk:
+                continue
+            cleaned = chunk.strip("()[]{}<>,.;\"'")
+            if self._extract_token(cleaned):
+                return cleaned
+        return None
+
+    def _extract_token(self, url: str) -> str | None:
+        parsed = urlparse(url)
+        token_values = parse_qs(parsed.query).get("token")
+        if not token_values:
+            return None
+
+        token = token_values[0].strip()
+        return token or None
 
 
 candidate_mail_service = CandidateMailService()

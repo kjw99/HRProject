@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Integer, String, Text, func
+from sqlalchemy import CheckConstraint, DateTime, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.dependencies.database import Base
@@ -24,6 +24,12 @@ class MailDeliveryLog(Base):
             "status IN ('pending', 'sent', 'failed')",
             name="check_mail_delivery_logs_status_valid",
         ),
+        UniqueConstraint(
+            "mail_type",
+            "related_entity_id",
+            "idempotency_key",
+            name="uq_mail_delivery_logs_idempotency_key",
+        ),
     )
 
     mail_log_id: Mapped[int] = mapped_column(
@@ -40,6 +46,15 @@ class MailDeliveryLog(Base):
     recipient_email: Mapped[str] = mapped_column(String(255), nullable=False)
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    idempotency_key: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        index=True,
+    )
+    request_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

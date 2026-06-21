@@ -34,7 +34,7 @@ async def send_candidate_mail(
         template_variables=data.template_variables,
         expires_at=data.expires_at,
     )
-    mail_log = await mail_delivery_service.create_pending_log(
+    pending_log = await mail_delivery_service.create_pending_log(
         db,
         mail_type=MAIL_TYPE_CANDIDATE,
         related_entity_id=candidate_id,
@@ -42,6 +42,7 @@ async def send_candidate_mail(
         subject=candidate_mail.subject,
         body=candidate_mail.content,
     )
+    mail_log = pending_log.mail_log
     try:
         send_mail_delivery.delay(mail_log.mail_log_id)
     except Exception as exc:

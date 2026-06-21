@@ -64,6 +64,25 @@ class InterviewBookingInvitationService:
             )
         )
         for invitation in active_invitations:
+            if invitation.raw_token is None:
+                continue
+            if invitation.allowed_slot_ids != allowed_slot_ids:
+                continue
+            if expires_at is not None and _as_kst(invitation.expires_at) != _as_kst(
+                expires_at
+            ):
+                continue
+
+            return InterviewBookingInvitationCreateResponse(
+                invitation_id=invitation.invitation_id,
+                candidate_id=invitation.candidate_id,
+                slot_ids=invitation.allowed_slot_ids or [],
+                invitation_url=self._build_invitation_url(invitation.raw_token),
+                expires_at=_as_kst(invitation.expires_at),
+                created_at=_as_kst(invitation.created_at),
+            )
+
+        for invitation in active_invitations:
             invitation.revoked_at = now
 
         raw_token = self._generate_raw_token()
@@ -71,6 +90,7 @@ class InterviewBookingInvitationService:
         invitation = InterviewBookingInvitation(
             candidate_id=candidate_id,
             token_hash=token_hash,
+            raw_token=raw_token,
             expires_at=expires_at,
             allowed_slot_ids=allowed_slot_ids,
         )
@@ -177,6 +197,9 @@ class InterviewBookingInvitationService:
 
     def _hash_token(self, token: str) -> str:
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def hash_token(self, token: str) -> str:
+        return self._hash_token(token)
 
     def _build_invitation_url(self, raw_token: str) -> str:
         frontend_base_url = os.getenv(

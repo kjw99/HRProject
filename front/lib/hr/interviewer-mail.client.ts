@@ -4,11 +4,15 @@ export const interviewerMailApi = {
   sendInterviewerMail: async (
     interviewerId: number,
     payload: InterviewerMailPayload,
+    idempotencyKey?: string,
   ): Promise<InterviewerMailResponse> => {
     const response = await fetch(`/api/interviewers/${interviewerId}/email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(idempotencyKey
+          ? { "Idempotency-Key": idempotencyKey }
+          : {}),
       },
       body: JSON.stringify(payload),
     });

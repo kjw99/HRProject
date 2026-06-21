@@ -20,6 +20,7 @@ export const candidateMailApi = {
   sendCandidateMail: async (
     candidateId: number,
     payload: CandidateMailPayload,
+    idempotencyKey?: string,
   ): Promise<CandidateMailResponse> => {
     const response = await api.post<
       CandidateMailResponse & {
@@ -29,6 +30,13 @@ export const candidateMailApi = {
     >(
       `/api/candidates/${candidateId}/email`,
       payload,
+      idempotencyKey
+        ? {
+            headers: {
+              "Idempotency-Key": idempotencyKey,
+            },
+          }
+        : undefined,
     );
 
     return {

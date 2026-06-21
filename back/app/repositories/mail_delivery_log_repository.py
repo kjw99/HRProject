@@ -21,6 +21,22 @@ class MailDeliveryLogRepository:
     ) -> MailDeliveryLog | None:
         return await db.get(MailDeliveryLog, mail_log_id)
 
+    async def find_by_idempotency_key(
+        self,
+        db: AsyncSession,
+        *,
+        mail_type: str,
+        related_entity_id: int,
+        idempotency_key: str,
+    ) -> MailDeliveryLog | None:
+        return await db.scalar(
+            select(MailDeliveryLog).where(
+                MailDeliveryLog.mail_type == mail_type,
+                MailDeliveryLog.related_entity_id == related_entity_id,
+                MailDeliveryLog.idempotency_key == idempotency_key,
+            )
+        )
+
     def find_by_id_sync(
         self,
         db: Session,

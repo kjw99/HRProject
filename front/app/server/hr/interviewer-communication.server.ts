@@ -33,13 +33,24 @@ export const acceptInterviewerInviteServer = async (
 export const sendInterviewerMailServer = async (
   interviewerId: number,
   payload: InterviewerMailPayload,
+  idempotencyKey?: string,
 ): Promise<InterviewerMailResponse> => {
   const response = await apiServer.post<
     InterviewerMailResponse & {
       invite_url?: string;
       expires_at?: string | null;
     }
-  >(`/api/interviewers/${interviewerId}/email`, payload);
+  >(
+    `/api/interviewers/${interviewerId}/email`,
+    payload,
+    idempotencyKey
+      ? {
+          headers: {
+            "Idempotency-Key": idempotencyKey,
+          },
+        }
+      : undefined,
+  );
 
   return {
     message: response.data.message,
