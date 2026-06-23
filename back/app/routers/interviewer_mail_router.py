@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ExternalServiceException
 from app.dependencies.database import get_async_db
 from app.dependencies.dependencies import get_current_user, require_roles
 from app.models.mail_delivery_log import MAIL_TYPE_INTERVIEWER
@@ -14,7 +13,6 @@ from app.schemas.interviewer_mail import (
 from app.services.interviewer_invite_service import interviewer_invite_service
 from app.services.interviewer_mail_service import interviewer_mail_service
 from app.services.mail_delivery_service import mail_delivery_service
-from app.tasks.mail_tasks import send_mail_delivery
 from app.utils.mail_idempotency import (
     build_mail_request_hash,
     normalize_idempotency_key,
@@ -101,7 +99,7 @@ async def send_interviewer_mail(
         expires_in_days=data.expires_in_days,
         created_by_user_id=current_user.user_id,
     )
-    pending_log = await mail_delivery_service.create_pending_log(
+    pending_log = await mail_delivery_service.create_delivery_request(
         db,
         mail_type=MAIL_TYPE_INTERVIEWER,
         related_entity_id=interviewer_id,
@@ -125,16 +123,6 @@ async def send_interviewer_mail(
             "expires_at": invite.expires_at,
         }
 
-    try:
-        send_mail_delivery.delay(mail_log.mail_log_id)
-    except Exception as exc:
-        await mail_delivery_service.mark_failed(
-            db,
-            mail_log.mail_log_id,
-            attempt_count=0,
-            exc=exc,
-        )
-        raise ExternalServiceException("Failed to queue email delivery.") from exc
     return {
         "message": "Interviewer mail has been queued for delivery.",
         "mail_log_id": mail_log.mail_log_id,

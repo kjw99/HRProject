@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,11 +10,13 @@ from app.core.exceptions import AppException, ConflictException, NotFoundExcepti
 from app.models.mail_delivery_log import (
     MAIL_DELIVERY_STATUS_FAILED,
     MAIL_DELIVERY_STATUS_PENDING,
+    MAIL_DELIVERY_STATUS_PROCESSING,
     MAIL_DELIVERY_STATUS_SENT,
     MailDeliveryLog,
 )
 from app.repositories.mail_delivery_log_repository import mail_delivery_log_repository
 from app.schemas.mail_delivery_log import MailDeliveryLogResponse
+from app.services.outbox_service import outbox_service
 
 
 class MailDeliveryService:
@@ -49,6 +52,59 @@ class MailDeliveryService:
         )
         mail_delivery_log_repository.save(db, mail_log)
         try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            if not idempotency_key:
+                raise
+
+            existing = await self.get_log_by_idempotency(
+                db,
+                mail_type=mail_type,
+                related_entity_id=related_entity_id,
+                idempotency_key=idempotency_key,
+                request_hash=request_hash,
+            )
+            if existing is None:
+                raise
+            return self.CreatePendingLogResult(mail_log=existing, created=False)
+
+        await db.refresh(mail_log)
+        return self.CreatePendingLogResult(mail_log=mail_log, created=True)
+
+    async def create_delivery_request(
+        self,
+        db: AsyncSession,
+        *,
+        mail_type: str,
+        related_entity_id: int,
+        recipient_email: str,
+        subject: str,
+        body: str,
+        idempotency_key: str | None = None,
+        request_hash: str | None = None,
+    ) -> CreatePendingLogResult:
+        if idempotency_key and not request_hash:
+            raise ValueError("request_hash is required when idempotency_key is set.")
+
+        mail_log = MailDeliveryLog(
+            mail_type=mail_type,
+            related_entity_id=related_entity_id,
+            recipient_email=recipient_email,
+            subject=subject,
+            body=body,
+            idempotency_key=idempotency_key,
+            request_hash=request_hash,
+            status=MAIL_DELIVERY_STATUS_PENDING,
+        )
+        mail_delivery_log_repository.save(db, mail_log)
+
+        try:
+            await db.flush()
+            outbox_service.create_mail_delivery_requested_event(
+                db,
+                mail_log_id=mail_log.mail_log_id,
+            )
             await db.commit()
         except IntegrityError:
             await db.rollback()
@@ -124,6 +180,46 @@ class MailDeliveryService:
         if not mail_log:
             raise NotFoundException("Mail delivery log not found.")
         return mail_log
+
+    def claim_pending_for_delivery_sync(
+        self,
+        db: Session,
+        mail_log_id: int,
+    ) -> MailDeliveryLog | None:
+        result = db.execute(
+            update(MailDeliveryLog)
+            .where(
+                MailDeliveryLog.mail_log_id == mail_log_id,
+                MailDeliveryLog.status == MAIL_DELIVERY_STATUS_PENDING,
+            )
+            .values(
+                status=MAIL_DELIVERY_STATUS_PROCESSING,
+                error_message=None,
+            )
+        )
+        if result.rowcount != 1:
+            db.rollback()
+            return None
+
+        db.commit()
+        return mail_delivery_log_repository.find_by_id_sync(db, mail_log_id)
+
+    def mark_retry_pending_sync(
+        self,
+        db: Session,
+        mail_log_id: int,
+        *,
+        attempt_count: int,
+        exc: Exception,
+    ) -> None:
+        mail_log = mail_delivery_log_repository.find_by_id_sync(db, mail_log_id)
+        if not mail_log:
+            return
+
+        mail_log.status = MAIL_DELIVERY_STATUS_PENDING
+        mail_log.attempt_count = attempt_count
+        mail_log.error_message = self._get_error_message(exc)
+        db.commit()
 
     async def mark_sent(
         self,

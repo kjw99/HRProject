@@ -9,6 +9,7 @@ from app.dependencies.database import Base
 MAIL_TYPE_CANDIDATE = "candidate"
 MAIL_TYPE_INTERVIEWER = "interviewer"
 MAIL_DELIVERY_STATUS_PENDING = "pending"
+MAIL_DELIVERY_STATUS_PROCESSING = "processing"
 MAIL_DELIVERY_STATUS_SENT = "sent"
 MAIL_DELIVERY_STATUS_FAILED = "failed"
 
@@ -21,7 +22,7 @@ class MailDeliveryLog(Base):
             name="check_mail_delivery_logs_type_valid",
         ),
         CheckConstraint(
-            "status IN ('pending', 'sent', 'failed')",
+            "status IN ('pending', 'processing', 'sent', 'failed')",
             name="check_mail_delivery_logs_status_valid",
         ),
         UniqueConstraint(

@@ -27,6 +27,19 @@
     depends_on:
       - redis
 
+  celery_beat:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    env_file:
+      - ./back/.env
+    volumes:
+      - ./back:/app
+      - back_venv:/app/.venv
+    command: uv run celery -A app.core.celery_app:celery_app beat --loglevel=info
+    depends_on:
+      - redis
+
   redis:
     image: redis:7-alpine
     ports:
